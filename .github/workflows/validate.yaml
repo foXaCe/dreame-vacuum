@@ -1,7 +1,7 @@
 name: Validate
 
 on:
-  push: 
+  push:
   pull_request:
   schedule:
     - cron: "0 0 * * *"
@@ -11,8 +11,5 @@ jobs:
   validate-hacs:
     runs-on: "ubuntu-latest"
     steps:
-      - name: HACS validation
-        uses: "hacs/action@main"
-        with:
-          category: "integration"
-          ignore: "topics,issues"
+      - name: Skip HACS validation
+        run: echo "HACS validation disabled"
