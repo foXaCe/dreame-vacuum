@@ -27,6 +27,27 @@ SEGMENT_TYPE_CODE_TO_NAME: Final = {
     15: "Secondary Bedroom",
 }
 
+SEGMENT_TYPE_TRANSLATIONS: Final = {
+    "fr": {
+        0: "Pièce",
+        1: "Salon",
+        2: "Chambre principale",
+        3: "Bureau",
+        4: "Cuisine",
+        5: "Salle à manger",
+        6: "Salle de bain",
+        7: "Balcon",
+        8: "Couloir",
+        9: "Buanderie",
+        10: "Placard",
+        11: "Salle de réunion",
+        12: "Bureau",
+        13: "Espace fitness",
+        14: "Espace de loisirs",
+        15: "Chambre secondaire",
+    }
+}
+
 SEGMENT_TYPE_CODE_TO_HA_ICON: Final = {
     0: "mdi:home-outline",
     1: "mdi:sofa-outline",
@@ -2722,6 +2743,24 @@ class Segment(Zone):
         else:
             self.name = f"Room {self.segment_id}"
         self.icon = SEGMENT_TYPE_CODE_TO_HA_ICON.get(self.type, "mdi:home-outline")
+
+    def get_translated_name(self, language: str = None) -> str:
+        """Get the translated name of the segment based on language."""
+        if self.custom_name is not None:
+            return self.custom_name
+
+        if language and language in SEGMENT_TYPE_TRANSLATIONS:
+            translations = SEGMENT_TYPE_TRANSLATIONS[language]
+            if self.type != 0 and self.type in translations:
+                name = translations[self.type]
+                if self.index > 0:
+                    name = f"{name} {self.index + 1}"
+                return name
+            elif self.type == 0 and 0 in translations:
+                return translations[0]
+
+        # Fallback to English name
+        return self.name
 
     def set_custom_carpet_settings(self, carpet_cleaning, carpet_settings=None):
         self.carpet_cleaning = carpet_cleaning

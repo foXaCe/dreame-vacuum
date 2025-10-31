@@ -5077,6 +5077,7 @@ class DreameVacuumMapRenderer:
         low_resolution: bool = False,
         square: bool = False,
         cache: bool = True,
+        language: str = None,
     ) -> None:
         self.color_scheme: MapRendererColorScheme = MAP_COLOR_SCHEME_LIST.get(color_scheme, MapRendererColorScheme())
         self.icon_set: int = MAP_ICON_SET_LIST.get(icon_set, 0)
@@ -5096,6 +5097,7 @@ class DreameVacuumMapRenderer:
         self._low_memory: bool = low_resolution
         self._square: bool = square
         self._cache: bool = cache
+        self._language: str = language
         self._has_mask: bool = False
         self._calibration_points: dict[str, int] = None
         self._default_calibration_points: dict[str, int] = [
@@ -8516,7 +8518,7 @@ class DreameVacuumMapRenderer:
             icon = self._segment_icons.get(segment.type) if self.config.icon else None
             if segment.type == 0 or self.config.name or icon is None:
                 text = (
-                    segment.name
+                    segment.get_translated_name(self._language)
                     if (self._robot_type != RobotType.VSLAM or icon is not None)
                     or (segment.custom_name is not None and segment.type == 0)
                     or self.icon_set == 2

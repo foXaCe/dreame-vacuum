@@ -353,6 +353,7 @@ async def async_setup_entry(
                 hidden_map_objects,
                 low_resolution,
                 square,
+                language=hass.config.language,
             )
             for description in CAMERAS
         )
@@ -367,6 +368,7 @@ async def async_setup_entry(
             hidden_map_objects,
             low_resolution,
             square,
+            hass.config.language,
         )
         platform = entity_platform.current_platform.get()
         platform.async_register_entity_service("update", {}, DreameVacuumCameraEntity.async_update.__name__)
@@ -397,6 +399,7 @@ def async_update_map_cameras(
     hidden_map_objects: list[str],
     low_resolution: bool,
     square: bool,
+    language: str = None,
 ) -> None:
     new_indexes = set([k for k in range(1, len(coordinator.device.status.map_list) + 1)])
     current_ids = set(current)
@@ -420,6 +423,7 @@ def async_update_map_cameras(
                 low_resolution,
                 square,
                 map_index,
+                language,
             )
         ]
 
@@ -440,6 +444,7 @@ def async_update_map_cameras(
                     True,
                     square,
                     map_index,
+                    language,
                 )
             )
 
@@ -482,6 +487,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         low_resolution: bool = False,
         square: bool = False,
         map_index: int = 0,
+        language: str = None,
     ) -> None:
         """Initialize a Dreame Vacuum Camera entity."""
         super().__init__(coordinator, description)
@@ -521,6 +527,8 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 self.device.capability.robot_type,
                 low_resolution,
                 square,
+                True,
+                language,
             )
             if not self.wifi_map:
                 self._proxy_renderer = DreameVacuumMapRenderer(
@@ -531,6 +539,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                     low_resolution,
                     square,
                     False,
+                    language,
                 )
         self._image = None
         self._default_map = True
