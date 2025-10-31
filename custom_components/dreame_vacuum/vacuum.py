@@ -768,9 +768,12 @@ class DreameVacuum(DreameVacuumEntity, StateVacuumEntity):
 
     @property
     def activity(self):
-        if self._activity_class is not None:
-            return self._activity_class(self._vacuum_state)
-        return self._vacuum_state
+        if self._activity_class is not None and self._vacuum_state != STATE_UNKNOWN:
+            try:
+                return self._activity_class(self._vacuum_state)
+            except ValueError:
+                return None
+        return None if self._vacuum_state == STATE_UNKNOWN else self._vacuum_state
 
     @property
     def available(self) -> bool:
