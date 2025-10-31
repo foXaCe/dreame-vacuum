@@ -7,6 +7,35 @@
         "Movahome Account": "Compte Movahome",
         "Manual Connection (Without map)": "Connexion manuelle (sans carte)"
       }
+    },
+    "notify": {
+      "options": {
+        "cleanup_completed": "Nettoyage terminé",
+        "consumable": "Consommable",
+        "information": "Information",
+        "warning": "Avertissement",
+        "error": "Erreur"
+      }
+    },
+    "segment_type": {
+      "options": {
+        "Room": "Pièce",
+        "Living Room": "Salon",
+        "Primary Bedroom": "Chambre principale",
+        "Study": "Bureau",
+        "Kitchen": "Cuisine",
+        "Dining Hall": "Salle à manger",
+        "Bathroom": "Salle de bain",
+        "Balcony": "Balcon",
+        "Corridor": "Couloir",
+        "Utility Room": "Buanderie",
+        "Closet": "Placard",
+        "Meeting Room": "Salle de réunion",
+        "Office": "Bureau",
+        "Fitness Area": "Espace fitness",
+        "Recreation Area": "Espace de loisirs",
+        "Secondary Bedroom": "Chambre secondaire"
+      }
     }
   },
   "config": {
