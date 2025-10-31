@@ -19,6 +19,12 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      - name: Create ZIP for HACS
+        run: |
+          cd custom_components
+          zip -r ../dreame_vacuum.zip dreame_vacuum/
+          cd ..
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -26,5 +32,6 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, 'b') }}
           generate_release_notes: true
+          files: dreame_vacuum.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
