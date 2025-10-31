@@ -21,9 +21,9 @@ jobs:
 
       - name: Create ZIP for HACS
         run: |
-          cd custom_components
-          zip -r ../dreame_vacuum.zip dreame_vacuum/
-          cd ..
+          cd custom_components/dreame_vacuum
+          zip -r ../../dreame_vacuum.zip .
+          cd ../..
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
