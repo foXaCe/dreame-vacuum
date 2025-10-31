@@ -1,4 +1,14 @@
 {
+  "selector": {
+    "configuration_type": {
+      "options": {
+        "Dreamehome Account": "Compte Dreamehome",
+        "Xiaomi Home Account": "Compte Xiaomi Home",
+        "Movahome Account": "Compte Movahome",
+        "Manual Connection (Without map)": "Connexion manuelle (sans carte)"
+      }
+    }
+  },
   "config": {
     "abort": {
       "already_configured": "L'appareil est déjà configuré",
