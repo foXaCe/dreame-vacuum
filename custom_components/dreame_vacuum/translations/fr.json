@@ -160,7 +160,7 @@
           "adaptation": "Adaptation",
           "remove_mop": "Retirer la serpillière",
           "adaptation_without_route": "Adaptation sans itinéraire",
-          "vacuum_and_mop": "Aspirateur et serpillière",
+          "vacuum_and_mop": "Aspirer et passer la serpillière",
           "ignore": "Ignorer",
           "cross": "Traverser"
         }
@@ -224,13 +224,13 @@
       "self_clean_frequency": {
         "state": {
           "by_area": "Par zone",
-          "by_time": "Par heure",
-          "by_room": "Par chambre"
+          "by_time": "Par durée",
+          "by_room": "Par pièce"
         }
       },
       "mop_clean_frequency": {
         "state": {
-          "by_room": "Par chambre"
+          "by_room": "Par pièce"
         }
       },
       "auto_empty_mode": {
@@ -262,13 +262,13 @@
       },
       "cleangenius_mode": {
         "state": {
-          "vacuum_and_mop": "Aspirateur et serpillière",
-          "mop_after_vacuum": "Serpillière après aspirateur"
+          "vacuum_and_mop": "Aspirer et passer la serpillière",
+          "mop_after_vacuum": "Passer la serpillière après aspiration"
         }
       },
       "washing_mode": {
         "state": {
-          "light": "Lumière",
+          "light": "Léger",
           "standard": "Standard",
           "deep": "Profond",
           "ultra_washing": "Ultra lavage"
@@ -277,9 +277,9 @@
       "water_temperature": {
         "state": {
           "normal": "Normale",
-          "mild": "Bénin",
+          "mild": "Tiède",
           "warm": "Chaud",
-          "hot": "Chaud"
+          "hot": "Très chaud"
         }
       },
       "auto_recleaning": {
@@ -374,7 +374,7 @@
           "factory": "Usine",
           "error": "Erreur",
           "remote_control": "Contrôle à distance",
-          "sleeping": "En veille",
+          "sleeping": "En sommeil",
           "self_test": "Auto-test",
           "factory_test": "Test usine",
           "standby": "En veille",
@@ -402,7 +402,7 @@
           "room_cleaning_paused": "Nettoyage de la pièce mis en pause",
           "zone_cleaning_paused": "Nettoyage de la zone mis en pause",
           "spot_cleaning_paused": "Nettoyage localisé mis en pause",
-          "map_cleaning_paused": "Map cleaning paused",
+          "map_cleaning_paused": "Nettoyage de la carte en pause",
           "docking_paused": "Retour à la station mis en pause",
           "mopping_paused": "Lavage mis en pause",
           "zone_mopping_paused": "Lavage d'une zone mis en pause",
@@ -417,7 +417,7 @@
           "returning_to_install_mop": "Retourner pour installer la serpillière",
           "returning_to_remove_mop": "Retourner pour retirer la serpillière",
           "station_cleaning": "Nettoyage de la station",
-          "pet_finding": "Constatation d'animaux",
+          "pet_finding": "Recherche d'animaux",
           "auto_cleaning_washing_paused": "Lavage de nettoyage automatique interrompu",
           "area_cleaning_washing_paused": "Lavage de nettoyage de zone interrompu",
           "custom_cleaning_washing_paused": "Lavage de nettoyage personnalisé pause"
@@ -525,11 +525,11 @@
           "bin_full": "Le sac à poussière est plein ou le conduit est obstrué.",
           "bin_open": "Le capot supérieur de la station de vidange automatique n'est pas fermé, ou le sac à poussière n'est pas installé.",
           "water_tank": "Le réservoir d'eau claire n'est pas installé.",
-          "dirty_water_tank": "Le réservoir d'eau sale est plein n'est pas installé.",
+          "dirty_water_tank": "Le réservoir d'eau sale est plein ou n'est pas installé.",
           "water_tank_dry": "Niveau d'eau claire bas, merci de faire le plein.",
           "dirty_water_tank_blocked": "Réservoir d'eau sale obstrué.",
           "dirty_water_tank_pump": "Erreur de la pompe du réservoir d'eau sale.",
-          "mop_pad": "Le dispositif de nettoyage de la serpillière n'est pas installée correctement.",
+          "mop_pad": "Le dispositif de nettoyage de la serpillière n'est pas installé correctement.",
           "wet_mop_pad": "Le niveau d'eau du dispositif de nettoyage de la serpillière est anormal, merci de nettoyer ce dernier.",
           "clean_mop_pad": "Nettoyage terminé, merci de nettoyer le dispositif de nettoyage de la serpillière.",
           "clean_tank_level": "Contrôlez et remplissez le réservoir d'eau claire.",
@@ -593,7 +593,7 @@
           "unknown": "Inconnu",
           "idle": "Inactif",
           "video": "Vidéo",
-          "audio": "l'audio",
+          "audio": "Audio",
           "recording": "Enregistrement"
         }
       },
@@ -609,9 +609,9 @@
       "clean_water_tank_status": {
         "state": {
           "unknown": "Inconnu",
-          "not_available": "Pas disponible",
+          "not_available": "Non disponible",
           "not_installed": "Non installé",
-          "low_water": "Basse eau",
+          "low_water": "Eau faible",
           "installed": "Installé"
         }
       },
@@ -619,7 +619,7 @@
         "state": {
           "unknown": "Inconnu",
           "installed": "Installé",
-          "not_installed_or_full": "Non installé ou complet"
+          "not_installed_or_full": "Non installé ou plein"
         }
       },
       "dust_bag_status": {
@@ -635,7 +635,7 @@
           "unknown": "Inconnu",
           "installed": "Installé",
           "disabled": "Désactivé",
-          "low_detergent": "Détergent faible"
+          "low_detergent": "Détergent bas"
         }
       },
       "hot_water_status": {
@@ -743,6 +743,24 @@
         }
       }
     },
+    "vacuum_set_dnd": {
+      "name": "Définir Ne Pas Déranger",
+      "description": "Activer/désactiver la fonctionnalité Ne Pas Déranger et/ou définir ses heures de début et de fin.",
+      "fields": {
+        "dnd_enabled": {
+          "name": "Ne Pas Déranger activé",
+          "description": "Activer ou désactiver la fonctionnalité Ne Pas Déranger."
+        },
+        "dnd_start": {
+          "name": "Début Ne Pas Déranger",
+          "description": "Heure de début de la fonctionnalité Ne Pas Déranger."
+        },
+        "dnd_end": {
+          "name": "Fin Ne Pas Déranger",
+          "description": "Heure de fin de la fonctionnalité Ne Pas Déranger."
+        }
+      }
+    },
     "vacuum_goto": {
       "name": "Aller à",
       "description": "Allez aux coordonnées de la carte et arrêtez-vous.",
@@ -752,14 +770,14 @@
           "description": "X Coordonnée du point."
         },
         "y": {
-          "name": "Oui",
-          "description": "Y Coordonnée du point."
+          "name": "Y",
+          "description": "Coordonnée Y du point."
         }
       }
     },
     "vacuum_follow_path": {
       "name": "Suivre le chemin",
-      "description": "Suivez la liste des coordonnées sur la carte et revenez à la base. ",
+      "description": "Suivez la liste des coordonnées sur la carte et revenez à la base. (Uniquement pris en charge sur les aspirateurs avec caméra)",
       "fields": {
         "points": {
           "name": "Points",
@@ -893,7 +911,7 @@
         },
         "file_url": {
           "name": "URL du fichier",
-          "description": "URL du fichier tbz2.gz ou tar.gz enregistré"
+          "description": "URL du fichier bz2.gz ou tar.gz enregistré"
         }
       }
     },
@@ -917,7 +935,7 @@
         },
         "segments": {
           "name": "Segments",
-          "description": "ID des chambres."
+          "description": "ID des pièces."
         }
       }
     },
@@ -934,8 +952,8 @@
           "description": "ID de la pièce."
         },
         "line": {
-          "name": "Doubler",
-          "description": "Coordonnées de ligne divisée."
+          "name": "Ligne",
+          "description": "Coordonnées de la ligne de division."
         }
       }
     },
@@ -969,7 +987,7 @@
       "fields": {
         "segment_id": {
           "name": "ID de segment",
-          "description": "ID des chambres."
+          "description": "ID des pièces."
         },
         "suction_level": {
           "name": "Niveau d'aspiration",
@@ -1096,8 +1114,8 @@
           "description": "X Coordonnée de l'obstacle."
         },
         "y": {
-          "name": "Oui",
-          "description": "Y Coordonnée de l'obstacle."
+          "name": "Y",
+          "description": "Coordonnée Y de l'obstacle."
         },
         "obstacle_ignored": {
           "name": "Obstacle ignoré",
@@ -1114,8 +1132,8 @@
           "description": "X Coordonnée du routeur."
         },
         "y": {
-          "name": "Oui",
-          "description": "Y Coordonnée du routeur."
+          "name": "Y",
+          "description": "Coordonnée Y du routeur."
         }
       }
     },
@@ -1124,8 +1142,8 @@
       "description": "Sélectionnez les options précédentes d'une entité sélectionnée.",
       "fields": {
         "cycle": {
-          "name": "Cycle",
-          "description": "Si l’option doit passer du premier au dernier."
+          "name": "Boucler",
+          "description": "Si l'option doit boucler du premier au dernier."
         }
       }
     },
@@ -1142,8 +1160,8 @@
       "description": "Sélectionnez les options suivantes d'une entité sélectionnée.",
       "fields": {
         "cycle": {
-          "name": "Cycle",
-          "description": "Si l’option doit passer du premier au dernier."
+          "name": "Boucler",
+          "description": "Si l'option doit boucler du premier au dernier."
         }
       }
     }
