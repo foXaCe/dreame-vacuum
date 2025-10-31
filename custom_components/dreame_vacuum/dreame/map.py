@@ -1202,7 +1202,6 @@ class DreameMapVacuumMapManager:
 
         self._update_running = True
 
-        _LOGGER.debug("Map update: %s", self._update_interval)
         try:
             if (self._map_list_object_name and self._need_map_list_request is None) or (
                 self._need_map_list_request and not self._device_running
@@ -1246,11 +1245,9 @@ class DreameMapVacuumMapManager:
                     if self._protocol.cloud.logged_in:
                         self._request_current_map()
                 elif not self._request_map_from_cloud() and self._device_running:
-                    _LOGGER.debug("No new map data received, retrying")
                     sleep(1)
                     if not self._request_map_from_cloud():
                         self.schedule_update(1)
-                        _LOGGER.debug("No new map data received on second try")
             elif self._protocol.cloud.connected:
                 if not self._connected:
                     self._connected = True
@@ -3421,7 +3418,7 @@ class DreameVacuumMapDecoder:
                                 furniture[2],
                             )
                         else:
-                            _LOGGER.debug("Unknown furniture type: %s", furniture_type)
+                            pass
 
             if map_data.furnitures is None:
                 furniture_key = (
@@ -3543,7 +3540,7 @@ class DreameVacuumMapDecoder:
                                 map_data.obstacles[str(index)].set_segment(map_data)
                             index = index + 1
                         else:
-                            _LOGGER.debug("Unknown obstacle type: %s", obstacle_type)
+                            pass
 
             if "vw" in data_json:
                 virtual_walls = data_json["vw"]
@@ -4996,12 +4993,6 @@ class DreameVacuumMapDataJsonRenderer:
 
         self._map_data = map_data
         self._map_data_json = map_data_json
-        _LOGGER.debug(
-            "Render Map Data: %s:%s took: %.2f",
-            map_data.map_id,
-            map_data.frame_id,
-            time.time() - now,
-        )
         self.render_complete = True
         return self._to_buffer(
             self._default_map_image,
@@ -6047,12 +6038,6 @@ class DreameVacuumMapRenderer:
             sort_keys=True,
             separators=(",", ":"),
         )
-        _LOGGER.debug(
-            "Convert Map Data: %s:%s took: %.2f",
-            map_data.map_id,
-            map_data.frame_id,
-            time.time() - now,
-        )
         return map_data_json
 
     def render_obstacle_image(
@@ -6231,7 +6216,6 @@ class DreameVacuumMapRenderer:
                     and self._image
                 ):
                     self.render_complete = True
-                    _LOGGER.info("Skip render frame, map data not changed")
                     return self._to_buffer(self._image)
 
             scale = (
@@ -6892,13 +6876,6 @@ class DreameVacuumMapRenderer:
                     line_x = x + (max_width - line_sizes[i][0]) / 2
                     text_draw.text((line_x, line_y), lines[i], fill=text_color, font=text_font)
                     line_y = line_y + line_sizes[i][1]
-
-            _LOGGER.info(
-                "Render frame: %s:%s took: %.2f",
-                map_data.map_id,
-                map_data.frame_id,
-                time.time() - now,
-            )
 
             if self._cache:
                 self._map_data = map_data
@@ -11369,12 +11346,6 @@ class DreameVacuumMapOptimizer:
 
                 self._merge_saved_map_data(map_data, saved_map_data, original_data)
 
-            _LOGGER.info(
-                "Optimize Map Data: %s:%s took: %.2f",
-                map_data.map_id,
-                map_data.frame_id,
-                time.time() - now,
-            )
         except:
             _LOGGER.warning("Optimize map failed: %s", traceback.format_exc())
 
