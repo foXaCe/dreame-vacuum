@@ -6255,7 +6255,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumSuctionLevel._value2member_map_:
             return DreameVacuumSuctionLevel(value)
         if value is not None:
-            _LOGGER.debug("SUCTION_LEVEL not supported: %s", value)
         return DreameVacuumSuctionLevel.UNKNOWN
 
     @property
@@ -6288,7 +6287,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumWaterVolume._value2member_map_:
             return DreameVacuumWaterVolume(value)
         if value is not None:
-            _LOGGER.debug("WATER_VOLUME not supported: %s", value)
         return DreameVacuumWaterVolume.UNKNOWN
 
     @property
@@ -6322,7 +6320,6 @@ class DreameVacuumDeviceStatus:
                 return DreameVacuumStatus.IDLE
             return DreameVacuumStatus(value)
         if value is not None:
-            _LOGGER.debug("STATUS not supported: %s", value)
         return DreameVacuumStatus.UNKNOWN
 
     @property
@@ -6342,7 +6339,6 @@ class DreameVacuumDeviceStatus:
                     return DreameVacuumTaskStatus.CRUISING_POINT_PAUSED
             return DreameVacuumTaskStatus(value)
         if value is not None:
-            _LOGGER.debug("TASK_STATUS not supported: %s", value)
         return DreameVacuumTaskStatus.UNKNOWN
 
     @property
@@ -6365,7 +6361,6 @@ class DreameVacuumDeviceStatus:
             if value in DreameVacuumWaterTank._value2member_map_:
                 return DreameVacuumWaterTank(value)
         if value is not None:
-            _LOGGER.debug("WATER_TANK not supported: %s", value)
         return DreameVacuumWaterTank.UNKNOWN
 
     @property
@@ -6389,7 +6384,6 @@ class DreameVacuumDeviceStatus:
                 return DreameVacuumChargingStatus.CHARGING_COMPLETED
             return value
         if value is not None:
-            _LOGGER.debug("CHARGING_STATUS not supported: %s", value)
         return DreameVacuumChargingStatus.UNKNOWN
 
     @property
@@ -6404,7 +6398,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumAutoEmptyStatus._value2member_map_:
             return DreameVacuumAutoEmptyStatus(value)
         if value is not None:
-            _LOGGER.debug("AUTO_EMPTY_STATUS not supported: %s", value)
         return DreameVacuumAutoEmptyStatus.UNKNOWN
 
     @property
@@ -6419,7 +6412,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumRelocationStatus._value2member_map_:
             return DreameVacuumRelocationStatus(value)
         if value is not None:
-            _LOGGER.debug("RELOCATION_STATUS not supported: %s", value)
         return DreameVacuumRelocationStatus.UNKNOWN
 
     @property
@@ -6434,7 +6426,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumSelfWashBaseStatus._value2member_map_:
             return DreameVacuumSelfWashBaseStatus(value)
         if value is not None:
-            _LOGGER.debug("SELF_WASH_BASE_STATUS not supported: %s", value)
         return DreameVacuumSelfWashBaseStatus.UNKNOWN
 
     @property
@@ -6448,7 +6439,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumDustCollection._value2member_map_:
             return DreameVacuumDustCollection(value)
         if value is not None:
-            _LOGGER.debug("DUST_COLLECTION not supported: %s", value)
         return DreameVacuumDustCollection.UNKNOWN
 
     @property
@@ -6463,7 +6453,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumCarpetSensitivity._value2member_map_:
             return DreameVacuumCarpetSensitivity(value)
         if value is not None:
-            _LOGGER.debug("CARPET_SENSITIVITY not supported: %s", value)
         return DreameVacuumCarpetSensitivity.UNKNOWN
 
     @property
@@ -6488,7 +6477,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumCarpetCleaning._value2member_map_:
             return DreameVacuumCarpetCleaning(value)
         if value is not None:
-            _LOGGER.debug("CARPET_CLEANING not supported: %s", value)
         return DreameVacuumCarpetCleaning.UNKNOWN
 
     @property
@@ -6540,7 +6528,6 @@ class DreameVacuumDeviceStatus:
             return vacuum_state
 
         if value is not None:
-            _LOGGER.debug("STATE not supported: %s", value)
         return DreameVacuumState.UNKNOWN
 
     @property
@@ -6556,7 +6543,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumMopWashLevel._value2member_map_:
                 return DreameVacuumMopWashLevel(value)
             if value is not None:
-                _LOGGER.debug("MOP_WASH_LEVEL not supported: %s", value)
             return DreameVacuumMopWashLevel.UNKNOWN
 
     @property
@@ -6574,7 +6560,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumMopCleanFrequency._value2member_map_:
                 return DreameVacuumMopCleanFrequency(value)
             if value is not None:
-                _LOGGER.debug("MOP_CLEAN_FREQUENCY not supported: %s", value)
             return DreameVacuumMopCleanFrequency.UNKNOWN
 
     @property
@@ -6588,7 +6573,6 @@ class DreameVacuumDeviceStatus:
         if value is not None:
             if value in DreameVacuumMoppingType._value2member_map_:
                 return DreameVacuumMoppingType(value)
-            _LOGGER.debug("MOPPING_TYPE not supported: %s", value)
             return DreameVacuumMoppingType.UNKNOWN
         return None
 
@@ -6612,7 +6596,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumWiderCornerCoverage._value2member_map_:
             return DreameVacuumWiderCornerCoverage(value)
         if value is not None:
-            _LOGGER.debug("WIDER_CORNER_COVERAGE not supported: %s", value)
         return DreameVacuumWiderCornerCoverage.UNKNOWN
 
     @property
@@ -6637,7 +6620,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumMopPadSwing._value2member_map_:
                 return DreameVacuumMopPadSwing(value)
             if value is not None:
-                _LOGGER.debug("MOP_PAD_SWING not supported: %s", value)
             return DreameVacuumMopPadSwing.UNKNOWN
 
     @property
@@ -6657,7 +6639,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumMopExtendFrequency._value2member_map_:
                 return DreameVacuumMopExtendFrequency(value)
             if value is not None:
-                _LOGGER.debug("MOP_EXTEND_FREQUENCY not supported: %s", value)
             return DreameVacuumMopExtendFrequency.UNKNOWN
 
     @property
@@ -6682,7 +6663,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumSecondCleaning._value2member_map_:
                 return DreameVacuumSecondCleaning(value)
             if value is not None:
-                _LOGGER.debug("AUTO_RECLEANING not supported: %s", value)
             return DreameVacuumSecondCleaning.UNKNOWN
 
     @property
@@ -6702,7 +6682,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumSecondCleaning._value2member_map_:
                 return DreameVacuumSecondCleaning(value)
             if value is not None:
-                _LOGGER.debug("AUTO_REWASHING not supported: %s", value)
             return DreameVacuumSecondCleaning.UNKNOWN
 
     @property
@@ -6722,7 +6701,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumCleaningRoute._value2member_map_:
                 return DreameVacuumCleaningRoute(value)
             if value is not None:
-                _LOGGER.debug("CLEANING_ROUTE not supported: %s", value)
             return DreameVacuumCleaningRoute.UNKNOWN
 
     @property
@@ -6744,7 +6722,6 @@ class DreameVacuumDeviceStatus:
                     return DreameVacuumCustomMoppingRoute.OFF
                 return DreameVacuumCustomMoppingRoute(value)
             if value is not None:
-                _LOGGER.debug("CUSTOM_MOPPING_ROUTE not supported: %s", value)
             return DreameVacuumCustomMoppingRoute.UNKNOWN
 
     @property
@@ -6764,7 +6741,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumCleanGenius._value2member_map_:
                 return DreameVacuumCleanGenius(value)
             if value is not None:
-                _LOGGER.debug("CLEANGENIUS not supported: %s", value)
         return DreameVacuumCleanGenius.UNKNOWN
 
     @property
@@ -6784,7 +6760,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumCleanGeniusMode._value2member_map_:
                 return DreameVacuumCleanGeniusMode(value)
             if value is not None:
-                _LOGGER.debug("CLEANGENIUS_MODE not supported: %s", value)
         return DreameVacuumCleanGeniusMode.UNKNOWN
 
     @property
@@ -6804,7 +6779,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumWaterTemperature._value2member_map_:
                 return DreameVacuumWaterTemperature(value)
             if value is not None:
-                _LOGGER.debug("WATER_TEMPERATURE not supported: %s", value)
         return DreameVacuumWaterTemperature.UNKNOWN
 
     @property
@@ -6826,7 +6800,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumWashingMode._value2member_map_:
                 return DreameVacuumWashingMode(value)
             if value is not None:
-                _LOGGER.debug("WASHING_MODE not supported: %s", value)
         return DreameVacuumWashingMode.UNKNOWN
 
     @property
@@ -6852,7 +6825,6 @@ class DreameVacuumDeviceStatus:
                     return DreameVacuumSelfCleanFrequency.BY_AREA
                 return DreameVacuumSelfCleanFrequency(value)
             if value is not None:
-                _LOGGER.debug("SELF_CLEAN_FREQUENCY not supported: %s", value)
             return DreameVacuumSelfCleanFrequency.UNKNOWN
 
     @property
@@ -6875,7 +6847,6 @@ class DreameVacuumDeviceStatus:
             if value is not None and value in DreameVacuumAutoEmptyMode._value2member_map_:
                 return DreameVacuumAutoEmptyMode(value)
             if value is not None:
-                _LOGGER.debug("AUTO_EMPTY_MODE not supported: %s", value)
             return DreameVacuumAutoEmptyMode.UNKNOWN
 
     @property
@@ -6894,7 +6865,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumLowWaterWarning._value2member_map_:
             return DreameVacuumLowWaterWarning(value)
         if value is not None:
-            _LOGGER.debug("LOW_WATER_WARNING not supported: %s", value)
         return DreameVacuumLowWaterWarning.UNKNOWN
 
     @property
@@ -6914,7 +6884,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumVoiceAssistantLanguage._value2member_map_:
             return DreameVacuumVoiceAssistantLanguage(value)
         if value is not None:
-            _LOGGER.debug("VOICE_ASSISTANT_LANGUAGE not supported: %s", value)
         return DreameVacuumVoiceAssistantLanguage.DEFAULT
 
     @property
@@ -6931,7 +6900,6 @@ class DreameVacuumDeviceStatus:
                 return DreameVacuumDrainageStatus.DRAINING
             return DreameVacuumDrainageStatus(value)
         if value is not None:
-            _LOGGER.debug("DRAINAGE_STATUS not supported: %s", value)
         return DreameVacuumDrainageStatus.UNKNOWN
 
     @property
@@ -6946,7 +6914,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumTaskType._value2member_map_:
             return DreameVacuumTaskType(value)
         if value is not None:
-            _LOGGER.debug("TASK_TYPE not supported: %s", value)
         return DreameVacuumTaskType.UNKNOWN
 
     @property
@@ -6972,7 +6939,6 @@ class DreameVacuumDeviceStatus:
                 return DreameVacuumErrorCode.NO_ERROR
             return DreameVacuumErrorCode(value)
         if value is not None:
-            _LOGGER.debug("ERROR_CODE not supported: %s", value)
         return DreameVacuumErrorCode.UNKNOWN
 
     @property
@@ -8050,7 +8016,6 @@ class DreameVacuumDeviceStatus:
                 value = DreameVacuumCleanWaterTankStatus.INSTALLED.value
             return DreameVacuumCleanWaterTankStatus(value)
         if value is not None:
-            _LOGGER.debug("CLEAN_WATER_TANK_STATUS not supported: %s", value)
         return DreameVacuumCleanWaterTankStatus.UNKNOWN
 
     @property
@@ -8065,7 +8030,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumDirtyWaterTankStatus._value2member_map_:
             return DreameVacuumDirtyWaterTankStatus(value)
         if value is not None:
-            _LOGGER.debug("DIRTY_WATER_TANK_STATUS not supported: %s", value)
         return DreameVacuumDirtyWaterTankStatus.UNKNOWN
 
     @property
@@ -8080,7 +8044,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumDustBagStatus._value2member_map_:
             return DreameVacuumDustBagStatus(value)
         if value is not None:
-            _LOGGER.debug("DUST_BAG_STATUS not supported: %s", value)
         return DreameVacuumDustBagStatus.UNKNOWN
 
     @property
@@ -8095,7 +8058,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumDetergentStatus._value2member_map_:
             return DreameVacuumDetergentStatus(value)
         if value is not None:
-            _LOGGER.debug("DETERGENT_STATUS not supported: %s", value)
         return DreameVacuumDetergentStatus.UNKNOWN
 
     @property
@@ -8110,7 +8072,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumHotWaterStatus._value2member_map_:
             return DreameVacuumHotWaterStatus(value)
         if value is not None:
-            _LOGGER.debug("HOT_WATER_STATUS not supported: %s", value)
         return DreameVacuumHotWaterStatus.UNKNOWN
 
     @property
@@ -8125,7 +8086,6 @@ class DreameVacuumDeviceStatus:
         if value is not None and value in DreameVacuumStationDrainageStatus._value2member_map_:
             return DreameVacuumStationDrainageStatus(value)
         if value is not None:
-            _LOGGER.debug("STATION_DRAINAGE_STATUS not supported: %s", value)
         return DreameVacuumStationDrainageStatus.UNKNOWN
 
     @property
