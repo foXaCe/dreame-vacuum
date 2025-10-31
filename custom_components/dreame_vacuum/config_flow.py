@@ -47,6 +47,7 @@ from .const import (
     NOTIFICATION,
     MAP_OBJECTS,
     SPONSOR,
+    get_notification_labels,
 )
 
 
@@ -83,7 +84,8 @@ class DreameVacuumOptionsFlowHandler(OptionsFlow):
             else:
                 notify = []
 
-        data_schema = vol.Schema({vol.Required(CONF_NOTIFY, default=notify): cv.multi_select(NOTIFICATION)})
+        notification_labels = get_notification_labels(self.hass.config.language)
+        data_schema = vol.Schema({vol.Required(CONF_NOTIFY, default=notify): cv.multi_select(notification_labels)})
         if self._config_entry.data[CONF_USERNAME]:
             data_schema = data_schema.extend(
                 {
@@ -540,10 +542,11 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
             return await self.async_step_donation()
 
+        notification_labels = get_notification_labels(self.hass.config.language)
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_NAME, default=self.name): str,
-                vol.Required(CONF_NOTIFY, default=list(NOTIFICATION.keys())): cv.multi_select(NOTIFICATION),
+                vol.Required(CONF_NOTIFY, default=list(NOTIFICATION.keys())): cv.multi_select(notification_labels),
             }
         )
 
