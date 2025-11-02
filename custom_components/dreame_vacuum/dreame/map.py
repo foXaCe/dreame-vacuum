@@ -2941,6 +2941,7 @@ class DreameVacuumMapDecoder:
 
         _LOGGER.debug("Map Data Json: %s", data_json)
 
+        saved_map_data = None
         try:
             if "origin" in data_json and data_json["origin"] and len(data_json["origin"]) > 1:
                 left = data_json["origin"][0]
@@ -4126,11 +4127,36 @@ class DreameVacuumMapDecoder:
     @staticmethod
     def extract_segment_outline(map_data: MapData, segment_id: int, x0_px: int, y0_px: int, x1_px: int, y1_px: int) -> list[list[int]]:
         """Extract the real outline of a segment by finding the 4 corners more accurately"""
+        # Validate indices are within bounds
+        if (x0_px < 0 or y0_px < 0 or
+            x1_px >= map_data.dimensions.width or
+            y1_px >= map_data.dimensions.height or
+            x0_px >= x1_px or y0_px >= y1_px):
+            # Return simple bounding box if indices are invalid
+            return [
+                [
+                    int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
+                    int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                ],
+                [
+                    int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
+                    int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                ],
+                [
+                    int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
+                ],
+                [
+                    int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
+                ],
+            ]
+
         # Find actual corners by scanning edges
         # Top-left corner
         top_left_x, top_left_y = x0_px, y0_px
-        for y in range(y0_px, y1_px + 1):
-            for x in range(x0_px, x1_px + 1):
+        for y in range(y0_px, min(y1_px + 1, map_data.dimensions.height)):
+            for x in range(x0_px, min(x1_px + 1, map_data.dimensions.width)):
                 if int(map_data.pixel_type[x, y]) == segment_id:
                     top_left_x = x
                     top_left_y = y
@@ -4140,8 +4166,8 @@ class DreameVacuumMapDecoder:
 
         # Top-right corner
         top_right_x, top_right_y = x1_px, y0_px
-        for y in range(y0_px, y1_px + 1):
-            for x in range(x1_px, x0_px - 1, -1):
+        for y in range(y0_px, min(y1_px + 1, map_data.dimensions.height)):
+            for x in range(min(x1_px, map_data.dimensions.width - 1), max(x0_px - 1, -1), -1):
                 if int(map_data.pixel_type[x, y]) == segment_id:
                     top_right_x = x
                     top_right_y = y
@@ -4151,8 +4177,8 @@ class DreameVacuumMapDecoder:
 
         # Bottom-right corner
         bottom_right_x, bottom_right_y = x1_px, y1_px
-        for y in range(y1_px, y0_px - 1, -1):
-            for x in range(x1_px, x0_px - 1, -1):
+        for y in range(min(y1_px, map_data.dimensions.height - 1), max(y0_px - 1, -1), -1):
+            for x in range(min(x1_px, map_data.dimensions.width - 1), max(x0_px - 1, -1), -1):
                 if int(map_data.pixel_type[x, y]) == segment_id:
                     bottom_right_x = x
                     bottom_right_y = y
@@ -4162,8 +4188,8 @@ class DreameVacuumMapDecoder:
 
         # Bottom-left corner
         bottom_left_x, bottom_left_y = x0_px, y1_px
-        for y in range(y1_px, y0_px - 1, -1):
-            for x in range(x0_px, x1_px + 1):
+        for y in range(min(y1_px, map_data.dimensions.height - 1), max(y0_px - 1, -1), -1):
+            for x in range(x0_px, min(x1_px + 1, map_data.dimensions.width)):
                 if int(map_data.pixel_type[x, y]) == segment_id:
                     bottom_left_x = x
                     bottom_left_y = y
