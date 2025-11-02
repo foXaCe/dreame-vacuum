@@ -4269,6 +4269,12 @@ class DreameVacuumMapDecoder:
                                 x = center_x
                                 y = center_y
 
+                # Save pixel indices before converting to map coordinates
+                x0_px = v.x0
+                y0_px = v.y0
+                x1_px = v.x1
+                y1_px = v.y1
+
                 segments[k].x0 = int(map_data.dimensions.left + (v.x0 * map_data.dimensions.grid_size))
                 segments[k].y0 = int(
                     map_data.dimensions.top + (v.y0 * map_data.dimensions.grid_size) - map_data.dimensions.grid_size
@@ -4280,9 +4286,9 @@ class DreameVacuumMapDecoder:
                 segments[k].x = int(map_data.dimensions.left + (x * map_data.dimensions.grid_size))
                 segments[k].y = int(map_data.dimensions.top + (y * map_data.dimensions.grid_size))
 
-                # Extract real outline instead of just bounding box
+                # Extract real outline instead of just bounding box using pixel indices
                 segments[k]._outline_points = DreameVacuumMapDecoder.extract_segment_outline(
-                    map_data, k, v.x0, v.y0, v.x1, v.y1
+                    map_data, k, x0_px, y0_px, x1_px, y1_px
                 )
 
                 segments[k].set_name()
