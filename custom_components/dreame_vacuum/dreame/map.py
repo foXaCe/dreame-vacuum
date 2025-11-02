@@ -6460,6 +6460,10 @@ class DreameVacuumMapRenderer:
                 ):
                     self._map_data = None
 
+                # Désactiver le cache pendant le washing pour permettre l'animation
+                # station_status 2 ou 3 = washing (normal ou hot)
+                is_washing = station_status in [2, 3, 12, 13]  # 12/13 = hot washing (10 + 2/3)
+
                 if (
                     self._map_data
                     and self._map_data == map_data
@@ -6468,6 +6472,7 @@ class DreameVacuumMapRenderer:
                     and self._map_data.segments == map_data.segments
                     and self._map_data.frame_id == map_data.frame_id
                     and self._image
+                    and not is_washing  # Ne pas utiliser le cache pendant le washing
                 ):
                     self.render_complete = True
                     return self._to_buffer(self._image)
