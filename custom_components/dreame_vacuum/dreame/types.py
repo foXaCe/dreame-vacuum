@@ -2676,6 +2676,7 @@ class Segment(Zone):
         cleaning_mode: int = None,
         mopping_settings: int = None,
         order: int = None,
+        outline: Optional[List[List[int]]] = None,
     ) -> None:
         super().__init__(x0, y0, x1, y1)
         self.segment_id = segment_id
@@ -2694,6 +2695,7 @@ class Segment(Zone):
         self.water_volume = water_volume
         self.cleaning_mode = cleaning_mode
         self.mopping_settings = mopping_settings
+        self.outline = outline
         self.wetness_level = None
         self.cleaning_route = None
         self.custom_mopping_route = None
@@ -2798,7 +2800,13 @@ class Segment(Zone):
         return {v: k for k, v in list.items()}
 
     def as_dict(self) -> Dict[str, Any]:
-        attributes = {**super(Segment, self).as_dict()}
+        # Si l'outline existe, ne pas inclure x0, y0, x1, y1 de la classe parente
+        if self.outline is not None:
+            attributes = {}
+            attributes["outline"] = self.outline
+        else:
+            attributes = {**super(Segment, self).as_dict()}
+
         if self.segment_id:
             attributes[ATTR_ROOM_ID] = self.segment_id
         if self.name is not None:

@@ -4124,6 +4124,76 @@ class DreameVacuumMapDecoder:
         return cleaning_map
 
     @staticmethod
+    def extract_segment_outline(map_data: MapData, segment_id: int, x0_px: int, y0_px: int, x1_px: int, y1_px: int) -> list[list[int]]:
+        """Extract the real outline of a segment by finding the 4 corners more accurately"""
+        # Find actual corners by scanning edges
+        # Top-left corner
+        top_left_x, top_left_y = x0_px, y0_px
+        for y in range(y0_px, y1_px + 1):
+            for x in range(x0_px, x1_px + 1):
+                if int(map_data.pixel_type[x, y]) == segment_id:
+                    top_left_x = x
+                    top_left_y = y
+                    break
+            if top_left_x != x0_px:
+                break
+
+        # Top-right corner
+        top_right_x, top_right_y = x1_px, y0_px
+        for y in range(y0_px, y1_px + 1):
+            for x in range(x1_px, x0_px - 1, -1):
+                if int(map_data.pixel_type[x, y]) == segment_id:
+                    top_right_x = x
+                    top_right_y = y
+                    break
+            if top_right_x != x1_px:
+                break
+
+        # Bottom-right corner
+        bottom_right_x, bottom_right_y = x1_px, y1_px
+        for y in range(y1_px, y0_px - 1, -1):
+            for x in range(x1_px, x0_px - 1, -1):
+                if int(map_data.pixel_type[x, y]) == segment_id:
+                    bottom_right_x = x
+                    bottom_right_y = y
+                    break
+            if bottom_right_x != x1_px:
+                break
+
+        # Bottom-left corner
+        bottom_left_x, bottom_left_y = x0_px, y1_px
+        for y in range(y1_px, y0_px - 1, -1):
+            for x in range(x0_px, x1_px + 1):
+                if int(map_data.pixel_type[x, y]) == segment_id:
+                    bottom_left_x = x
+                    bottom_left_y = y
+                    break
+            if bottom_left_x != x0_px:
+                break
+
+        # Convert pixel coordinates to map coordinates
+        outline = [
+            [
+                int(map_data.dimensions.left + (top_left_x * map_data.dimensions.grid_size)),
+                int(map_data.dimensions.top + (top_left_y * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+            ],
+            [
+                int(map_data.dimensions.left + (top_right_x * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
+                int(map_data.dimensions.top + (top_right_y * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+            ],
+            [
+                int(map_data.dimensions.left + (bottom_right_x * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
+                int(map_data.dimensions.top + (bottom_right_y * map_data.dimensions.grid_size))
+            ],
+            [
+                int(map_data.dimensions.left + (bottom_left_x * map_data.dimensions.grid_size)),
+                int(map_data.dimensions.top + (bottom_left_y * map_data.dimensions.grid_size))
+            ],
+        ]
+
+        return outline
+
+    @staticmethod
     def get_segments(map_data: MapData, vslam_map: bool) -> dict[str, Any]:
         segments = {}
         for y in range(map_data.dimensions.height):
@@ -4183,6 +4253,12 @@ class DreameVacuumMapDecoder:
                 segments[k].y1 = int(map_data.dimensions.top + (v.y1 * map_data.dimensions.grid_size))
                 segments[k].x = int(map_data.dimensions.left + (x * map_data.dimensions.grid_size))
                 segments[k].y = int(map_data.dimensions.top + (y * map_data.dimensions.grid_size))
+
+                # Extract real outline instead of just bounding box
+                segments[k].outline = DreameVacuumMapDecoder.extract_segment_outline(
+                    map_data, k, v.x0, v.y0, v.x1, v.y1
+                )
+
                 segments[k].set_name()
         return segments
 
