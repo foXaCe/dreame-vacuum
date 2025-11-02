@@ -4255,7 +4255,7 @@ class DreameVacuumMapDecoder:
                 segments[k].y = int(map_data.dimensions.top + (y * map_data.dimensions.grid_size))
 
                 # Extract real outline instead of just bounding box
-                segments[k].outline = DreameVacuumMapDecoder.extract_segment_outline(
+                segments[k]._outline_points = DreameVacuumMapDecoder.extract_segment_outline(
                     map_data, k, v.x0, v.y0, v.x1, v.y1
                 )
 

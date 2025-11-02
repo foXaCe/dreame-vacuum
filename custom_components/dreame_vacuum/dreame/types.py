@@ -2676,7 +2676,7 @@ class Segment(Zone):
         cleaning_mode: int = None,
         mopping_settings: int = None,
         order: int = None,
-        outline: Optional[List[List[int]]] = None,
+        outline_points: Optional[List[List[int]]] = None,
     ) -> None:
         super().__init__(x0, y0, x1, y1)
         self.segment_id = segment_id
@@ -2695,7 +2695,7 @@ class Segment(Zone):
         self.water_volume = water_volume
         self.cleaning_mode = cleaning_mode
         self.mopping_settings = mopping_settings
-        self.outline = outline
+        self._outline_points = outline_points
         self.wetness_level = None
         self.cleaning_route = None
         self.custom_mopping_route = None
@@ -2715,6 +2715,9 @@ class Segment(Zone):
 
     @property
     def outline(self) -> List[List[int]]:
+        # Return custom outline if provided, otherwise calculate from bounding box
+        if self._outline_points is not None:
+            return self._outline_points
         return [
             [self.x0, self.y0],
             [self.x0, self.y1],
@@ -2800,10 +2803,10 @@ class Segment(Zone):
         return {v: k for k, v in list.items()}
 
     def as_dict(self) -> Dict[str, Any]:
-        # If outline exists, do not include x0, y0, x1, y1 from parent class
-        if self.outline is not None:
+        # If custom outline exists, use it instead of x0, y0, x1, y1 from parent class
+        if self._outline_points is not None:
             attributes = {}
-            attributes["outline"] = self.outline
+            attributes["outline"] = self._outline_points
         else:
             attributes = {**super(Segment, self).as_dict()}
 
