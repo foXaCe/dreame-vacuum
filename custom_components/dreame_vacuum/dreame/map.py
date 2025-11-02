@@ -4126,7 +4126,7 @@ class DreameVacuumMapDecoder:
 
     @staticmethod
     def extract_segment_outline(map_data: MapData, segment_id: int, x0_px: int, y0_px: int, x1_px: int, y1_px: int) -> list[list[int]]:
-        """Extract the real outline of a segment by finding the 4 corners more accurately"""
+        """Extract the real outline of a segment using Moore-Neighbor contour tracing"""
         # Validate indices are within bounds
         if (x0_px < 0 or y0_px < 0 or
             x1_px >= map_data.dimensions.width or
@@ -4152,72 +4152,157 @@ class DreameVacuumMapDecoder:
                 ],
             ]
 
-        # Find actual corners by scanning edges
-        # Top-left corner
-        top_left_x, top_left_y = x0_px, y0_px
+        # Find the starting point (leftmost, topmost pixel of the segment)
+        start_x, start_y = None, None
         for y in range(y0_px, min(y1_px + 1, map_data.dimensions.height)):
             for x in range(x0_px, min(x1_px + 1, map_data.dimensions.width)):
                 if int(map_data.pixel_type[x, y]) == segment_id:
-                    top_left_x = x
-                    top_left_y = y
+                    start_x, start_y = x, y
                     break
-            if top_left_x != x0_px:
+            if start_x is not None:
                 break
 
-        # Top-right corner
-        top_right_x, top_right_y = x1_px, y0_px
-        for y in range(y0_px, min(y1_px + 1, map_data.dimensions.height)):
-            for x in range(min(x1_px, map_data.dimensions.width - 1), max(x0_px - 1, -1), -1):
-                if int(map_data.pixel_type[x, y]) == segment_id:
-                    top_right_x = x
-                    top_right_y = y
-                    break
-            if top_right_x != x1_px:
+        if start_x is None:
+            # No pixels found, return bounding box
+            return [
+                [
+                    int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
+                    int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                ],
+                [
+                    int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
+                    int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                ],
+                [
+                    int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
+                ],
+                [
+                    int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
+                ],
+            ]
+
+        # Moore-Neighbor directions (8-connectivity, starting from right and going clockwise)
+        # Right, Bottom-Right, Bottom, Bottom-Left, Left, Top-Left, Top, Top-Right
+        directions = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+
+        contour = []
+        current_x, current_y = start_x, start_y
+        # Start searching from the left (direction index 4)
+        current_dir = 4
+
+        max_iterations = (x1_px - x0_px + 1) * (y1_px - y0_px + 1) * 2
+        iterations = 0
+
+        while True:
+            contour.append((current_x, current_y))
+
+            # Search for the next border pixel starting from the backtrack direction
+            found = False
+            for i in range(8):
+                search_dir = (current_dir + i) % 8
+                dx, dy = directions[search_dir]
+                next_x, next_y = current_x + dx, current_y + dy
+
+                # Check bounds
+                if (next_x >= x0_px and next_x <= x1_px and
+                    next_y >= y0_px and next_y <= y1_px and
+                    next_x < map_data.dimensions.width and next_y < map_data.dimensions.height):
+
+                    if int(map_data.pixel_type[next_x, next_y]) == segment_id:
+                        current_x, current_y = next_x, next_y
+                        # Update search direction (backtrack 2 positions for next search)
+                        current_dir = (search_dir + 5) % 8
+                        found = True
+                        break
+
+            if not found or iterations > max_iterations:
                 break
 
-        # Bottom-right corner
-        bottom_right_x, bottom_right_y = x1_px, y1_px
-        for y in range(min(y1_px, map_data.dimensions.height - 1), max(y0_px - 1, -1), -1):
-            for x in range(min(x1_px, map_data.dimensions.width - 1), max(x0_px - 1, -1), -1):
-                if int(map_data.pixel_type[x, y]) == segment_id:
-                    bottom_right_x = x
-                    bottom_right_y = y
-                    break
-            if bottom_right_x != x1_px:
+            # Check if we've returned to the start
+            if len(contour) > 2 and current_x == start_x and current_y == start_y:
                 break
 
-        # Bottom-left corner
-        bottom_left_x, bottom_left_y = x0_px, y1_px
-        for y in range(min(y1_px, map_data.dimensions.height - 1), max(y0_px - 1, -1), -1):
-            for x in range(x0_px, min(x1_px + 1, map_data.dimensions.width)):
-                if int(map_data.pixel_type[x, y]) == segment_id:
-                    bottom_left_x = x
-                    bottom_left_y = y
-                    break
-            if bottom_left_x != x0_px:
-                break
+            iterations += 1
+
+        # Simplify contour using Douglas-Peucker algorithm to reduce number of points
+        if len(contour) > 10:
+            simplified = DreameVacuumMapDecoder._simplify_contour(contour, epsilon=2.0)
+        else:
+            simplified = contour
 
         # Convert pixel coordinates to map coordinates
-        outline = [
+        outline = []
+        for px, py in simplified:
+            outline.append([
+                int(map_data.dimensions.left + (px * map_data.dimensions.grid_size)),
+                int(map_data.dimensions.top + (py * map_data.dimensions.grid_size))
+            ])
+
+        return outline if len(outline) > 0 else [
             [
-                int(map_data.dimensions.left + (top_left_x * map_data.dimensions.grid_size)),
-                int(map_data.dimensions.top + (top_left_y * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
+                int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
             ],
             [
-                int(map_data.dimensions.left + (top_right_x * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
-                int(map_data.dimensions.top + (top_right_y * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
+                int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
             ],
             [
-                int(map_data.dimensions.left + (bottom_right_x * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
-                int(map_data.dimensions.top + (bottom_right_y * map_data.dimensions.grid_size))
+                int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
+                int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
             ],
             [
-                int(map_data.dimensions.left + (bottom_left_x * map_data.dimensions.grid_size)),
-                int(map_data.dimensions.top + (bottom_left_y * map_data.dimensions.grid_size))
+                int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
+                int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
             ],
         ]
 
-        return outline
+    @staticmethod
+    def _simplify_contour(points: list, epsilon: float) -> list:
+        """Simplify contour using Ramer-Douglas-Peucker algorithm"""
+        if len(points) < 3:
+            return points
+
+        # Find the point with maximum distance
+        dmax = 0
+        index = 0
+        end = len(points) - 1
+
+        for i in range(1, end):
+            d = DreameVacuumMapDecoder._perpendicular_distance(points[i], points[0], points[end])
+            if d > dmax:
+                index = i
+                dmax = d
+
+        # If max distance is greater than epsilon, recursively simplify
+        if dmax > epsilon:
+            # Recursive call
+            rec_results1 = DreameVacuumMapDecoder._simplify_contour(points[:index+1], epsilon)
+            rec_results2 = DreameVacuumMapDecoder._simplify_contour(points[index:], epsilon)
+
+            # Build the result list
+            result = rec_results1[:-1] + rec_results2
+        else:
+            result = [points[0], points[end]]
+
+        return result
+
+    @staticmethod
+    def _perpendicular_distance(point, line_start, line_end):
+        """Calculate perpendicular distance from point to line"""
+        x, y = point
+        x1, y1 = line_start
+        x2, y2 = line_end
+
+        if x1 == x2 and y1 == y2:
+            return ((x - x1) ** 2 + (y - y1) ** 2) ** 0.5
+
+        num = abs((y2 - y1) * x - (x2 - x1) * y + x2 * y1 - y2 * x1)
+        den = ((y2 - y1) ** 2 + (x2 - x1) ** 2) ** 0.5
+
+        return num / den if den > 0 else 0
 
     @staticmethod
     def get_segments(map_data: MapData, vslam_map: bool) -> dict[str, Any]:
