@@ -2803,12 +2803,12 @@ class Segment(Zone):
         return {v: k for k, v in list.items()}
 
     def as_dict(self) -> Dict[str, Any]:
-        # If custom outline exists, use it instead of x0, y0, x1, y1 from parent class
+        # Always include parent attributes (x, y, etc.)
+        attributes = {**super(Segment, self).as_dict()}
+
+        # If custom outline exists, add it (and it will override the parent's outline if any)
         if self._outline_points is not None:
-            attributes = {}
             attributes["outline"] = self._outline_points
-        else:
-            attributes = {**super(Segment, self).as_dict()}
 
         if self.segment_id:
             attributes[ATTR_ROOM_ID] = self.segment_id
