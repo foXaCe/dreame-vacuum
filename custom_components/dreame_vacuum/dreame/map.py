@@ -8405,60 +8405,43 @@ class DreameVacuumMapRenderer:
                 icon = self._robot_emptying_icon
             elif station_status < 4:
                 if not hot_washing and self._robot_washing_icon is None:
-                    self._robot_washing_icon = (
+                    washing_img = (
                         Image.open(BytesIO(base64.b64decode(MAP_ROBOT_WASHING_IMAGE)))
                         .convert("RGBA")
                         .resize(
                             (int(icon_size * 1.25), int(icon_size * 1.25)),
                             resample=Image.Resampling.NEAREST,
                         )
-                        .rotate(-map_rotation, expand=1)
                     )
-                    enhancer = ImageEnhance.Brightness(self._robot_washing_icon)
+                    enhancer = ImageEnhance.Brightness(washing_img)
                     if self.color_scheme.dark:
-                        self._robot_washing_icon = enhancer.enhance(0.65)
+                        washing_img = enhancer.enhance(0.65)
+                    self._robot_washing_icon = washing_img
 
                 if hot_washing and self._robot_hot_washing_icon is None:
-                    self._robot_hot_washing_icon = (
+                    hot_washing_img = (
                         Image.open(BytesIO(base64.b64decode(MAP_ROBOT_HOT_WASHING_IMAGE)))
                         .convert("RGBA")
                         .resize(
                             (int(icon_size * 1.25), int(icon_size * 1.25)),
                             resample=Image.Resampling.NEAREST,
                         )
-                        .rotate(-map_rotation, expand=1)
                     )
-                    enhancer = ImageEnhance.Brightness(self._robot_hot_washing_icon)
+                    enhancer = ImageEnhance.Brightness(hot_washing_img)
                     if self.color_scheme.dark:
-                        self._robot_hot_washing_icon = enhancer.enhance(0.65)
+                        hot_washing_img = enhancer.enhance(0.65)
+                    self._robot_hot_washing_icon = hot_washing_img
 
                 offset = icon_size * 1.5
-                icon = self._robot_hot_washing_icon if hot_washing else self._robot_washing_icon
 
-                # Dessiner les cercles d'animation de lavage autour du robot
-                washing_circle_radius = int(icon_size * 0.4)
-                washing_orbit_radius = int(icon_size * 0.8)
-                washing_color = (33, 150, 243, 180)  # Bleu semi-transparent
+                # Animer la rotation de l'icône de lavage basée sur le temps
+                # Rotation complète en 2 secondes pour une animation fluide
+                rotation_speed = 360 / 2  # 360 degrés en 2 secondes
+                rotation_angle = (time.time() * rotation_speed) % 360
 
-                # Dessiner 3 cercles à 120° d'intervalle pour simuler les hélices
-                draw = ImageDraw.Draw(new_layer)
-                for angle_offset in [0, 120, 240]:
-                    angle_rad = math.radians(angle_offset)
-                    circle_x = int(point.x * scale + washing_orbit_radius * math.cos(angle_rad))
-                    circle_y = int(point.y * scale + washing_orbit_radius * math.sin(angle_rad))
-
-                    # Dessiner le cercle avec bordure
-                    draw.ellipse(
-                        [
-                            circle_x - washing_circle_radius,
-                            circle_y - washing_circle_radius,
-                            circle_x + washing_circle_radius,
-                            circle_y + washing_circle_radius,
-                        ],
-                        fill=washing_color,
-                        outline=(33, 150, 243, 255),
-                        width=2,
-                    )
+                # Appliquer la rotation de la map ET l'animation
+                base_icon = self._robot_hot_washing_icon if hot_washing else self._robot_washing_icon
+                icon = base_icon.rotate(-map_rotation - rotation_angle, expand=1)
             else:
                 if not hot_washing and self._robot_drying_icon is None:
                     self._robot_drying_icon = (
