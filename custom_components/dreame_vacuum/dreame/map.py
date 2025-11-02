@@ -8434,6 +8434,31 @@ class DreameVacuumMapRenderer:
 
                 offset = icon_size * 1.5
                 icon = self._robot_hot_washing_icon if hot_washing else self._robot_washing_icon
+
+                # Dessiner les cercles d'animation de lavage autour du robot
+                washing_circle_radius = int(icon_size * 0.4)
+                washing_orbit_radius = int(icon_size * 0.8)
+                washing_color = (33, 150, 243, 180)  # Bleu semi-transparent
+
+                # Dessiner 3 cercles à 120° d'intervalle pour simuler les hélices
+                draw = ImageDraw.Draw(new_layer)
+                for angle_offset in [0, 120, 240]:
+                    angle_rad = math.radians(angle_offset)
+                    circle_x = int(point.x * scale + washing_orbit_radius * math.cos(angle_rad))
+                    circle_y = int(point.y * scale + washing_orbit_radius * math.sin(angle_rad))
+
+                    # Dessiner le cercle avec bordure
+                    draw.ellipse(
+                        [
+                            circle_x - washing_circle_radius,
+                            circle_y - washing_circle_radius,
+                            circle_x + washing_circle_radius,
+                            circle_y + washing_circle_radius,
+                        ],
+                        fill=washing_color,
+                        outline=(33, 150, 243, 255),
+                        width=2,
+                    )
             else:
                 if not hot_washing and self._robot_drying_icon is None:
                     self._robot_drying_icon = (
