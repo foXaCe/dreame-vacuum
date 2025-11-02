@@ -8411,19 +8411,29 @@ class DreameVacuumMapRenderer:
         )
 
         if station_status > 0 and not self._low_memory:
-            # DEBUG: Log station_status pour comprendre les valeurs
+            # DEBUG: Log station_status avec throttling (max 1 fois par 5 secondes)
             import logging
             _LOGGER = logging.getLogger(__name__)
-            _LOGGER.warning(f"[DREAME DEBUG] station_status original = {station_status}")
+
+            # Throttle logging to avoid spam
+            current_time = time.time()
+            if not hasattr(self, '_last_debug_log_time'):
+                self._last_debug_log_time = 0
+
+            if current_time - self._last_debug_log_time >= 5:
+                _LOGGER.warning(f"[DREAME DEBUG] station_status original = {station_status}")
+                self._last_debug_log_time = current_time
 
             hot_washing = False
             if station_status >= 10:
                 hot_washing = True
                 station_status = station_status - 10
-                _LOGGER.warning(f"[DREAME DEBUG] Hot mode detected, station_status après -10 = {station_status}")
+                if current_time - self._last_debug_log_time < 1:
+                    _LOGGER.warning(f"[DREAME DEBUG] Hot mode detected, station_status après -10 = {station_status}")
 
             if station_status == 1:
-                _LOGGER.warning(f"[DREAME DEBUG] Branch EMPTYING (station_status == 1)")
+                if current_time - self._last_debug_log_time < 1:
+                    _LOGGER.warning(f"[DREAME DEBUG] Branch EMPTYING (station_status == 1)")
                 if self._robot_emptying_icon is None:
                     self._robot_emptying_icon = (
                         Image.open(BytesIO(base64.b64decode(MAP_ROBOT_EMPTYING_IMAGE)))
@@ -8437,7 +8447,8 @@ class DreameVacuumMapRenderer:
                 offset = icon_size * 1.2
                 icon = self._robot_emptying_icon
             elif station_status < 4:
-                _LOGGER.warning(f"[DREAME DEBUG] Branch WASHING (station_status < 4, valeur = {station_status})")
+                if current_time - self._last_debug_log_time < 1:
+                    _LOGGER.warning(f"[DREAME DEBUG] Branch WASHING (station_status < 4, valeur = {station_status})")
                 if not hot_washing and self._robot_washing_icon is None:
                     washing_img = (
                         Image.open(BytesIO(base64.b64decode(MAP_ROBOT_WASHING_IMAGE)))
@@ -8477,7 +8488,8 @@ class DreameVacuumMapRenderer:
                 base_icon = self._robot_hot_washing_icon if hot_washing else self._robot_washing_icon
                 icon = base_icon.rotate(-map_rotation - rotation_angle, expand=1)
             else:
-                _LOGGER.warning(f"[DREAME DEBUG] Branch DRYING (station_status >= 4, valeur = {station_status})")
+                if current_time - self._last_debug_log_time < 1:
+                    _LOGGER.warning(f"[DREAME DEBUG] Branch DRYING (station_status >= 4, valeur = {station_status})")
                 if not hot_washing and self._robot_drying_icon is None:
                     self._robot_drying_icon = (
                         Image.open(BytesIO(base64.b64decode(MAP_ROBOT_DRYING_IMAGE)))
