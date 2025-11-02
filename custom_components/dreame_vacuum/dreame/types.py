@@ -2800,7 +2800,7 @@ class Segment(Zone):
         return {v: k for k, v in list.items()}
 
     def as_dict(self) -> Dict[str, Any]:
-        # Si l'outline existe, ne pas inclure x0, y0, x1, y1 de la classe parente
+        # If outline exists, do not include x0, y0, x1, y1 from parent class
         if self.outline is not None:
             attributes = {}
             attributes["outline"] = self.outline
