@@ -1,7 +1,5 @@
-.vs
-*.pyproj
-*.pyproj.user
-*.sln
-/env
-*.zip
-.idea
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
