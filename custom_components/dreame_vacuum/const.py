@@ -5,9 +5,9 @@ DOMAIN = "dreame_vacuum"
 LOGGER = logging.getLogger(__package__)
 
 UNIT_MINUTES: Final = "min"
-UNIT_HOURS: Final = "hr"
+UNIT_HOURS: Final = "h"
 UNIT_PERCENT: Final = "%"
-UNIT_DAYS: Final = "dy"
+UNIT_DAYS: Final = "j"
 UNIT_AREA: Final = "m²"
 UNIT_TIMES: Final = "x"
 
