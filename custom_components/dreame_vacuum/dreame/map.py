@@ -6461,8 +6461,19 @@ class DreameVacuumMapRenderer:
                     self._map_data = None
 
                 # Désactiver le cache pendant le washing pour permettre l'animation
-                # station_status 2 ou 3 = washing normal, 12 ou 13 = hot washing (avant la transformation -10)
-                is_washing = station_status in [2, 3, 12, 13]
+                # Vérifier tous les cas de washing (normal et hot) avant et après transformation
+                # Si >= 10 c'est hot washing, sinon normal
+                # Après ligne 8396: station_status -= 10 si >= 10
+                # Après ligne 8411: elif station_status < 4 = washing (2, 3 après transform, ou 12, 13 avant)
+                original_station = station_status
+                is_washing = False
+                if original_station >= 10:
+                    # Hot washing: 12 ou 13 deviennent 2 ou 3 après -10
+                    test_status = original_station - 10
+                    is_washing = 1 < test_status < 4
+                else:
+                    # Normal washing: 2 ou 3 directement
+                    is_washing = 1 < original_station < 4
 
                 if (
                     self._map_data
@@ -7759,6 +7770,15 @@ class DreameVacuumMapRenderer:
         layer = MapRendererLayer.ROBOT
         if not map_data.saved_map and map_data.robot_position and self.config.robot:
             layers.append(layer)
+
+            # Vérifier si on est en mode washing pour forcer le re-rendu (animation)
+            current_is_washing = False
+            if station_status >= 10:
+                test_status = station_status - 10
+                current_is_washing = 1 < test_status < 4
+            else:
+                current_is_washing = 1 < station_status < 4
+
             if (
                 not self._cache
                 or self._map_data is None
@@ -7769,6 +7789,7 @@ class DreameVacuumMapRenderer:
                 or self._station_status != station_status
                 or self._map_data.docked != map_data.docked
                 or not cached_layers.get(layer)
+                or current_is_washing  # Forcer le re-rendu pendant le washing pour l'animation
             ):
                 robot_position = map_data.robot_position
 
