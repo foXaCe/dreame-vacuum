@@ -43,15 +43,7 @@ from .const import (
     CONF_VERSION,
     MAP_OBJECTS,
     CONTENT_TYPE,
-    NOTIFICATION_CLEANUP_COMPLETED,
-    NOTIFICATION_DUST_COLLECTION_NOT_PERFORMED,
-    NOTIFICATION_RESUME_CLEANING,
-    NOTIFICATION_RESUME_CLEANING_NOT_PERFORMED,
-    NOTIFICATION_REPLACE_MULTI_MAP,
-    NOTIFICATION_REPLACE_MAP,
-    NOTIFICATION_DRAINAGE_COMPLETED,
-    NOTIFICATION_DRAINAGE_FAILED,
-    NOTIFICATION_SPONSOR,
+    get_notification_message,
     NOTIFICATION_ID_DUST_COLLECTION,
     NOTIFICATION_ID_CLEANING_PAUSED,
     NOTIFICATION_ID_REPLACE_MAIN_BRUSH,
@@ -141,7 +133,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             if not options.get(CONF_DONATED):
                 persistent_notification.create(
                     hass=hass,
-                    message=NOTIFICATION_SPONSOR,
+                    message=get_notification_message(hass.config.language, "sponsor"),
                     title="Dreame Vacuum",
                     notification_id=f"{DOMAIN}_sponsor",
                 )
@@ -187,7 +179,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             self._fire_event(EVENT_INFORMATION, {EVENT_INFORMATION: NOTIFICATION_ID_DUST_COLLECTION})
 
             self._create_persistent_notification(
-                NOTIFICATION_DUST_COLLECTION_NOT_PERFORMED,
+                get_notification_message(self.hass.config.language, "dust_collection_not_performed"),
                 NOTIFICATION_ID_DUST_COLLECTION,
             )
         else:
@@ -195,13 +187,17 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
     def _cleaning_paused_changed(self, previous_value=None) -> None:
         if self._device.status.cleaning_paused:
-            notification = NOTIFICATION_RESUME_CLEANING
+            notification = get_notification_message(self.hass.config.language, "resume_cleaning")
             if self._device.status.battery_level >= 80:
                 dnd_remaining = self._device.status.dnd_remaining
                 if dnd_remaining:
                     hour = math.floor(dnd_remaining / 3600)
                     minute = math.floor((dnd_remaining - hour * 3600) / 60)
-                    notification = f"{NOTIFICATION_RESUME_CLEANING_NOT_PERFORMED}\n## Cleaning will start in {hour} hour(s) and {minute} minutes(s)"
+                    notification = get_notification_message(
+                        self.hass.config.language, "resume_cleaning_not_performed"
+                    ) + get_notification_message(
+                        self.hass.config.language, "resume_cleaning_timer", hour=hour, minute=minute
+                    )
                 self._fire_event(
                     EVENT_INFORMATION,
                     {EVENT_INFORMATION: NOTIFICATION_ID_CLEANING_PAUSED},
@@ -220,7 +216,10 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         if previous_value is not None:
             if self._device.status.cleanup_completed:
                 self._fire_event(EVENT_TASK_STATUS, self._device.status.job)
-                self._create_persistent_notification(NOTIFICATION_CLEANUP_COMPLETED, NOTIFICATION_ID_CLEANUP_COMPLETED)
+                self._create_persistent_notification(
+                    get_notification_message(self.hass.config.language, "cleanup_completed"),
+                    NOTIFICATION_ID_CLEANUP_COMPLETED,
+                )
                 self._check_consumables()
 
             elif previous_value == 0 and not self._device.status.fast_mapping and not self._device.status.cruising:
@@ -264,10 +263,11 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
     def _has_temporary_map_changed(self, previous_value=None) -> None:
         if self._device.status.has_temporary_map:
-            self._fire_event(EVENT_WARNING, {EVENT_WARNING: NOTIFICATION_REPLACE_MULTI_MAP})
+            message_key = "replace_multi_map" if self._device.status.multi_map else "replace_map"
+            self._fire_event(EVENT_WARNING, {EVENT_WARNING: message_key})
 
             self._create_persistent_notification(
-                NOTIFICATION_REPLACE_MULTI_MAP if self._device.status.multi_map else NOTIFICATION_REPLACE_MAP,
+                get_notification_message(self.hass.config.language, message_key),
                 NOTIFICATION_ID_REPLACE_TEMPORARY_MAP,
             )
         else:
@@ -297,11 +297,9 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         if self._device.status.draining_complete:
             success = bool(self._device.status.drainage_status.value == 2)
             if success:
-                description = f"{NOTIFICATION_DRAINAGE_COMPLETED}\n![image](data:{CONTENT_TYPE};base64,{DRAINAGE_STATUS_SUCCESS})"
+                description = f"{get_notification_message(self.hass.config.language, 'drainage_completed')}\n![image](data:{CONTENT_TYPE};base64,{DRAINAGE_STATUS_SUCCESS})"
             else:
-                description = (
-                    f"{NOTIFICATION_DRAINAGE_FAILED}\n![image](data:{CONTENT_TYPE};base64,{DRAINAGE_STATUS_FAIL})"
-                )
+                description = f"{get_notification_message(self.hass.config.language, 'drainage_failed')}\n![image](data:{CONTENT_TYPE};base64,{DRAINAGE_STATUS_FAIL})"
 
             self._fire_event(EVENT_DRAINAGE_STATUS, {EVENT_DRAINAGE_STATUS: success})
             self._create_persistent_notification(description, NOTIFICATION_ID_DRAINAGE_STATUS)

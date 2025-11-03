@@ -241,6 +241,62 @@ NOTIFICATION_DRAINAGE_COMPLETED: Final = "### Drainage completed"
 NOTIFICATION_DRAINAGE_FAILED: Final = "### Drainage failed"
 NOTIFICATION_SPONSOR: Final = f"## Do not forget to support the project.{SPONSOR}"
 
+NOTIFICATION_MESSAGES_TRANSLATIONS: Final = {
+    "fr": {
+        "cleanup_completed": "### Nettoyage terminé",
+        "dust_collection_not_performed": (
+            "### Tâche de vidage automatique non effectuée\nLe robot n'effectuera pas de vidage automatique pendant la période Ne Pas Déranger."
+        ),
+        "resume_cleaning": (
+            "### Mode Reprise du nettoyage\nLe robot reprendra automatiquement les tâches de nettoyage inachevées après avoir chargé sa batterie à 80%."
+        ),
+        "resume_cleaning_not_performed": (
+            "### Le robot est en période Ne Pas Déranger\nLe robot reprendra le nettoyage après la fin de la période Ne Pas Déranger."
+        ),
+        "resume_cleaning_timer": "\n## Le nettoyage démarrera dans {hour} heure(s) et {minute} minute(s)",
+        "replace_map": "### Une nouvelle carte a été générée\nVous devez enregistrer ou supprimer la carte avant de l'utiliser.",
+        "replace_multi_map": (
+            "### Une nouvelle carte a été générée\nLe nombre maximum de cartes multi-étages pouvant être enregistrées est atteint. Vous devez remplacer ou supprimer une carte avant de l'utiliser."
+        ),
+        "drainage_completed": "### Vidange terminée",
+        "drainage_failed": "### Vidange échouée",
+        "sponsor": f"## N'oubliez pas de soutenir le projet.{SPONSOR}",
+    }
+}
+
+
+def get_notification_message(language: str, key: str, **kwargs) -> str:
+    """Get translated notification message based on language."""
+    if language and language in NOTIFICATION_MESSAGES_TRANSLATIONS:
+        translations = NOTIFICATION_MESSAGES_TRANSLATIONS[language]
+        if key in translations:
+            message = translations[key]
+            if kwargs:
+                return message.format(**kwargs)
+            return message
+
+    # Fallback to English
+    messages = {
+        "cleanup_completed": NOTIFICATION_CLEANUP_COMPLETED,
+        "dust_collection_not_performed": NOTIFICATION_DUST_COLLECTION_NOT_PERFORMED,
+        "resume_cleaning": NOTIFICATION_RESUME_CLEANING,
+        "resume_cleaning_not_performed": NOTIFICATION_RESUME_CLEANING_NOT_PERFORMED,
+        "resume_cleaning_timer": "\n## Cleaning will start in {hour} hour(s) and {minute} minutes(s)",
+        "replace_map": NOTIFICATION_REPLACE_MAP,
+        "replace_multi_map": NOTIFICATION_REPLACE_MULTI_MAP,
+        "drainage_completed": NOTIFICATION_DRAINAGE_COMPLETED,
+        "drainage_failed": NOTIFICATION_DRAINAGE_FAILED,
+        "sponsor": NOTIFICATION_SPONSOR,
+    }
+
+    if key in messages:
+        message = messages[key]
+        if kwargs:
+            return message.format(**kwargs)
+        return message
+
+    return ""
+
 EVENT_TASK_STATUS: Final = "task_status"
 EVENT_CONSUMABLE: Final = "consumable"
 EVENT_WARNING: Final = "warning"
