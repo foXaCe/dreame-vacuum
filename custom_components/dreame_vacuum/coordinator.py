@@ -44,6 +44,7 @@ from .const import (
     MAP_OBJECTS,
     CONTENT_TYPE,
     get_notification_message,
+    translate_description,
     NOTIFICATION_ID_DUST_COLLECTION,
     NOTIFICATION_ID_CLEANING_PAUSED,
     NOTIFICATION_ID_REPLACE_MAIN_BRUSH,
@@ -229,7 +230,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
     def _error_changed(self, previous_value=None) -> None:
         has_warning = self._device.status.has_warning
-        description = self._device.status.error_description
+        description = translate_description(self.hass.config.language, self._device.status.error_description)
         if has_warning:
             content = description[0]
             self._fire_event(
@@ -278,7 +279,10 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
     def _low_water_warning_changed(self, previous_value=None) -> None:
         low_water_warning = self._device.status.low_water_warning
         if low_water_warning.value > 0 and (not previous_value or low_water_warning.value > 1):
-            low_water_warning_description = self._device.status.low_water_warning_name_description
+            low_water_warning_description = translate_description(
+                self.hass.config.language,
+                self._device.status.low_water_warning_name_description
+            )
             self._fire_event(
                 EVENT_LOW_WATER,
                 {EVENT_LOW_WATER: low_water_warning_description[0], "code": low_water_warning.value},
@@ -316,6 +320,9 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
     def _check_consumable(self, consumable, notification_id, property):
         description = self._device.status.consumable_life_warning_description(property)
         if description:
+            # Translate the description
+            description = translate_description(self.hass.config.language, description)
+
             image = CONSUMABLE_IMAGE.get(consumable)
             notification = f"### {description[0]}\n{description[1]}"
             if image:

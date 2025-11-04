@@ -297,6 +297,111 @@ def get_notification_message(language: str, key: str, **kwargs) -> str:
 
     return ""
 
+
+# Translation dictionaries for error descriptions, warnings and consumables
+DESCRIPTION_TRANSLATIONS: Final = {
+    "fr": {
+        # Error descriptions
+        "No error": "Aucune erreur",
+        "Wheels are suspended": "Les roues sont suspendues",
+        "Please reposition the robot and restart.": "Veuillez repositionner le robot et redémarrer.",
+        "Cliff sensor error": "Erreur du capteur de chute",
+        "Please wipe the cliff sensor and start the cleanup away from the stairs.": "Veuillez essuyer le capteur de chute et démarrer le nettoyage loin des escaliers.",
+        "Collision sensor is stuck": "Le capteur de collision est coincé",
+        "Please clean and gently tap the collision sensor.": "Veuillez nettoyer et tapoter doucement le capteur de collision.",
+        "Robot is tilted": "Le robot est incliné",
+        "Please move the robot to a level surface and start again.": "Veuillez déplacer le robot sur une surface plane et redémarrer.",
+        "Optical flow sensor error": "Erreur du capteur optique de flux",
+        "Please try to restart the vacuum-mop.": "Veuillez essayer de redémarrer l'aspirateur-serpillière.",
+        "Dust bin not installed": "Le bac à poussière n'est pas installé",
+        "Please install the dust bin and filter.": "Veuillez installer le bac à poussière et le filtre.",
+        "Water tank not installed": "Le réservoir d'eau n'est pas installé",
+        "Please install the water tank.": "Veuillez installer le réservoir d'eau.",
+        "Water tank is empty": "Le réservoir d'eau est vide",
+        "Please will up the water tank": "Veuillez remplir le réservoir d'eau",
+        "The filter not dry or blocked": "Le filtre n'est pas sec ou est obstrué",
+        "Please check whether the filter has dried or needs to be cleaned.": "Veuillez vérifier si le filtre est sec ou doit être nettoyé.",
+        "The main brush wrapped": "La brosse principale est entravée",
+        "Please remove the main brush and clean its bristles and bearings.": "Veuillez retirer la brosse principale et nettoyer ses poils et ses roulements.",
+        # Low water warnings
+        "No warning": "Pas d'avertissement",
+        "Please check the clean water tank.": "Veuillez vérifier le réservoir d'eau propre.",
+        "Please fill the clean water tank.": "Veuillez remplir le réservoir d'eau propre.",
+        "The water in the clean water tank is about to be used up. Check and fill the clean water tank promptly.": "L'eau du réservoir d'eau propre est sur le point d'être épuisée. Vérifiez et remplissez le réservoir d'eau propre rapidement.",
+        "Mop pad has been cleaned. Detected that the water in the clean water tank is insufficient, please fill the clean water tank and empty the used water tank.": "Le tampon de la serpillière a été nettoyé. Détecté que l'eau dans le réservoir d'eau propre est insuffisante, veuillez remplir le réservoir d'eau propre et vider le réservoir d'eau usée.",
+        "Low water level in the clean water tank.": "Niveau d'eau bas dans le réservoir d'eau propre.",
+        "Robot has switched to Vacuuming Mode.": "Le robot est passé en mode Aspiration.",
+        "About to run out of water": "Sur le point de manquer d'eau",
+        "The clean water tank is not installed.": "Le réservoir d'eau propre n'est pas installé.",
+        # Consumable descriptions
+        "Main brush must be replaced": "La brosse principale doit être remplacée",
+        "The main brush is worn out. Please replace it in time and reset the counter.": "La brosse principale est usée. Veuillez la remplacer à temps et réinitialiser le compteur.",
+        "Main brush needs to be replaced soon": "La brosse principale doit être remplacée bientôt",
+        "The main brush is nearly worn out. Please replace it in time.": "La brosse principale est presque usée. Veuillez la remplacer à temps.",
+        "Side brush must be replaced": "La brosse latérale doit être remplacée",
+        "The side brush is worn out. Please replace it and reset the counter.": "La brosse latérale est usée. Veuillez la remplacer et réinitialiser le compteur.",
+        "Side brush needs to be replaced soon": "La brosse latérale doit être remplacée bientôt",
+        "The side brush is nearly worn out. Please replace it as soon as possible.": "La brosse latérale est presque usée. Veuillez la remplacer dès que possible.",
+        "Filter must be replaced": "Le filtre doit être remplacé",
+        "The filter is worn out. Please replace it in time and reset the counter.": "Le filtre est usé. Veuillez le remplacer à temps et réinitialiser le compteur.",
+        "Filter needs to be replaced soon": "Le filtre doit être remplacé bientôt",
+        "The filter is nearly worn out. Please replace it in time.": "Le filtre est presque usé. Veuillez le remplacer à temps.",
+        "Sensors must be cleaned": "Les capteurs doivent être nettoyés",
+        "Please clean the sensors and reset the counter": "Veuillez nettoyer les capteurs et réinitialiser le compteur",
+        "Tank filter must be replaced": "Le filtre du réservoir doit être remplacé",
+        "The tank filter is worn out. Please replace it in time and reset the counter.": "Le filtre du réservoir est usé. Veuillez le remplacer à temps et réinitialiser le compteur.",
+        "Tank filter needs to be replaced soon": "Le filtre du réservoir doit être remplacé bientôt",
+        "The tank filter is nearly worn out. Please replace it in time.": "Le filtre du réservoir est presque usé. Veuillez le remplacer à temps.",
+        "Mop Pad Worn Out": "Tampon de la serpillière usé",
+        "Please replace the mop pad and reset the counter.": "Veuillez remplacer le tampon de la serpillière et réinitialiser le compteur.",
+        "Mop Pad Nearly Worn Out": "Tampon de la serpillière presque usé",
+        "Please replace the mop pad timely.": "Veuillez remplacer le tampon de la serpillière à temps.",
+        "Silver Ion Sterilizer Deteriorated": "Stérilisateur à ions d'argent détérioré",
+        "Please replace the silver ion sterilizer and reset the counter.": "Veuillez remplacer le stérilisateur à ions d'argent et réinitialiser le compteur.",
+        "Silver Ion Sterilizer Near to Deterioration": "Stérilisateur à ions d'argent proche de la détérioration",
+        "Please replace the silver ion sterilizer timely.": "Veuillez remplacer le stérilisateur à ions d'argent à temps.",
+        "The detergent is used up": "Le détergent est épuisé",
+        "Please replace the detergent cartridge it and reset the counter.": "Veuillez remplacer la cartouche de détergent et réinitialiser le compteur.",
+        "The detergent is about to be used up": "Le détergent est sur le point d'être épuisé",
+        "The detergent is about to be used up, please replace it in time.": "Le détergent est sur le point d'être épuisé, veuillez le remplacer à temps.",
+        "Squeegee Worn Out": "Raclette usée",
+        "Please replace the squeegee and reset the counter.": "Veuillez remplacer la raclette et réinitialiser le compteur.",
+        "Squeegee Nearly Worn Out": "Raclette presque usée",
+        "Please replace the squeegee timely.": "Veuillez remplacer la raclette à temps.",
+        "Onboard dirty water tank needs to be cleaned": "Le réservoir d'eau sale embarqué doit être nettoyé",
+        "Please clean the onboard dirty water tank and reset the counter.": "Veuillez nettoyer le réservoir d'eau sale embarqué et réinitialiser le compteur.",
+        "Dirty water tank needs to be cleaned": "Le réservoir d'eau sale doit être nettoyé",
+        "Please clean the dirty water tank and reset the counter.": "Veuillez nettoyer le réservoir d'eau sale et réinitialiser le compteur.",
+        "Used water tank deodorizer has been exhausted.": "Le désodorisant du réservoir d'eau usée est épuisé.",
+        "Used water tank deodorizer has been exhausted. Please replace it.": "Le désodorisant du réservoir d'eau usée est épuisé. Veuillez le remplacer.",
+        "Used water tank deodorizer is running out.": "Le désodorisant du réservoir d'eau usée est presque vide.",
+        "Used water tank deodorizer is running out. Please replace it.": "Le désodorisant du réservoir d'eau usée est presque vide. Veuillez le remplacer.",
+        "Omnidirectional wheel needs to be cleaned": "La roue omnidirectionnelle doit être nettoyée",
+        "Please omnidirectional wheel and reset the counter.": "Veuillez nettoyer la roue omnidirectionnelle et réinitialiser le compteur.",
+        "Scale inhibitor has been exhausted": "L'inhibiteur de tartre est épuisé",
+        "Please replace the scale inhibitor and reset the counter.": "Veuillez remplacer l'inhibiteur de tartre et réinitialiser le compteur.",
+        "Scale inhibitor is running out": "L'inhibiteur de tartre est presque vide",
+        "Please replace the scale inhibitor timely.": "Veuillez remplacer l'inhibiteur de tartre à temps.",
+    }
+}
+
+
+def translate_description(language: str, description: list[str]) -> list[str]:
+    """Translate a description list [title, message] based on language."""
+    if not language or language not in DESCRIPTION_TRANSLATIONS or not description:
+        return description
+
+    translations = DESCRIPTION_TRANSLATIONS[language]
+    translated = []
+
+    for text in description:
+        if text in translations:
+            translated.append(translations[text])
+        else:
+            translated.append(text)
+
+    return translated
+
 EVENT_TASK_STATUS: Final = "task_status"
 EVENT_CONSUMABLE: Final = "consumable"
 EVENT_WARNING: Final = "warning"
