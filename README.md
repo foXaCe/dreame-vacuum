@@ -262,6 +262,21 @@ attributes:
 
 ```
 
+## Known Issues
+
+### Python 3.13 FutureWarning
+Si vous utilisez Home Assistant 2025.1+ (Python 3.13), vous pouvez voir cet avertissement dans les logs :
+```
+FutureWarning: functools.partial will be a method descriptor in future Python versions
+```
+
+**Explication :** Cet avertissement provient de la bibliothèque `python-miio` (utilisée pour la communication avec les appareils Xiaomi). Un correctif a été mergé dans le dépôt python-miio ([PR #1993](https://github.com/rytilahti/python-miio/pull/1993)) mais n'a pas encore été publié dans une version stable.
+
+**Impact :** Il s'agit uniquement d'un avertissement de dépréciation. Cela n'affecte pas le fonctionnement de l'intégration.
+
+**Solution :** L'avertissement disparaîtra automatiquement lorsque python-miio publiera une nouvelle version stable incluant le correctif. En attendant, vous pouvez ignorer cet avertissement en toute sécurité.
+
+
 ## To Do
 
 - Integrated custom lovelace map card
