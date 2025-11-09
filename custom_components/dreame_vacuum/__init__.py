@@ -10,6 +10,10 @@ from .const import DOMAIN
 
 from .coordinator import DreameVacuumDataUpdateCoordinator
 
+# Apply patch for python-miio Python 3.13 compatibility
+from .dreame.miio_patch import apply_miio_patch
+apply_miio_patch()
+
 PLATFORMS = (
     Platform.VACUUM,
     Platform.SENSOR,
