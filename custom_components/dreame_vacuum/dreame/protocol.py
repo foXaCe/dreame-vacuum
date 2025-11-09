@@ -15,6 +15,11 @@ import paho.mqtt
 from paho.mqtt.client import Client
 from typing import Any, Dict, Final, Optional, Tuple
 from Crypto.Cipher import ARC4
+
+# Apply python-miio patch before importing miio to prevent FutureWarning on Python 3.13
+from .miio_patch import apply_miio_patch
+apply_miio_patch()
+
 from miio.miioprotocol import MiIOProtocol
 
 from .exceptions import DeviceException
