@@ -18,7 +18,7 @@ Partial map (P frame type) decoding for three seconds refresh rate with three se
 
 > - P type maps are introduced with second generation robots and new devices only sends P frames to the cloud when running.
 > - P maps are only containing the difference between its previous frame therefore handling is much harder than standard I type maps.
-> - Valetudo do not parses P frames suggesting that is hard and instead it sends new map requests to refresh the map but requesting I frames from device is strictly restricted to minimum 5 seconds on the official App source code. 
+> - Valetudo do not parses P frames suggesting that is hard and instead it sends new map requests to refresh the map but requesting I frames from device is strictly restricted to minimum 5 seconds on the official App source code.
 > - Documentation for handling P frames is not available and currently there are no other integration, library or app exists that can handle P maps for Dreame vacuums except the official App.
 
 ### Color schemes
@@ -68,8 +68,8 @@ Live mapping support with *new map* handling, parsing and rendering.
 
 Vacuum icon overlays for displaying device state same as on the official App.
 
-| <div style="width:70px">Sleeping</div> | <div style="width:70px">Idle</div> | <div style="width:70px">Active</div> | <div style="width:70px">Charging</div> | <div style="width:70px">Error</div> | 
-|:--------:|:--------:|:--------:|:--------:|:--------:| 
+| <div style="width:70px">Sleeping</div> | <div style="width:70px">Idle</div> | <div style="width:70px">Active</div> | <div style="width:70px">Charging</div> | <div style="width:70px">Error</div> |
+|:--------:|:--------:|:--------:|:--------:|:--------:|
 | <img src="https://raw.githubusercontent.com/Tasshack/dreame-vacuum/master/docs/media/robot_sleeping.png" width="50px"> | <img src="https://raw.githubusercontent.com/Tasshack/dreame-vacuum/master/docs/media/robot_idle.png" width="50px"> | <img src="https://raw.githubusercontent.com/Tasshack/dreame-vacuum/master/docs/media/robot_active.png" width="50px"> | <img src="https://raw.githubusercontent.com/Tasshack/dreame-vacuum/master/docs/media/robot_charging.png" width="50px"> | <img src="https://raw.githubusercontent.com/Tasshack/dreame-vacuum/master/docs/media/robot_error.png" width="50px"> |
 
 > Warnings are clearable via notifications or `clear_warning` service for restoring robot state on map.
@@ -129,7 +129,7 @@ TODO ADD IMAGES
 
 ### Hidden Map Objects
 
-Configurable map object rendering options: 
+Configurable map object rendering options:
 
 > Hidden Map objects can be selected from integration configuration options.
 - **Room Colors**: Disable rooms with colors
@@ -329,7 +329,7 @@ styles:
 
 #### Obstacle Photos from History Maps
 
-Map obstacle photos for history maps be displayed via `Current Map` entity camera proxy. 
+Map obstacle photos for history maps be displayed via `Current Map` entity camera proxy.
 
 `/api/camera_map_obstacle_history_proxy/{entity_id}?token={access_token}&history_index={history_index}&cruising={is_cruising_history}&index={obstacle_index}&crop={is_cropped}&file={download_file}`
 
@@ -381,7 +381,7 @@ Recovery maps can be displayed and downloaded via related `Saved or Current Map`
 type: custom:button-card
 entity: camera. # Current or saved map camera entity
 label: Recovery Maps # Optional
-title: Restore Map # Optional 
+title: Restore Map # Optional
 extra_params: info=0 # For transparent map
 icon: mdi:file-restore
 entity_picture: >
@@ -402,7 +402,7 @@ custom_fields:
           tap_action:
             action: call-service
             service: dreame_vacuum.vacuum_restore_map
-            data: 
+            data:
               entity_id: |
                 [[[ return (this._config.entity ? this._config.entity.replace('camera.','vacuum.').substring(0, this._config.entity.lastIndexOf('_map')) : ''); ]]]
               recovery_map_index: |

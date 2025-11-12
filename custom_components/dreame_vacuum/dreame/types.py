@@ -2514,13 +2514,13 @@ class Obstacle(Point):
         y: float,
         type: int,
         possibility: int,
-        object_id: str = None,
-        file_name: str = None,
-        key: int = None,
-        pos_x: float = None,
-        pos_y: float = None,
-        width: float = None,
-        height: float = None,
+        object_id: str | None = None,
+        file_name: str | None = None,
+        key: int | None = None,
+        pos_x: float | None = None,
+        pos_y: float | None = None,
+        width: float | None = None,
+        height: float | None = None,
         picture_status: int = 0,
         ignore_status: int = 0,
     ) -> None:
@@ -2658,18 +2658,18 @@ class Segment(Zone):
         y1: float | None = None,
         x: int | None = None,
         y: int | None = None,
-        name: str = None,
-        custom_name: str = None,
+        name: str | None = None,
+        custom_name: str | None = None,
         index: int = 0,
         type: int = 0,
-        icon: str = None,
+        icon: str | None = None,
         neighbors: list[int] = [],
-        cleaning_times: int = None,
-        suction_level: int = None,
-        water_volume: int = None,
-        cleaning_mode: int = None,
-        mopping_settings: int = None,
-        order: int = None,
+        cleaning_times: int | None = None,
+        suction_level: int | None = None,
+        water_volume: int | None = None,
+        cleaning_mode: int | None = None,
+        mopping_settings: int | None = None,
+        order: int | None = None,
         outline_points: list[list[int]] | None = None,
     ) -> None:
         super().__init__(x0, y0, x1, y1)
@@ -2743,7 +2743,7 @@ class Segment(Zone):
             self.name = f"Room {self.segment_id}"
         self.icon = SEGMENT_TYPE_CODE_TO_HA_ICON.get(self.type, "mdi:home-outline")
 
-    def get_translated_name(self, language: str = None) -> str:
+    def get_translated_name(self, language: str | None = None) -> str:
         """Get the translated name of the segment based on language."""
         if self.custom_name is not None:
             return self.custom_name
@@ -2930,7 +2930,16 @@ class Wall:
 
 class Area:
     def __init__(
-        self, x0: float, y0: float, x1: float, y1: float, x2: float, y2: float, x3: float, y3: float, angle: int = None
+        self,
+        x0: float,
+        y0: float,
+        x1: float,
+        y1: float,
+        x2: float,
+        y2: float,
+        x3: float,
+        y3: float,
+        angle: int | None = None,
     ) -> None:
         self.x0 = x0
         self.y0 = y0
@@ -3038,8 +3047,8 @@ class Furniture(Point):
         size_type: int,
         angle: float = 0,
         scale: float = 1.0,
-        furniture_id: int = None,
-        segment_id: int = None,
+        furniture_id: int | None = None,
+        segment_id: int | None = None,
     ) -> None:
         super().__init__(x, y)
         self.x0 = x0
@@ -3145,10 +3154,10 @@ class Carpet(Area):
         x3: float,
         y3: float,
         ellipse: bool = False,
-        carpet_type: int = None,
-        ignored_areas: list[int] = None,
-        segments: list[int] = None,
-        polygon: list[float] = None,
+        carpet_type: int | None = None,
+        ignored_areas: list[int] | None = None,
+        segments: list[int] | None = None,
+        polygon: list[float] | None = None,
     ) -> None:
         super().__init__(x0, y0, x1, y1, x2, y2, x3, y3)
         self.id = id
@@ -3198,10 +3207,10 @@ class Polygon(Area):
         x3: float,
         y3: float,
         polygon: list[float],
-        type: int = None,
-        hidden: int = None,
-        ms: int = None,
-        area: int = None,
+        type: int | None = None,
+        hidden: int | None = None,
+        ms: int | None = None,
+        area: int | None = None,
     ) -> None:
         super().__init__(x0, y0, x1, y1, x2, y2, x3, y3)
         self.id = id

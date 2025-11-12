@@ -274,7 +274,7 @@ class DreameMapVacuumMapManager:
         self._add_cloud_map_data(partial_map_data, object_name, object_name_timestamp)
         return len(map_data_result) or object_name is not None
 
-    def _request_map(self, parameters: dict[str, Any] = None) -> dict[str, Any] | None:
+    def _request_map(self, parameters: dict[str, Any] | None = None) -> dict[str, Any] | None:
         if parameters is None:
             parameters = {
                 MAP_REQUEST_PARAMETER_FRAME_TYPE: MapFrameType.I.name,
@@ -295,7 +295,7 @@ class DreameMapVacuumMapManager:
             _LOGGER.warning("Send request map failed: %s", ex)
         return None
 
-    def _request_i_map(self, start_time: int = None) -> bool:
+    def _request_i_map(self, start_time: int | None = None) -> bool:
         if not self._request_i_map_available and not self._protocol.dreame_cloud:
             return self.request_new_map()
 
@@ -445,7 +445,7 @@ class DreameMapVacuumMapManager:
             _LOGGER.warning("Send request map failed: %s", ex)
         return None
 
-    def _request_current_map(self, map_request_time: int = None) -> bool:
+    def _request_current_map(self, map_request_time: int | None = None) -> bool:
         if self._request_i_map_available or self._protocol.dreame_cloud:
             return self._request_i_map(map_request_time)
 
@@ -1201,7 +1201,7 @@ class DreameMapVacuumMapManager:
         self._change_callback = None
         self._error_callback = None
 
-    def schedule_update(self, wait: float = None) -> None:
+    def schedule_update(self, wait: float | None = None) -> None:
         if wait == None:
             wait = self._update_interval
         if self._update_timer is not None:
@@ -1381,7 +1381,7 @@ class DreameMapVacuumMapManager:
     def request_next_recovery_map_list(self) -> None:
         self._need_recovery_map_list_request = True
 
-    def set_map_list_object_name(self, object_name: str, md5: str = None) -> bool:
+    def set_map_list_object_name(self, object_name: str, md5: str | None = None) -> bool:
         if object_name and object_name != "":
             if self._map_list_object_name != object_name or self._map_list_md5 != md5:
                 self._map_list_object_name = object_name
@@ -1629,7 +1629,7 @@ class DreameMapVacuumMapEditor:
     def _set_updated_frame_id(self, frame_id) -> None:
         self.map_manager._updated_frame_id = frame_id
 
-    def _refresh_map(self, map_id: int = None) -> None:
+    def _refresh_map(self, map_id: int | None = None) -> None:
         if map_id:
             if self._saved_map_data and map_id in self._saved_map_data:
                 self._saved_map_data[map_id].last_updated = time.time()
@@ -1639,7 +1639,7 @@ class DreameMapVacuumMapEditor:
             self._map_data.last_updated = time.time()
             self.map_manager._map_data_updated()
 
-    def refresh_map(self, map_id: int = None) -> None:
+    def refresh_map(self, map_id: int | None = None) -> None:
         timer = Timer(0.5, self._refresh_map, [map_id])
         timer.start()
 
@@ -1937,7 +1937,7 @@ class DreameMapVacuumMapEditor:
         self.refresh_map()
         return
 
-    def delete_map(self, map_id: int = None) -> None:
+    def delete_map(self, map_id: int | None = None) -> None:
         map_data = self._map_data
         if map_data and map_data.temporary_map:
             return
@@ -2030,7 +2030,7 @@ class DreameMapVacuumMapEditor:
             self.set_current_map(self._selected_map_id)
             self.map_manager.request_next_map_list()
 
-    def replace_temporary_map(self, map_id: int = None) -> None:
+    def replace_temporary_map(self, map_id: int | None = None) -> None:
         map_data = self._map_data
         if map_data and map_data.temporary_map:
             if not map_id and self._selected_map_id:
@@ -2454,7 +2454,7 @@ class DreameMapVacuumMapEditor:
                 return self.cleanset(map_data)
 
     def set_segment_floor_material(
-        self, segment_id: int, floor_material: int, direction: int = None
+        self, segment_id: int, floor_material: int, direction: int | None = None
     ) -> list[list[int]] | None:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments and not map_data.temporary_map:
@@ -2520,7 +2520,9 @@ class DreameMapVacuumMapEditor:
             return map_data.hidden_segments
         return []
 
-    def set_segment_name(self, segment_id: int, segment_type: int, custom_name: str = None) -> dict[str, Any] | None:
+    def set_segment_name(
+        self, segment_id: int, segment_type: int, custom_name: str | None = None
+    ) -> dict[str, Any] | None:
         map_data = self._map_data
         if (
             map_data
@@ -2869,8 +2871,8 @@ class DreameVacuumMapDecoder:
         raw_map: str,
         vslam_map: bool,
         rotation: int = 0,
-        iv: str = None,
-        key: str = None,
+        iv: str | None = None,
+        key: str | None = None,
     ) -> tuple[MapData, MapData | None]:
         return DreameVacuumMapDecoder.decode_map_data_from_partial(
             DreameVacuumMapDecoder.decode_map_partial(raw_map, iv, key),
@@ -2879,7 +2881,7 @@ class DreameVacuumMapDecoder:
         )
 
     @staticmethod
-    def decode_saved_map(raw_map: str, vslam_map: bool, rotation: int = 0, iv: str = None) -> MapData | None:
+    def decode_saved_map(raw_map: str, vslam_map: bool, rotation: int = 0, iv: str | None = None) -> MapData | None:
         return DreameVacuumMapDecoder.decode_map(raw_map, vslam_map, rotation, iv)[0]
 
     @staticmethod
@@ -5301,14 +5303,14 @@ class DreameVacuumMapDataJsonRenderer:
 class DreameVacuumMapRenderer:
     def __init__(
         self,
-        color_scheme: str = None,
-        icon_set: str = None,
-        hidden_map_objects: list[str] = None,
+        color_scheme: str | None = None,
+        icon_set: str | None = None,
+        hidden_map_objects: list[str] | None = None,
         robot_type: int = 0,
         low_resolution: bool = False,
         square: bool = False,
         cache: bool = True,
-        language: str = None,
+        language: str | None = None,
     ) -> None:
         self.color_scheme: MapRendererColorScheme = MAP_COLOR_SCHEME_LIST.get(color_scheme, MapRendererColorScheme())
         self.icon_set: int = MAP_ICON_SET_LIST.get(icon_set, 0)

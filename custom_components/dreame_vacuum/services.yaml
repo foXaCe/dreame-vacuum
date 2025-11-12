@@ -5,19 +5,19 @@ vacuum_clean_segment:
       domain: vacuum
   fields:
     segments:
-      example: "[3,2] or 3" 
+      example: "[3,2] or 3"
       required: true
       selector:
         object:
     repeats:
-      example: "[1,2] or 1" 
+      example: "[1,2] or 1"
       required: false
       selector:
         number:
           min: 1
           max: 3
     suction_level:
-      example: "[0,3] or 0" 
+      example: "[0,3] or 0"
       required: false
       selector:
         number:
@@ -43,14 +43,14 @@ vacuum_clean_zone:
       selector:
         object:
     repeats:
-      example: "[1,2] or 1" 
+      example: "[1,2] or 1"
       required: false
       selector:
         number:
           min: 1
           max: 3
     suction_level:
-      example: "[0,3] or 0" 
+      example: "[0,3] or 0"
       required: false
       selector:
         number:
@@ -71,19 +71,19 @@ vacuum_clean_spot:
       domain: vacuum
   fields:
     points:
-      example: "[819,-263] or [[819,-263],[819,-263]]" 
+      example: "[819,-263] or [[819,-263],[819,-263]]"
       required: true
       selector:
         object:
     repeats:
-      example: "[1,2] or 1" 
+      example: "[1,2] or 1"
       required: false
       selector:
         number:
           min: 1
           max: 3
     suction_level:
-      example: "[0,3] or 0" 
+      example: "[0,3] or 0"
       required: false
       selector:
         number:
@@ -123,7 +123,7 @@ vacuum_follow_path:
       domain: vacuum
   fields:
     points:
-      example: "[819,-263] or [[819,-263],[900,-463]]" 
+      example: "[819,-263] or [[819,-263],[900,-463]]"
       required: false
       selector:
         object:
@@ -434,7 +434,7 @@ vacuum_set_custom_cleaning:
       required: true
       selector:
         object:
-        
+
 vacuum_set_custom_carpet_cleaning:
   target:
     entity:
@@ -442,30 +442,30 @@ vacuum_set_custom_carpet_cleaning:
       domain: vacuum
   fields:
     id:
-      example: "[1,2] or 3" 
+      example: "[1,2] or 3"
       required: true
       selector:
         object:
     type:
-      example: "[0,1] or 1" 
+      example: "[0,1] or 1"
       required: true
       selector:
         number:
           min: 0
           max: 1
     carpet_cleaning:
-      example: "[0,3] or 5" 
+      example: "[0,3] or 5"
       required: false
       selector:
         number:
           min: 0
           max: 6
     carpet_settings:
-      example: "['carpet_boost'] or 'clean_carpets_first' or '-1' or []" 
+      example: "['carpet_boost'] or 'clean_carpets_first' or '-1' or []"
       required: false
       selector:
         object:
-        
+
 vacuum_set_restricted_zone:
   target:
     entity:
@@ -547,7 +547,7 @@ vacuum_set_carpet_area:
       example: "[[819,-263,4424,2105],[-2001,-3050,-542,515]]"
       required: false
       selector:
-        object:    
+        object:
 
 vacuum_set_virtual_threshold:
   target:
@@ -568,7 +568,7 @@ vacuum_set_predefined_points:
       domain: vacuum
   fields:
     points:
-      example: "[819,-263] or [[819,-263],[900,-463]]" 
+      example: "[819,-263] or [[819,-263],[900,-463]]"
       required: false
       selector:
         object:

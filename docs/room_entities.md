@@ -3,7 +3,7 @@
 
 Integration exposes and manages room entities for customized cleaning settings that are introduced on firmware version 1156. If *customized cleaning* feature is enabled, robot uses these settings on *cleaning* and *custom segment cleaning* jobs and cannot be overridden by start action parameters.
 
-Room settings stored on current map data and only selected map custom cleaning settings can be accessed via the cloud api. Therefore integration shares same room entities with other saved maps and dynamically updates their entity names and icons respectively when selected map is changed. 
+Room settings stored on current map data and only selected map custom cleaning settings can be accessed via the cloud api. Therefore integration shares same room entities with other saved maps and dynamically updates their entity names and icons respectively when selected map is changed.
 
 <img src="https://raw.githubusercontent.com/Tasshack/dreame-vacuum/master/docs/media/rooms_map_1.png" width="350px"><img src="https://raw.githubusercontent.com/Tasshack/dreame-vacuum/master/docs/media/rooms_map_2.png" width="350px">
 
@@ -23,12 +23,12 @@ TODO
 {# ----------------- PROVIDE YOUR OWN ENTITY ID HERE ----------------- #}
 {% set vacuum_entity = "vacuum." %}
 {# ------------------- DO NOT CHANGE ANYTHING BELOW ------------------- #}
-{%- set vacuum_name = states[vacuum_entity].entity_id.replace('vacuum.', '') %} 
+{%- set vacuum_name = states[vacuum_entity].entity_id.replace('vacuum.', '') %}
 {%- set mop_pad = ('mop_pad_humidity' in states[vacuum_entity].attributes)|bool %}
 {% set rooms = namespace(list=[]) %}
 {%- if 'rooms' in states[vacuum_entity].attributes %}
 {%- for map in states[vacuum_entity].attributes.rooms.values() %}  
-    {%- for room in map %}      
+    {%- for room in map %}  
     {%- if room.id not in rooms.list %}
         {%- set rooms.list = rooms.list + [room.id] %}
     {%- endif %}
@@ -43,14 +43,14 @@ show_header_toggle: false
 entities:
 {%- for room in rooms.list %}
 {%- set custom_cleaning_mode = states['select.' + vacuum_name + '_room_' + room|string + '_cleaning_mode'] != None %}
-{%- set room_exists = "states['" + vacuum_entity + "'].attributes.cleaning_sequence && states['" + vacuum_entity + "'].attributes.cleaning_sequence.length > " + (loop.index - 1)|string  %} 
+{%- set room_exists = "states['" + vacuum_entity + "'].attributes.cleaning_sequence && states['" + vacuum_entity + "'].attributes.cleaning_sequence.length > " + (loop.index - 1)|string  %}
 {%- set room_id = "(" + room_exists + " ? (states['" + vacuum_entity + "'].attributes.cleaning_sequence[" + (loop.index - 1)|string + "]) : " + room|string + ")" %}
 {%- set current_room = "(vars[5].state == 'unavailable' && states['select." + vacuum_name + "_cleaning_mode'].state == 'unavailable' && states['" + vacuum_entity + "'].attributes.current_segment == vars[0])" %}
   - type: custom:config-template-card
     variables:
-      - >- 
+      - >-
         {{ room_id }}
-      - states['select.{{ vacuum_name }}_room_' + vars[0] + '_name'] 
+      - states['select.{{ vacuum_name }}_room_' + vars[0] + '_name']
       - states['select.{{ vacuum_name }}_room_' + vars[0] + '_suction_level']
       {%- if mop_pad %}
       - states['select.{{ vacuum_name }}_room_' + vars[0] + '_mop_pad_humidity']
@@ -59,7 +59,7 @@ entities:
       {%- endif %}
       - states['select.{{ vacuum_name }}_room_' + vars[0] + '_cleaning_times']
       - states['select.{{ vacuum_name }}_room_' + vars[0] + '_order']
-      - >- 
+      - >-
         states['{{ vacuum_entity }}']
       - >-
         (vars[6].attributes.rooms && vars[6].attributes.selected_map ? vars[6].attributes.rooms[vars[6].attributes.selected_map].filter(function (e) { return states['select.{{ vacuum_name }}_room_' + e.id + '_order'] && states['select.{{ vacuum_name }}_room_' + e.id + '_order'].state != 'not_set' }).length : 0)
@@ -70,7 +70,7 @@ entities:
       - >-
         (vars[5] && vars[5].state != 'unavailable' ? 'inherit' : 'none')
       - >-
-        (vars[6].attributes.customized_cleaning && (!vars[6].attributes.active_segments || states['{{ vacuum_entity }}'].attributes.active_segments.includes(vars[0])) ? 'inherit' : 'none')        
+        (vars[6].attributes.customized_cleaning && (!vars[6].attributes.active_segments || states['{{ vacuum_entity }}'].attributes.active_segments.includes(vars[0])) ? 'inherit' : 'none')  
       - >-
         (vars[5] && vars[5].state != 'not_set' ? 'inherit' : 'hidden')
       {%- if custom_cleaning_mode %}
@@ -91,7 +91,7 @@ entities:
       conditions:
         - entity: ${vars[1].entity_id}
           state_not: unavailable
-      card:            
+      card:  
         type: custom:multiple-entity-row
         entity: ${vars[1].entity_id}
         show_state: false
@@ -101,7 +101,7 @@ entities:
           - icon: ${vars[13].attributes.icon}
             entity: ${vars[13].entity_id}
             name: ' '
-            tap_action: 
+            tap_action:
               action: call-service
               service: dreame_vacuum.select_select_next
               service_data:
@@ -123,7 +123,7 @@ entities:
           - icon: ${vars[2].attributes.icon}
             entity: ${vars[2].entity_id}
             name: ' '
-            tap_action: 
+            tap_action:
               action: call-service
               service: dreame_vacuum.select_select_next
               service_data:

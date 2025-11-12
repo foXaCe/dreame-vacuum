@@ -227,7 +227,7 @@
           "by_time": "Per temps",
           "by_room": "Per habitació"
         }
-      },      
+      },
       "mop_clean_frequency": {
         "state": {
           "by_room": "Per habitació"

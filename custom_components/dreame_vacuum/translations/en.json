@@ -37,7 +37,7 @@
           "prefer_cloud": "Prefer cloud connection"
         },
         "description": "Log in to the Xiaomi Miio cloud, see https://www.openhab.org/addons/bindings/miio/#country-servers for the cloud server to use."
-      },      
+      },
       "2fa": {
         "data": {
           "verification_code": "Two-factor verification code"
@@ -227,7 +227,7 @@
           "by_time": "By Time",
           "by_room": "By Room"
         }
-      },      
+      },
       "mop_clean_frequency": {
         "state": {
           "by_room": "By Room"
@@ -976,7 +976,7 @@
         "water_volume": {
           "name": "Water Volume",
           "description": "Water volume for each room."
-        },        
+        },
         "wetness_level": {
           "name": "Wetness Level",
           "description": "Wetness level for each room (On supported devices)."

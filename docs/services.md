@@ -1,5 +1,5 @@
 # Services
-The integration adds the following services to vacuum domain. 
+The integration adds the following services to vacuum domain.
 
 ## Vacuum Services
 Services for actions that are not available via an entity.
@@ -8,7 +8,7 @@ Services for actions that are not available via an entity.
 
 ### `dreame_vacuum.vacuum_clean_segment`
 
-Start selected room cleaning with optional customized cleaning parameters. 
+Start selected room cleaning with optional customized cleaning parameters.
 > - If you are using integration with map feature, you can acquire segment ids from vacuum entity attributes.
 > - Cleaning parameters and cleaning sequence are ignored by the device when `customized_cleaning` or `cleaning_sequence` is enabled.
 
@@ -52,7 +52,7 @@ Start selected room cleaning with optional customized cleaning parameters.
       segments:
         - 3
         - 5
-      repeats: 
+      repeats:
         - 2
         - 1
     target:
@@ -78,7 +78,7 @@ Start selected room cleaning with optional customized cleaning parameters.
       segments:
         - 3
         - 5
-      suction_level: 
+      suction_level:
         - "high"
         - "quiet"
     target:
@@ -98,7 +98,7 @@ Start selected zone cleaning with optional customized cleaning parameters.
     ```yaml
     service: dreame_vacuum.vacuum_clean_zone
     data:
-      zone: 
+      zone:
         - 819
         - -263
         - 4424
@@ -110,7 +110,7 @@ Start selected zone cleaning with optional customized cleaning parameters.
     ```yaml
     service: dreame_vacuum.vacuum_clean_zone
     data:
-      zone: 
+      zone:
         - - 819
           - -263
           - 4424
@@ -126,7 +126,7 @@ Start selected zone cleaning with optional customized cleaning parameters.
     ```yaml
     service: dreame_vacuum.vacuum_clean_zone
     data:
-      zone: 
+      zone:
         - 819
         - -263
         - 4424
@@ -140,7 +140,7 @@ Start selected zone cleaning with optional customized cleaning parameters.
     ```yaml
     service: dreame_vacuum.vacuum_clean_zone
     data:
-      zone: 
+      zone:
         - - 819
           - -263
           - 4424
@@ -149,7 +149,7 @@ Start selected zone cleaning with optional customized cleaning parameters.
           - -3050
           - 542
           - 515
-      repeats: 
+      repeats:
         - 2
         - 3
     target:
@@ -171,7 +171,7 @@ Start selected spot cleaning with optional customized cleaning parameters.
     ```yaml
     service: dreame_vacuum.vacuum_clean_spot
     data:
-      points: 
+      points:
         - 819
         - -263
     target:
@@ -181,7 +181,7 @@ Start selected spot cleaning with optional customized cleaning parameters.
     ```yaml
     service: dreame_vacuum.vacuum_clean_spot
     data:
-      points: 
+      points:
         - - 819
           - -263
         - - 2001
@@ -193,7 +193,7 @@ Start selected spot cleaning with optional customized cleaning parameters.
     ```yaml
     service: dreame_vacuum.vacuum_clean_spot
     data:
-      points: 
+      points:
         - 819
         - -263
       repeats: 2
@@ -205,12 +205,12 @@ Start selected spot cleaning with optional customized cleaning parameters.
     ```yaml
     service: dreame_vacuum.vacuum_clean_spot
     data:
-      points: 
+      points:
         - - 819
           - -263
         - - 2001
           - -3050
-      repeats: 
+      repeats:
         - 2
         - 3
     target:
@@ -249,7 +249,7 @@ Install an official voice pack.
 
 ### `dreame_vacuum.vacuum_set_cleaning_sequence`
 
-Set room cleaning sequence on current map. 
+Set room cleaning sequence on current map.
 
 > Exact number of room ids must be passed as sequence list
 
@@ -259,7 +259,7 @@ Set room cleaning sequence on current map.
     ```yaml
     service: dreame_vacuum.vacuum_set_cleaning_sequence
     data:
-        cleaning_sequence: 
+        cleaning_sequence:
           - 3
           - 5
           - 4
@@ -280,7 +280,7 @@ Set room cleaning sequence on current map.
 
 ### `dreame_vacuum.vacuum_set_custom_cleaning`
 
-Set customized room cleaning parameters on current map. 
+Set customized room cleaning parameters on current map.
 
 > Settings for all rooms must be passed as list
 
@@ -290,16 +290,16 @@ Set customized room cleaning parameters on current map.
     ```yaml
     service: dreame_vacuum.vacuum_set_custom_cleaning
     data:
-        segment_id: 
+        segment_id:
           - 1
           - 5
-        suction_level: 
+        suction_level:
           - 0
           - 3
-        water_volume: 
+        water_volume:
           - 1
           - 2
-        repeats: 
+        repeats:
           - 2
           - 1
     target:
@@ -310,9 +310,9 @@ Set customized room cleaning parameters on current map.
     ```yaml
     service: dreame_vacuum.vacuum_set_custom_cleaning
     data:
-        segment_id: 
+        segment_id:
           - 3
-        wetness_level: 
+        wetness_level:
           - 16
     target:
         entity_id: vacuum.vacuum
@@ -360,7 +360,7 @@ Reset a consumable life by type.
 
 ### *`vacuum.send_command`*
 
-Send command service can be used to send raw api requests that are not available with this integration. 
+Send command service can be used to send raw api requests that are not available with this integration.
 
 > <a href="https://github.com/al-one/hass-xiaomi-miot#xiaomi-miot-for-homeassistant" target="_blank">More info about commands and parameters.</a>
 
@@ -372,7 +372,7 @@ Send command service can be used to send raw api requests that are not available
     data:
         entity_id: vacuum.vacuum
         command: action
-        params: 
+        params:
             did: "15.1"
             siid: 15
             aiid: 1
@@ -385,7 +385,7 @@ Send command service can be used to send raw api requests that are not available
     data:
         entity_id: vacuum.vacuum
         command: set_properties
-        params: 
+        params:
           - did: "4.29"
             siid: 4
             piid: 29
@@ -558,12 +558,12 @@ Set invisible walls, no go and no mopping zones on current map.
     ```yaml
     service: dreame_vacuum.vacuum_set_restricted_zone
     data:
-        walls: 
+        walls:
             - - 819
               - -263
               - 4424
               - 2105
-        zones: 
+        zones:
             - - 819
               - -263
               - 4424
@@ -619,7 +619,7 @@ Merge two rooms from a map.
     service: dreame_vacuum.vacuum_replace_temporary_map
     data:
         map_id: 63
-        segments: 
+        segments:
             - 4
             - 6
     target:
@@ -631,7 +631,7 @@ Merge two rooms from a map.
     service: dreame_vacuum.vacuum_replace_temporary_map
     data:
         map_id: 63
-        segments: 
+        segments:
             - 6
             - 4
     target:
@@ -656,7 +656,7 @@ Split a map room into to different rooms.
     data:
         map_id: 63
         segment: 4
-        line: 
+        line:
             - 819
             - -263
             - 4424

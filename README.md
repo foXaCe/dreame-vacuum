@@ -55,7 +55,7 @@ wget -O - https://raw.githubusercontent.com/Tasshack/dreame-vacuum/dev/install |
      - **Dreamehome Account**: TODO
      - **Local**: TODO
 
-- Enter required credentials according to the selected configuration type. 
+- Enter required credentials according to the selected configuration type.
   > Please make sure that the devices are at same subnet for `Mi Home account` and `Local` configuration types. <a href="https://python-miio.readthedocs.io/en/latest/troubleshooting.html#discover-devices-across-subnets" target="_blank">python-miio article about this issue.</a>
 - Set your device name and integration settings:
 
@@ -189,7 +189,7 @@ shortcuts:
 ```
 
 #### With <a href="https://github.com/Hypfer/lovelace-valetudo-map-card" target="_blank">Valetudo Map Card</a>
- > Enable **Map Data** camera entity. 
+ > Enable **Map Data** camera entity.
 <a href="https://my.home-assistant.io/redirect/entities/" target="_blank"><img src="https://my.home-assistant.io/badges/entities.svg" alt="Open your Home Assistant instance and show your entities." /></a>
 
 ```yaml
@@ -287,7 +287,7 @@ FutureWarning: functools.partial will be a method descriptor in future Python ve
 
 
 ## Contributing
-To submit your changes please fork `dev` branch of this repository and open a pull request. 
+To submit your changes please fork `dev` branch of this repository and open a pull request.
 
 ## Thanks To
 

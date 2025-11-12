@@ -22,6 +22,6 @@ If applicable, add screenshots to help explain your problem.
 **Additional Information (please complete the following information)**
  - Model Name [e.g. dreame.vacuum.p2028]:
  - Firmware Version [e.g. 1156]:
- - Home Assistant Version: 
+ - Home Assistant Version:
  - Configuration Type [With or without map support]:
  - Errors or warnings shown in the HA logs (if applicable):

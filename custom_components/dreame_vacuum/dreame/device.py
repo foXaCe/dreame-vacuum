@@ -265,14 +265,14 @@ class DreameVacuumDevice:
         name: str,
         host: str,
         token: str,
-        mac: str = None,
-        username: str = None,
-        password: str = None,
-        country: str = None,
+        mac: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        country: str | None = None,
         prefer_cloud: bool = False,
         account_type: str = "mi",
-        device_id: str = None,
-        auth_key: str = None,
+        device_id: str | None = None,
+        auth_key: str | None = None,
     ) -> None:
         # Used for easy filtering the device from cloud device list and generating unique ids
         self.info = None
@@ -771,7 +771,7 @@ class DreameVacuumDevice:
 
         return changed
 
-    def _request_properties(self, properties: list[DreameVacuumProperty] = None) -> bool:
+    def _request_properties(self, properties: list[DreameVacuumProperty] | None = None) -> bool:
         """Request properties from the device."""
         if not properties:
             properties = self._default_properties
@@ -2234,7 +2234,7 @@ class DreameVacuumDevice:
         """Set error callback function for external listeners"""
         self._error_callback = callback
 
-    def schedule_update(self, wait: float = None, force_request_properties=False) -> None:
+    def schedule_update(self, wait: float | None = None, force_request_properties=False) -> None:
         """Schedule a device update for future"""
         if wait == None:
             wait = self._update_interval
@@ -3206,7 +3206,9 @@ class DreameVacuumDevice:
             ],
         )
 
-    def call_action(self, action: DreameVacuumAction, parameters: dict[str, Any] = None) -> dict[str, Any] | None:
+    def call_action(
+        self, action: DreameVacuumAction, parameters: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
         """Call an action."""
         if action not in self.action_mapping:
             raise InvalidActionException(f"Unable to find {action} in the action mapping")
@@ -3333,7 +3335,7 @@ class DreameVacuumDevice:
 
         return result
 
-    def send_command(self, command: str, parameters: dict[str, Any] = None) -> dict[str, Any] | None:
+    def send_command(self, command: str, parameters: dict[str, Any] | None = None) -> dict[str, Any] | None:
         """Send a raw command to the device. This is mostly useful when trying out
         commands which are not implemented by a given device instance. (Not likely)"""
 
@@ -3733,7 +3735,7 @@ class DreameVacuumDevice:
 
         return self.call_action(DreameVacuumAction.START)
 
-    def start_custom(self, status, parameters: dict[str, Any] = None) -> dict[str, Any] | None:
+    def start_custom(self, status, parameters: dict[str, Any] | None = None) -> dict[str, Any] | None:
         """Start custom cleaning task."""
         if not self.capability.cruising and status != DreameVacuumStatus.ZONE_CLEANING.value:
             self._restore_go_to_zone()
@@ -4348,7 +4350,7 @@ class DreameVacuumDevice:
 
         return self.start_custom(DreameVacuumStatus.CLEANING.value, "3")
 
-    def start_self_wash_base(self, parameters: dict[str, Any] = None) -> dict[str, Any] | None:
+    def start_self_wash_base(self, parameters: dict[str, Any] | None = None) -> dict[str, Any] | None:
         """Start self-wash base for cleaning or drying the mop."""
         if not self.capability.self_wash_base:
             return None
@@ -5165,7 +5167,7 @@ class DreameVacuumDevice:
             self._map_manager.editor.set_map_name(map_id, map_name)
         return self.update_map_data_async({"nrism": {map_id: {"name": map_name if len(map_name) else None}}})
 
-    def set_map_rotation(self, rotation: int, map_id: int = None) -> dict[str, Any] | None:
+    def set_map_rotation(self, rotation: int, map_id: int | None = None) -> dict[str, Any] | None:
         """Set rotation of a map"""
         if self.status.has_temporary_map:
             raise InvalidActionException("Cannot rotate a map when temporary map is present")
@@ -5289,7 +5291,7 @@ class DreameVacuumDevice:
         self._map_select_time = time.time()
         return self.update_map_data({"sm": {}, "mapid": map_id})
 
-    def delete_map(self, map_id: int = None) -> dict[str, Any] | None:
+    def delete_map(self, map_id: int | None = None) -> dict[str, Any] | None:
         """Delete a map."""
         map_id = int(map_id)
 
@@ -5338,7 +5340,7 @@ class DreameVacuumDevice:
                 self._map_manager.editor.discard_temporary_map()
             return self.update_map_data({"cw": 0})
 
-    def replace_temporary_map(self, map_id: int = None) -> dict[str, Any] | None:
+    def replace_temporary_map(self, map_id: int | None = None) -> dict[str, Any] | None:
         """Replace new map with an old one when device have reached maximum number of maps it can store."""
         if self.status.has_temporary_map:
             if self.status.multi_map:
@@ -5351,7 +5353,7 @@ class DreameVacuumDevice:
                 parameters["mapid"] = map_id
             return self.update_map_data(parameters)
 
-    def restore_map_from_file(self, map_url: int, map_id: int = None) -> dict[str, Any] | None:
+    def restore_map_from_file(self, map_url: int, map_id: int | None = None) -> dict[str, Any] | None:
         map_recovery_status = self.status.map_recovery_status
         if map_recovery_status is None:
             raise InvalidActionException("Map recovery is not supported on this device")
@@ -5393,7 +5395,7 @@ class DreameVacuumDevice:
         self.schedule_update(1)
         return response
 
-    def restore_map(self, recovery_map_index: int, map_id: int = None) -> dict[str, Any] | None:
+    def restore_map(self, recovery_map_index: int, map_id: int | None = None) -> dict[str, Any] | None:
         """Replace a map with previously saved version by device."""
         map_recovery_status = self.status.map_recovery_status
         if map_recovery_status is None:
@@ -5436,7 +5438,7 @@ class DreameVacuumDevice:
             return response
         raise InvalidActionException("Invalid recovery map object name")
 
-    def backup_map(self, map_id: int = None) -> dict[str, Any] | None:
+    def backup_map(self, map_id: int | None = None) -> dict[str, Any] | None:
         """Save a map map to cloud for later use of restoring."""
         if not self.capability.backup_map:
             raise InvalidActionException("Map backup is not supported on this device")
@@ -5571,10 +5573,10 @@ class DreameVacuumDevice:
         suction_level: list[int],
         water_volume: list[int],
         cleaning_times: list[int],
-        cleaning_mode: list[int] = None,
-        custom_mopping_route: list[int] = None,
-        cleaning_route: list[int] = None,
-        wetness_level: list[int] = None,
+        cleaning_mode: list[int] | None = None,
+        custom_mopping_route: list[int] | None = None,
+        cleaning_route: list[int] | None = None,
+        wetness_level: list[int] | None = None,
     ) -> dict[str, Any] | None:
         """Set customized cleaning settings on current map.
         Device will use these settings even you pass another setting for custom segment cleaning.
@@ -5754,8 +5756,8 @@ class DreameVacuumDevice:
         self,
         id: int | list[int],
         type: int | list[int],
-        carpet_cleaning: int | list[int] = None,
-        carpet_settings: list[int] | list[list[int]] = None,
+        carpet_cleaning: int | list[int] | None = None,
+        carpet_settings: list[int] | list[list[int]] | None = None,
     ) -> dict[str, Any] | None:
         """Set customized carpet cleaning settings on current map."""
         if not self.capability.carpet_recognition:
@@ -5890,7 +5892,9 @@ class DreameVacuumDevice:
 
         return self.update_map_data_async({"delsr": hidden_segments})
 
-    def set_segment_name(self, segment_id: int, segment_type: int, custom_name: str = None) -> dict[str, Any] | None:
+    def set_segment_name(
+        self, segment_id: int, segment_type: int, custom_name: str | None = None
+    ) -> dict[str, Any] | None:
         """Update name of a segment on current map"""
         if self.status.has_temporary_map:
             raise InvalidActionException("Cannot edit segment when temporary map is present")
@@ -6009,7 +6013,7 @@ class DreameVacuumDevice:
             return self.set_cleanset(self._map_manager.editor.set_segment_cleaning_times(segment_id, cleaning_times))
 
     def set_segment_floor_material(
-        self, segment_id: int, floor_material: int, direction: int = None
+        self, segment_id: int, floor_material: int, direction: int | None = None
     ) -> dict[str, Any] | None:
         """Update floor material of a segment on current map"""
         if self._map_manager and not self.status.has_temporary_map:

@@ -90,8 +90,8 @@ class DreameVacuumDreameHomeCloudProtocol:
         password: str,
         account_type: str = "dreame",
         country: str = "cn",
-        auth_key: str = None,
-        did: str = None,
+        auth_key: str | None = None,
+        did: str | None = None,
     ) -> None:
         self._username = username
         self._password = password
@@ -749,7 +749,9 @@ class DreameVacuumDreameHomeCloudProtocol:
 
 
 class DreameVacuumMiHomeCloudProtocol:
-    def __init__(self, username: str, password: str, country: str, auth_key: str = None, device_id: str = None) -> None:
+    def __init__(
+        self, username: str, password: str, country: str, auth_key: str | None = None, device_id: str | None = None
+    ) -> None:
         self._username = username
         self._password = password
         self._country = country
@@ -1461,15 +1463,15 @@ class DreameVacuumMiHomeCloudProtocol:
 class DreameVacuumProtocol:
     def __init__(
         self,
-        ip: str = None,
-        token: str = None,
-        username: str = None,
-        password: str = None,
-        country: str = None,
+        ip: str | None = None,
+        token: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        country: str | None = None,
         prefer_cloud: bool = False,
         account_type: str = "mi",
-        device_id: str = None,
-        auth_key: str = None,
+        device_id: str | None = None,
+        auth_key: str | None = None,
     ) -> None:
         self._ready = False
         self.prefer_cloud = prefer_cloud
@@ -1502,7 +1504,7 @@ class DreameVacuumProtocol:
             self.prefer_cloud = True
             self.device_cloud = self.cloud
 
-    def set_credentials(self, ip: str, token: str, mac: str = None, account_type: str = "mi"):
+    def set_credentials(self, ip: str, token: str, mac: str | None = None, account_type: str = "mi"):
         self._mac = mac
         self._account_type = account_type
         if ip and token and account_type == "mi":

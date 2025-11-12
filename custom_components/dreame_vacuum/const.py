@@ -80,7 +80,7 @@ NOTIFICATION_TRANSLATIONS: Final = {
 }
 
 
-def get_notification_labels(language: str = None) -> dict:
+def get_notification_labels(language: str | None = None) -> dict:
     """Get translated notification labels based on language."""
     if language and language in NOTIFICATION_TRANSLATIONS:
         return NOTIFICATION_TRANSLATIONS[language]

@@ -379,7 +379,7 @@
           "room_cleaning": "房间清洁",
           "zone_cleaning": "区域清洁",
           "fast_mapping": "快速建图",
-          "cruising_path": "路径巡航", 
+          "cruising_path": "路径巡航",
           "cruising_point": "定点巡航",
           "summon_clean": "召唤清洁",
           "shortcut": "快捷指令",
@@ -393,7 +393,7 @@
           "completed": "完成",
           "cleaning": "清洁中",
           "zone_cleaning": "区域清洁中",
-          "room_cleaning": "房间清洁中",  
+          "room_cleaning": "房间清洁中",
           "spot_cleaning": "定点清洁中",
           "fast_mapping": "快速建图中",
           "cleaning_paused": "清洁已暂停",
@@ -417,7 +417,7 @@
           "station_cleaning": "基站自清洁中",
           "pet_finding": "寻宠中",
           "auto_cleaning_washing_paused": "自动洗拖暂停",
-          "area_cleaning_washing_paused": "区域洗拖暂停",  
+          "area_cleaning_washing_paused": "区域洗拖暂停",
           "custom_cleaning_washing_paused": "定制洗拖暂停"
         }
       },
@@ -426,7 +426,7 @@
           "unknown": "未知",
           "installed": "已安装",
           "not_installed": "未安装",
-          "mop_installed": "拖布已安装", 
+          "mop_installed": "拖布已安装",
           "in_station": "在基站内"
         }
       },
@@ -435,7 +435,7 @@
           "unknown": "未知",
           "installed": "已安装",
           "not_installed": "未安装",
-          "mop_installed": "拖布已安装", 
+          "mop_installed": "拖布已安装",
           "in_station": "在基站内"
         }
       },
@@ -468,7 +468,7 @@
           "drop_repeat": "轮子持续悬空",
           "optical_flow": "光学流量传感器异常",
           "no_box": "尘盒未安装",
-          "no_tank_box": "水箱未安装",  
+          "no_tank_box": "水箱未安装",
           "water_box_empty": "水箱缺水",
           "box_full": "滤网未干或堵塞",
           "brush": "主刷缠绕",
@@ -539,7 +539,7 @@
           "mop_install_failed": "拖布安装失败",
           "low_battery_turn_off": "电量过低，设备即将关机",
           "dirty_tank_not_installed": "未安装污水箱",
-          "robot_in_hidden_room": "处于禁止区域，请将设备移至可运行区域后重试",  
+          "robot_in_hidden_room": "处于禁止区域，请将设备移至可运行区域后重试",
           "washboard_not_working": "清洁盘停止工作",
           "return_to_charge_failed": "回充失败"
         }
@@ -654,7 +654,7 @@
           "standard": "标准清洁",
           "standard_paused": "标准清洁暂停",
           "custom": "自定义清洁",
-          "custom_paused": "自定义清洁暂停", 
+          "custom_paused": "自定义清洁暂停",
           "shortcut": "快捷清洁",
           "shortcut_paused": "快捷清洁暂停",
           "scheduled": "预约清洁",
@@ -783,7 +783,7 @@
           "description": "转向角度值（二进制角度制），范围-128至128"
         },
         "velocity": {
-          "name": "移动速度", 
+          "name": "移动速度",
           "description": "移动速度值，100（前进）至-300（后退）"
         }
       }

@@ -40,7 +40,7 @@ Complete app replacement with Home Assistant for Dreame robot vacuums.
 
     <a href="https://github.com/Tasshack/dreame-vacuum/blob/dev/docs/map.md" target="_blank">About map feature</a>
 
-- Enter required credentials according to the selected configuration type. 
+- Enter required credentials according to the selected configuration type.
   > Please make sure that the devices are at same subnet for both configuration types. <a href="https://python-miio.readthedocs.io/en/latest/troubleshooting.html#discover-devices-across-subnets" target="_blank">python-miio article about this issue.</a>
 - Set your device name and integration settings:
 
@@ -169,7 +169,7 @@ shortcuts:
 ```
 
 #### With <a href="https://github.com/Hypfer/lovelace-valetudo-map-card" target="_blank">Valetudo Map Card</a>
- > Enable **Map Data** camera entity. 
+ > Enable **Map Data** camera entity.
 <a href="https://my.home-assistant.io/redirect/entities/" target="_blank"><img src="https://my.home-assistant.io/badges/entities.svg" alt="Open your Home Assistant instance and show your entities." /></a>
 
 ```yaml

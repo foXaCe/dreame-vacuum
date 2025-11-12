@@ -396,7 +396,7 @@ def async_update_map_cameras(
     hidden_map_objects: list[str],
     low_resolution: bool,
     square: bool,
-    language: str = None,
+    language: str | None = None,
 ) -> None:
     new_indexes = set(range(1, len(coordinator.device.status.map_list) + 1))
     current_ids = set(current)
@@ -478,13 +478,13 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         self,
         coordinator: DreameVacuumDataUpdateCoordinator,
         description: DreameVacuumCameraEntityDescription,
-        color_scheme: str = None,
-        icon_set: str = None,
-        hidden_map_objects: list[str] = None,
+        color_scheme: str | None = None,
+        icon_set: str | None = None,
+        hidden_map_objects: list[str] | None = None,
         low_resolution: bool = False,
         square: bool = False,
         map_index: int = 0,
-        language: str = None,
+        language: str | None = None,
     ) -> None:
         """Initialize a Dreame Vacuum Camera entity."""
         super().__init__(coordinator, description)

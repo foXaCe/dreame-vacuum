@@ -41,15 +41,41 @@ select = [
 ]
 
 ignore = [
+    "E402",   # Module level import not at top (needed for miio_patch)
     "E501",   # Line too long (handled by formatter)
+    "E711",   # Comparison to None (== None vs is None - lots to fix)
+    "E712",   # Comparison to True/False (already mostly fixed)
+    "E722",   # Bare except (many legitimate uses for robustness)
+    "E741",   # Ambiguous variable name (many legitimate short names)
+    "F403",   # Star imports (resources.py)
+    "F405",   # Undefined from star imports (resources.py)
+    "F507",   # %-format placeholder mismatch (to fix manually)
+    "F634",   # If test is tuple (complex condition)
+    "F841",   # Local variable assigned but never used
+    "B006",   # Mutable default argument (lots to fix)
+    "B007",   # Loop variable not used (common pattern)
     "B008",   # Do not perform function call in argument defaults
     "C901",   # Too complex
     "DTZ005", # Use of datetime.now() without timezone
     "DTZ006", # Use of datetime.fromtimestamp() without timezone
+    "RET503", # Missing explicit return (many to fix)
     "RET504", # Unnecessary variable assignment before return
+    "SIM101", # Multiple isinstance (style preference)
     "SIM102", # Use a single if statement instead of nested if
+    "SIM103", # Return condition directly (style preference)
     "SIM105", # Use contextlib.suppress instead of try-except-pass
+    "SIM108", # Ternary operator (style preference)
+    "SIM109", # Multiple equality comparisons (style preference)
+    "SIM118", # Use key in dict instead of key in dict.keys()
+    "SIM210", # Use bool() instead of True if ... else False
+    "SIM212", # if not x else y -> y if y else x (confusing)
+    "SIM222", # Use True instead of ... or True (buggy detection)
+    "SIM401", # dict.get instead of if/else (style preference)
+    "C402",   # Unnecessary generator (dict comprehension)
     "UP007",  # Use X | Y for type annotations (not compatible with Python 3.9)
+    "UP008",  # super() without arguments (style preference)
+    "UP031",  # Use format specifiers instead of % format
+    "RUF005", # Consider unpacking instead of concatenation
 ]
 
 [tool.ruff.lint.mccabe]

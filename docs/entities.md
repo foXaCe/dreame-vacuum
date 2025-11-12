@@ -1,9 +1,9 @@
 # Entities
 <img src="https://raw.githubusercontent.com/Tasshack/dreame-vacuum/master/docs/media/entities.png">
 
-- Integration exposes *almost* all available settings and states reverse engineered from the official App. 
+- Integration exposes *almost* all available settings and states reverse engineered from the official App.
 - Almost all entities are dynamically exposed for specific device. If the device does not have property that tied to specific entity, integration will not add that entity to the Home Assistant.
-- Some entities may not be available on devices with older firmware versions like *customized_cleaning* and *cleaning_mode* that are also not available on valetudo. 
+- Some entities may not be available on devices with older firmware versions like *customized_cleaning* and *cleaning_mode* that are also not available on valetudo.
 - Most of the entities including the vacuum entity has dynamic icons for their state and can be overridden from entity settings.
 - Most of the sensor and all select entities returns their current raw integer value on `raw_value`, `map_id` or `segment_id` attributes for ease of use on automations and services.
 - All entities has dynamic refresh rate determined by its change range and device state. Integration only inform Home Assistant when a device property has changed through listeners. This is more like a *local_push* type of approach instead of *local_pull* but please note that it may take time entity to reflect the changes when you edit related setting from the official App.
@@ -19,13 +19,13 @@
 
 | Name  | Description  | Notes |
 | ----------------------- | -------------------- | -------------------- |
-| `resume_cleaning`   | Enable/Disable resume cleaning feature | Vacuum entity return its state as `paused` before cleaning continues while charging 
+| `resume_cleaning`   | Enable/Disable resume cleaning feature | Vacuum entity return its state as `paused` before cleaning continues while charging
 | `carpet_boost`   | Enable/Disable carpet boost feature |
 | `carpet_recognition`   | Enable/Disable recognition feature | Available on vacuums with ultrasonic sensor
 | `obstacle_avoidance`   | Enable/Disable 3D obstacle avoidance | Available on vacuums with line laser
 | `customized_cleaning`   | Enable/Disable customized room cleaning | Available on devices with firmware above 1056
 | `child_lock`   | Enable/Disable child lock |
-| `tight_mopping`   | Enable/Disable tight mopping pattern | Available on devices with firmware above 1056 and unavailable and water tank or mop pad is not installed. 
+| `tight_mopping`   | Enable/Disable tight mopping pattern | Available on devices with firmware above 1056 and unavailable and water tank or mop pad is not installed.
 | `dnd`   | Enable/Disable do not disturb |
 | `multi_floor_map`   | Enable/Disable multi-floor map | Available on vacuums can store more than one map
 | `auto_dust_collecting`   | Enable/Disable automatic dust collecting when cleaning completed |  Available on vacuums with auto-empty station
@@ -49,36 +49,36 @@
 | `stain_avoidance`   | After it is turned on and when a stain is identified, the robot will avoid and do not clean the area. | Available on devices with AI fluid detection feature
 | `intelligent_recognition`   | Enable/Disable automatic map switching when multi-floor map is enabled | Available on devices with wifi map feature
 | `cleaning_sequence`   | Enable/Disable custom room cleaning sequence | Available with map feature (This a dynamically created entity and not actually tied to any setting directly, when turned of it actually deletes current cleaning order and regenerates with default order or restores previous order from memory when turned on again)
-| `voice_assistant`   | TODO | 
-| `fuzzy_obstacle_detection`   | TODO | 
-| `ai_pet_avoidance`   | TODO | 
-| `pet_picture`   | TODO | 
-| `pet_focused_detection`   | TODO | 
-| `floor_direction_cleaning`   | TODO | 
-| `pet_focused_cleaning`   | TODO | 
-| `smart_charging`   | TODO | 
-| `human_follow`   | TODO | 
-| `max_suction_power`   | TODO | 
-| `smart_drying`   | TODO | 
-| `hot_washing`   | TODO | 
-| `uv_sterilization`   | TODO | 
-| `camera_light_brightness_auto`   | TODO | 
-| `off_peak_charging`   | TODO | 
-| `mopping_under_furnitures`   | TODO | 
-| `gap_cleaning_extension`   | TODO | 
-| `intensive_carpet_cleaning`   | TODO | 
-| `large_particles_boost`   | TODO | 
-| `ultra_clean_mode`   | TODO | 
-| `streaming_voice_prompt`   | TODO | 
-| `clean_carpets_first`   | TODO | 
-| `silent_drying`   | TODO | 
-| `hair_compression`   | TODO | 
-| `side_brush_carpet_rotate`   | TODO | 
-| `auto_lds_lifting`   | TODO | 
-| `smart_mop_washing`   | TODO | 
-| `dnd_disable_resume_cleaning`   | TODO | 
-| `dnd_disable_auto_empty`   | TODO | 
-| `dnd_reduce_volume`   | TODO | 
+| `voice_assistant`   | TODO |
+| `fuzzy_obstacle_detection`   | TODO |
+| `ai_pet_avoidance`   | TODO |
+| `pet_picture`   | TODO |
+| `pet_focused_detection`   | TODO |
+| `floor_direction_cleaning`   | TODO |
+| `pet_focused_cleaning`   | TODO |
+| `smart_charging`   | TODO |
+| `human_follow`   | TODO |
+| `max_suction_power`   | TODO |
+| `smart_drying`   | TODO |
+| `hot_washing`   | TODO |
+| `uv_sterilization`   | TODO |
+| `camera_light_brightness_auto`   | TODO |
+| `off_peak_charging`   | TODO |
+| `mopping_under_furnitures`   | TODO |
+| `gap_cleaning_extension`   | TODO |
+| `intensive_carpet_cleaning`   | TODO |
+| `large_particles_boost`   | TODO |
+| `ultra_clean_mode`   | TODO |
+| `streaming_voice_prompt`   | TODO |
+| `clean_carpets_first`   | TODO |
+| `silent_drying`   | TODO |
+| `hair_compression`   | TODO |
+| `side_brush_carpet_rotate`   | TODO |
+| `auto_lds_lifting`   | TODO |
+| `smart_mop_washing`   | TODO |
+| `dnd_disable_resume_cleaning`   | TODO |
+| `dnd_disable_auto_empty`   | TODO |
+| `dnd_reduce_volume`   | TODO |
 
 
 ## Sensor
@@ -122,44 +122,44 @@
 | `detergent_time_left`   | Detergent left in hours | Available on vacuums has detergent cartridge
 | `cleaning_history`   | Previous cleaning job details as attributes | Available with map feature
 | `current_room`   | Current room that vacuum currently in | Available with map feature
-| `stream_status`   | TODO | 
-| `drainage_status`   | TODO | 
-| `low_water_warning`   | TODO | 
-| `task_type`   | TODO | 
-| `firmware_version`   | TODO | 
-| `cruising_history`   | TODO | 
-| `cleaning_progress`   | TODO | 
-| `drying_progress`   | TODO | 
-| `clean_water_tank_status`   | TODO | 
-| `dirty_water_tank_status`   | TODO | 
-| `dust_bag_status`   | TODO | 
-| `detergent_status`   | TODO | 
-| `hot_water_status`   | TODO | 
-| `station_drainage_status`   | TODO | 
-| `squeegee_left`   | TODO | 
-| `squeegee_time_left`   | TODO | 
-| `dirty_water_tank_left`   | TODO | 
-| `dirty_water_tank_time_left`   | TODO | 
-| `onboard_dirty_water_tank_left`   | TODO | 
-| `onboard_dirty_water_tank_time_left`   | TODO | 
-| `deodorizer_left`   | TODO | 
-| `deodorizer_time_left`   | TODO | 
-| `wheel_dirty_left`   | TODO | 
-| `wheel_dirty_time_left`   | TODO | 
-| `scale_inhibitor_left`   | TODO | 
-| `scale_inhibitor_time_left`   | TODO | 
+| `stream_status`   | TODO |
+| `drainage_status`   | TODO |
+| `low_water_warning`   | TODO |
+| `task_type`   | TODO |
+| `firmware_version`   | TODO |
+| `cruising_history`   | TODO |
+| `cleaning_progress`   | TODO |
+| `drying_progress`   | TODO |
+| `clean_water_tank_status`   | TODO |
+| `dirty_water_tank_status`   | TODO |
+| `dust_bag_status`   | TODO |
+| `detergent_status`   | TODO |
+| `hot_water_status`   | TODO |
+| `station_drainage_status`   | TODO |
+| `squeegee_left`   | TODO |
+| `squeegee_time_left`   | TODO |
+| `dirty_water_tank_left`   | TODO |
+| `dirty_water_tank_time_left`   | TODO |
+| `onboard_dirty_water_tank_left`   | TODO |
+| `onboard_dirty_water_tank_time_left`   | TODO |
+| `deodorizer_left`   | TODO |
+| `deodorizer_time_left`   | TODO |
+| `wheel_dirty_left`   | TODO |
+| `wheel_dirty_time_left`   | TODO |
+| `scale_inhibitor_left`   | TODO |
+| `scale_inhibitor_time_left`   | TODO |
 
 ## Number
 
 | Name  | Description  | Notes |
 | ----------------------- | -------------------- | -------------------- |
 | `volume`   | Volume level |
-| `mop_cleaning_remainder`   | Mop cleaning remainder | 
-| `camera_light_brightness`   | TODO | 
-| `self_clean_area`   | TODO | 
-| `self_clean_time`   | TODO | 
-| `wetness_level`   | TODO | 
-| `drying_time`   | TODO | 
+| `mop_cleaning_remainder`   | Mop cleaning remainder |
+| `camera_light_brightness`   | TODO |
+| `self_clean_area`   | TODO |
+| `self_clean_time`   | TODO |
+| `wetness_level`   | TODO |
+| `drying_time`   | TODO |
 
 ## Time
 
@@ -167,8 +167,8 @@
 | ----------------------- | -------------------- | -------------------- |
 | `dnd_start`   | Do not disturb start | Unavailable when do not disturb is disabled
 | `dnd_end`   | Do not disturb end | Unavailable when do not disturb is disabled
-| `off_peak_charging_start`   | TODO | 
-| `off_peak_charging_end`   | TODO | 
+| `off_peak_charging_start`   | TODO |
+| `off_peak_charging_end`   | TODO |
 
 ## Button
 
@@ -181,29 +181,29 @@
 | `reset_mop_pad`   | Reset mop pad remaining life left | Available on vacuums with self-wash base
 | `reset_silver_ion`   | Reset silver-ion remaining life left | Available on vacuums with silver-ion feature
 | `reset_detergent`   | Reset detergent remaining life left | Available on vacuums with self-wash base has detergent cartridge
-| `reset_squeegee`   | TODO | 
-| `reset_dirty_water_tank`   | TODO | 
-| `reset_onboard_dirty_water_tank`   | TODO | 
-| `reset_deodorizer`   | TODO | 
-| `reset_wheel`   | TODO | 
-| `reset_scale_inhibitor`   | TODO | 
+| `reset_squeegee`   | TODO |
+| `reset_dirty_water_tank`   | TODO |
+| `reset_onboard_dirty_water_tank`   | TODO |
+| `reset_deodorizer`   | TODO |
+| `reset_wheel`   | TODO |
+| `reset_scale_inhibitor`   | TODO |
 | `start_auto_empty`   | Start auto-emptying | Available on vacuums with auto-empty station
 | `clear_warning`   | Clear warning | Unavailable when there is no warning to clear
 | `start_fast_mapping`   | Start fast mapping | Unavailable when maximum map count reached
 | `start_mapping`   | Create new map with cleaning the whole floor | Unavailable when maximum map count reached
 | `self_clean_`   | Manually start/pause mop washing | Available on vacuums with self-wash base, unavailable when washing is not possible
 | `manual_drying`   | Manually starti/stop mop drying | Available on vacuums with self-wash base, unavailable when drying is not possible
-| `water_tank_draining`   | TODO | 
-| `base_station_self_repair`   | TODO | 
-| `start_recleaning`   | TODO | 
-| `empty_water_tank`   | TODO | 
-| `base_station_cleaning`   | TODO | 
-| `reload_shortcuts`   | TODO | 
-| `shortcut_{1-33}`   | TODO | 
-| `backup_map_1`   | TODO | 
-| `backup_map_2`   | TODO | 
-| `backup_map_3`   | TODO | 
-| `backup_map_4`   | TODO | 
+| `water_tank_draining`   | TODO |
+| `base_station_self_repair`   | TODO |
+| `start_recleaning`   | TODO |
+| `empty_water_tank`   | TODO |
+| `base_station_cleaning`   | TODO |
+| `reload_shortcuts`   | TODO |
+| `shortcut_{1-33}`   | TODO |
+| `backup_map_1`   | TODO |
+| `backup_map_2`   | TODO |
+| `backup_map_3`   | TODO |
+| `backup_map_4`   | TODO |
 
 
 ## Select
@@ -223,7 +223,7 @@
 | `selected_map`   | Currently selected map | Available with map feature and unavailable when multi-floor map is disabled or not available (Robot will end active job when selected map is changed)
 | `wider_corner_coverage`   | TODO |  
 | `mop_pad_swing`   | TODO |
-| `voice_assistant_language`   | TODO | 
+| `voice_assistant_language`   | TODO |
 | `auto_empty_mode`   | TODO |
 | `cleangenius`   | TODO |
 | `auto_rewashing`   | TODO |
@@ -237,7 +237,7 @@
 | `water_temperature`   | TODO |
 
 ### Select Entities for rooms
-- Room select entities are only available with cloud connection. 
+- Room select entities are only available with cloud connection.
 - Entities are dynamically generated from saved maps but only selected map is editable via shared room entities.
 - Entity names and icons are dynamically generated from segment id, custom name or segment type  and can be overridden from entity settings (Not recommended when multi-floor map is enabled).
 - Entities uses segment id system but generated from all saved maps. When multi-floor map is enabled, specific room entity may not be available on currently selected map.
@@ -247,17 +247,17 @@
 | Name  | Description  | Notes |
 | ----------------------- | -------------------- | -------------------- |
 | `name`   | Room name from predefined types or current custom name | Unavailable when room does not exists on current map
-| `cleaning_mode`   | TODO | 
+| `cleaning_mode`   | TODO |
 | `suction_level`   | Suction level for the room | Unavailable if customized cleaning is disabled
 | `water_volume`   | Water volume for the room | Available on vacuums with water tank and unavailable if customized cleaning is disabled
 | `mop_pad_humidity`   | Humidity level of the mop pad for the room | Available on vacuums with self-wash base and unavailable if customized cleaning is disabled
 | `cleaning times`   | Cleaning times of the room | Unavailable when cleaning job is active or customized cleaning is disabled
 | `order`   | Cleaning order of the room | Unavailable when cleaning job is active or cleaning sequence is disabled
-| `wetness_level`   | TODO | 
+| `wetness_level`   | TODO |
 | `cleaning_route`   | TODO |
 | `custom_mopping_route`   | TODO |
 | `floor_material`   | TODO |
-| `floor_material_direction`   | TODO | 
+| `floor_material_direction`   | TODO |
 | `visibility`   | TODO |
 
 #### <a href="https://github.com/Tasshack/dreame-vacuum/blob/master/room_entities/map.md" target="_blank">For more info about customized cleaning feature</a>
@@ -272,13 +272,13 @@
 | `map_2`   | Second saved map | Saved map at index 2, available if multi-floor map is enabled and there are at least two saved maps on map list
 | `map_3`   | Third saved map | Saved map at index 3, available if multi-floor map is enabled and there are at least three saved maps on map list
 | `map_4`   | Fourth saved map | Saved map at index 4, available if multi-floor map is enabled and there are at least four saved maps on map list (only available on vacuums with WiFi map)
-| `wifi_map_1`   | TODO | 
-| `wifi_map_2`   | TODO | 
-| `wifi_map_3`   | TODO | 
-| `wifi_map_4`   | TODO | 
+| `wifi_map_1`   | TODO |
+| `wifi_map_2`   | TODO |
+| `wifi_map_3`   | TODO |
+| `wifi_map_4`   | TODO |
 
 
-- Camera entities are only available with cloud connection. 
+- Camera entities are only available with cloud connection.
 - All camera entities has different dynamic refresh rate determined by its last request time and device state.
 - Camera will only render a map when an image request has been made and only render changed areas of the image.
 - Saved map camera names generated dynamically from index or custom name.
