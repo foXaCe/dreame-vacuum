@@ -1,6 +1,6 @@
 [project]
 name = "dreame-vacuum"
-version = "2.2.12"
+version = "2.2.13"
 description = "Dreame Vacuum integration for Home Assistant"
 readme = "README.md"
 requires-python = ">=3.11"
