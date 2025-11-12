@@ -5,15 +5,16 @@ from __future__ import annotations
 import math
 import time
 import traceback
+
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    CONF_NAME,
-    CONF_HOST,
-    CONF_TOKEN,
-    CONF_PASSWORD,
-    CONF_USERNAME,
     ATTR_ENTITY_ID,
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_TOKEN,
+    CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -21,75 +22,75 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import generate_entity_id
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .dreame import DreameVacuumDevice, DreameVacuumProperty, VERSION
-from .dreame.resources import (
-    CONSUMABLE_IMAGE,
-    DRAINAGE_STATUS_SUCCESS,
-    DRAINAGE_STATUS_FAIL,
-)
 from .const import (
-    DOMAIN,
-    LOGGER,
-    CONF_NOTIFY,
-    CONF_COUNTRY,
-    CONF_MAC,
-    CONF_DID,
-    CONF_AUTH_KEY,
     CONF_ACCOUNT_TYPE,
-    CONF_PREFER_CLOUD,
-    CONF_MAP_OBJECTS,
-    CONF_HIDDEN_MAP_OBJECTS,
+    CONF_AUTH_KEY,
+    CONF_COUNTRY,
+    CONF_DID,
     CONF_DONATED,
+    CONF_HIDDEN_MAP_OBJECTS,
+    CONF_MAC,
+    CONF_MAP_OBJECTS,
+    CONF_NOTIFY,
+    CONF_PREFER_CLOUD,
     CONF_VERSION,
-    MAP_OBJECTS,
+    CONSUMABLE_DEODORIZER,
+    CONSUMABLE_DETERGENT,
+    CONSUMABLE_DIRTY_WATER_TANK,
+    CONSUMABLE_FILTER,
+    CONSUMABLE_MAIN_BRUSH,
+    CONSUMABLE_MOP_PAD,
+    CONSUMABLE_ONBOARD_DIRTY_WATER_TANK,
+    CONSUMABLE_SCALE_INHIBITOR,
+    CONSUMABLE_SENSOR,
+    CONSUMABLE_SIDE_BRUSH,
+    CONSUMABLE_SILVER_ION,
+    CONSUMABLE_SQUEEGEE,
+    CONSUMABLE_TANK_FILTER,
+    CONSUMABLE_WHEEL,
     CONTENT_TYPE,
-    get_notification_message,
-    translate_description,
-    NOTIFICATION_ID_DUST_COLLECTION,
-    NOTIFICATION_ID_CLEANING_PAUSED,
-    NOTIFICATION_ID_REPLACE_MAIN_BRUSH,
-    NOTIFICATION_ID_REPLACE_SIDE_BRUSH,
-    NOTIFICATION_ID_REPLACE_FILTER,
-    NOTIFICATION_ID_REPLACE_TANK_FILTER,
-    NOTIFICATION_ID_CLEAN_SENSOR,
-    NOTIFICATION_ID_REPLACE_MOP,
-    NOTIFICATION_ID_SILVER_ION,
-    NOTIFICATION_ID_REPLACE_DETERGENT,
-    NOTIFICATION_ID_REPLACE_SQUEEGEE,
-    NOTIFICATION_ID_CLEAN_ONBOARD_DIRTY_WATER_TANK,
-    NOTIFICATION_ID_CLEAN_DIRTY_WATER_TANK,
-    NOTIFICATION_ID_REPLACE_DEODORIZER,
-    NOTIFICATION_ID_CLEAN_WHEEL,
-    NOTIFICATION_ID_REPLACE_SCALE_INHIBITOR,
-    NOTIFICATION_ID_CLEANUP_COMPLETED,
-    NOTIFICATION_ID_WARNING,
-    NOTIFICATION_ID_ERROR,
-    NOTIFICATION_ID_INFORMATION,
-    NOTIFICATION_ID_CONSUMABLE,
-    NOTIFICATION_ID_REPLACE_TEMPORARY_MAP,
-    NOTIFICATION_ID_LOW_WATER,
-    NOTIFICATION_ID_DRAINAGE_STATUS,
-    EVENT_TASK_STATUS,
+    DOMAIN,
     EVENT_CONSUMABLE,
-    EVENT_WARNING,
+    EVENT_DRAINAGE_STATUS,
     EVENT_ERROR,
     EVENT_INFORMATION,
     EVENT_LOW_WATER,
-    EVENT_DRAINAGE_STATUS,
-    CONSUMABLE_MAIN_BRUSH,
-    CONSUMABLE_SIDE_BRUSH,
-    CONSUMABLE_FILTER,
-    CONSUMABLE_TANK_FILTER,
-    CONSUMABLE_SENSOR,
-    CONSUMABLE_MOP_PAD,
-    CONSUMABLE_SILVER_ION,
-    CONSUMABLE_DETERGENT,
-    CONSUMABLE_SQUEEGEE,
-    CONSUMABLE_ONBOARD_DIRTY_WATER_TANK,
-    CONSUMABLE_DIRTY_WATER_TANK,
-    CONSUMABLE_DEODORIZER,
-    CONSUMABLE_WHEEL,
-    CONSUMABLE_SCALE_INHIBITOR,
+    EVENT_TASK_STATUS,
+    EVENT_WARNING,
+    LOGGER,
+    MAP_OBJECTS,
+    NOTIFICATION_ID_CLEAN_DIRTY_WATER_TANK,
+    NOTIFICATION_ID_CLEAN_ONBOARD_DIRTY_WATER_TANK,
+    NOTIFICATION_ID_CLEAN_SENSOR,
+    NOTIFICATION_ID_CLEAN_WHEEL,
+    NOTIFICATION_ID_CLEANING_PAUSED,
+    NOTIFICATION_ID_CLEANUP_COMPLETED,
+    NOTIFICATION_ID_CONSUMABLE,
+    NOTIFICATION_ID_DRAINAGE_STATUS,
+    NOTIFICATION_ID_DUST_COLLECTION,
+    NOTIFICATION_ID_ERROR,
+    NOTIFICATION_ID_INFORMATION,
+    NOTIFICATION_ID_LOW_WATER,
+    NOTIFICATION_ID_REPLACE_DEODORIZER,
+    NOTIFICATION_ID_REPLACE_DETERGENT,
+    NOTIFICATION_ID_REPLACE_FILTER,
+    NOTIFICATION_ID_REPLACE_MAIN_BRUSH,
+    NOTIFICATION_ID_REPLACE_MOP,
+    NOTIFICATION_ID_REPLACE_SCALE_INHIBITOR,
+    NOTIFICATION_ID_REPLACE_SIDE_BRUSH,
+    NOTIFICATION_ID_REPLACE_SQUEEGEE,
+    NOTIFICATION_ID_REPLACE_TANK_FILTER,
+    NOTIFICATION_ID_REPLACE_TEMPORARY_MAP,
+    NOTIFICATION_ID_SILVER_ION,
+    NOTIFICATION_ID_WARNING,
+    get_notification_message,
+    translate_description,
+)
+from .dreame import VERSION, DreameVacuumDevice, DreameVacuumProperty
+from .dreame.resources import (
+    CONSUMABLE_IMAGE,
+    DRAINAGE_STATUS_FAIL,
+    DRAINAGE_STATUS_SUCCESS,
 )
 
 
@@ -121,7 +122,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
         if entry.options.get(CONF_VERSION) != VERSION:
             options = entry.options.copy()
-            
+
             ## Migration: Convert map objects to hidden map objects
             if CONF_MAP_OBJECTS in entry.options and CONF_HIDDEN_MAP_OBJECTS not in options:
                 options[CONF_HIDDEN_MAP_OBJECTS] = []
@@ -280,8 +281,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         low_water_warning = self._device.status.low_water_warning
         if low_water_warning.value > 0 and (not previous_value or low_water_warning.value > 1):
             low_water_warning_description = translate_description(
-                self.hass.config.language,
-                self._device.status.low_water_warning_name_description
+                self.hass.config.language, self._device.status.low_water_warning_name_description
             )
             self._fire_event(
                 EVENT_LOW_WATER,

@@ -1,12 +1,11 @@
 """Support for Dreame Vacuum numbers."""
 
 from __future__ import annotations
-import copy
 
+from collections.abc import Callable
+import copy
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable
-from .dreame import DreameVacuumCleaningMode
 
 from homeassistant.components.number import (
     ENTITY_ID_FORMAT,
@@ -16,16 +15,15 @@ from homeassistant.components.number import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, UNIT_MINUTES, UNIT_HOURS, UNIT_AREA, UNIT_PERCENT
-
+from .const import DOMAIN, UNIT_AREA, UNIT_HOURS, UNIT_MINUTES, UNIT_PERCENT
 from .coordinator import DreameVacuumDataUpdateCoordinator
+from .dreame import DreameVacuumCleaningMode, DreameVacuumProperty
 from .entity import DreameVacuumEntity, DreameVacuumEntityDescription
-from .dreame import DreameVacuumAction, DreameVacuumProperty
 
 
 def WETNESS_LEVEL_TO_ICON(wetness, max):
@@ -57,7 +55,11 @@ NUMBERS: tuple[DreameVacuumNumberEntityDescription, ...] = (
         icon_fn=lambda value, device: (
             "mdi:volume-off"
             if not value
-            else "mdi:volume-low" if value <= 35 else "mdi:volume-medium" if value <= 65 else "mdi:volume-high"
+            else "mdi:volume-low"
+            if value <= 35
+            else "mdi:volume-medium"
+            if value <= 65
+            else "mdi:volume-high"
         ),
         mode=NumberMode.SLIDER,
         native_min_value=0,
@@ -152,9 +154,7 @@ NUMBERS: tuple[DreameVacuumNumberEntityDescription, ...] = (
                 not (device.status.water_tank_or_mop_installed)
                 or device.status.cleaning_mode is DreameVacuumCleaningMode.SWEEPING
             )
-            else WETNESS_LEVEL_TO_ICON(
-                device.status.wetness_level, 14 if device.capability.mop_clean_frequency else 26
-            )
+            else WETNESS_LEVEL_TO_ICON(device.status.wetness_level, 14 if device.capability.mop_clean_frequency else 26)
         ),
         mode=NumberMode.SLIDER,
         native_min_value=1,

@@ -1,55 +1,55 @@
 """Config flow for Dremae Vacuum."""
 
 from __future__ import annotations
-from typing import Any, Final
-import re
-import zlib
+
 import base64
-import json
-import voluptuous as vol
-import homeassistant.helpers.config_validation as cv
 from collections.abc import Mapping
-from homeassistant.const import (
-    CONF_NAME,
-    CONF_HOST,
-    CONF_TOKEN,
-    CONF_PASSWORD,
-    CONF_USERNAME,
-)
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult, AbortFlow
-from homeassistant.helpers.device_registry import format_mac
+import json
+import re
+from typing import Any, Final
+import zlib
+
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     OptionsFlow,
 )
-
-from .dreame import DreameVacuumProtocol, MAP_COLOR_SCHEME_LIST, MAP_ICON_SET_LIST, DEVICE_INFO, VERSION
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_TOKEN,
+    CONF_USERNAME,
+)
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.device_registry import format_mac
+import voluptuous as vol
 
 from .const import (
-    DOMAIN,
-    CONF_NOTIFY,
-    CONF_COLOR_SCHEME,
-    CONF_ICON_SET,
-    CONF_COUNTRY,
-    CONF_TYPE,
     CONF_ACCOUNT_TYPE,
-    CONF_MAC,
-    CONF_DID,
     CONF_AUTH_KEY,
-    CONF_HIDDEN_MAP_OBJECTS,
-    CONF_PREFER_CLOUD,
-    CONF_LOW_RESOLUTION,
-    CONF_SQUARE,
+    CONF_COLOR_SCHEME,
+    CONF_COUNTRY,
+    CONF_DID,
     CONF_DONATED,
+    CONF_HIDDEN_MAP_OBJECTS,
+    CONF_ICON_SET,
+    CONF_LOW_RESOLUTION,
+    CONF_MAC,
+    CONF_NOTIFY,
+    CONF_PREFER_CLOUD,
+    CONF_SQUARE,
+    CONF_TYPE,
     CONF_VERSION,
-    NOTIFICATION,
+    DOMAIN,
     MAP_OBJECTS,
+    NOTIFICATION,
     SPONSOR,
     get_notification_labels,
 )
-
+from .dreame import DEVICE_INFO, MAP_COLOR_SCHEME_LIST, MAP_ICON_SET_LIST, VERSION, DreameVacuumProtocol
 
 ACCOUNT_TYPE_DREAME = "dreame"
 ACCOUNT_TYPE_MOVA = "mova"
@@ -267,8 +267,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                     if self.name is None:
                         self.name = self.model
                     return await self.async_step_options()
-                else:
-                    error = "unsupported"
+                error = "unsupported"
 
             if self.username and self.password:
                 return await self.async_step_login(error=error)
@@ -290,7 +289,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             self.token = user_input[CONF_TOKEN]
             self.mac = None
             return await self.async_step_connect()
-        elif error:
+        if error:
             errors["base"] = error
         else:
             errors = {}
@@ -346,9 +345,9 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
                 if self.protocol.cloud.captcha_img is not None:
                     return await self.async_step_captcha()
-                elif self.protocol.cloud.verification_url is not None:
+                if self.protocol.cloud.verification_url is not None:
                     return await self.async_step_2fa()
-                elif self.protocol.cloud.logged_in is False:
+                if self.protocol.cloud.logged_in is False:
                     errors["base"] = "login_error"
                 elif self.protocol.cloud.logged_in:
                     return await self.async_step_devices()
@@ -377,8 +376,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                 if not self.protocol.cloud.logged_in:
                     return await self.async_step_mi(user_input=None, error="login_error")
                 return await self.async_step_devices()
-            else:
-                errors["base"] = "2fa_failed"
+            errors["base"] = "2fa_failed"
         else:
             errors = {}
 
@@ -406,8 +404,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                         return await self.async_step_2fa()
                     return await self.async_step_mi(user_input=None, error="login_error")
                 return await self.async_step_devices()
-            else:
-                errors["base"] = "wrong_captcha"
+            errors["base"] = "wrong_captcha"
         else:
             errors = {}
 
@@ -465,7 +462,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             devices = ""
             if error == "no_devices" and self.unsupported_devices:
                 for device in self.unsupported_devices.values():
-                    devices = f"{devices} ({device.get("model", "unknown")})"
+                    devices = f"{devices} ({device.get('model', 'unknown')})"
 
             description_placeholders = {"devices": devices}
         else:
@@ -653,9 +650,10 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             for k in device_info[3]:
                 info = device_info[0][device_info[3][k]]
                 if info:
-                    self.models[
-                        f"{"xiaomi" if info[0] == 1 else ACCOUNT_TYPE_MOVA if info[0] == 2 else ACCOUNT_TYPE_DREAME}.vacuum.{k}"
-                    ] = info[1]
+                    account_type = (
+                        "xiaomi" if info[0] == 1 else ACCOUNT_TYPE_MOVA if info[0] == 2 else ACCOUNT_TYPE_DREAME
+                    )
+                    self.models[f"{account_type}.vacuum.{k}"] = info[1]
 
     @property
     def login_schema(self):

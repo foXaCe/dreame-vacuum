@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.components.switch import (
     ENTITY_ID_FORMAT,
@@ -12,22 +12,20 @@ from homeassistant.components.switch import (
     SwitchEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
-
 from .coordinator import DreameVacuumDataUpdateCoordinator
-from .entity import DreameVacuumEntity, DreameVacuumEntityDescription
 from .dreame import (
-    DreameVacuumProperty,
-    DreameVacuumAutoSwitchProperty,
-    DreameVacuumStrAIProperty,
     DreameVacuumAIProperty,
+    DreameVacuumAutoSwitchProperty,
+    DreameVacuumProperty,
+    DreameVacuumStrAIProperty,
 )
+from .entity import DreameVacuumEntity, DreameVacuumEntityDescription
 
 
 @dataclass
@@ -226,7 +224,7 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
             else (
                 device.status.previous_cleaning_sequence
                 if device.status.previous_cleaning_sequence
-                else list(sorted(device.status.current_segments.keys()))
+                else sorted(device.status.current_segments.keys())
             )
         ),
         format_fn=lambda value, device: int(value),

@@ -6,17 +6,15 @@ from dataclasses import dataclass
 
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
+    BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
-    BinarySensorDeviceClass,
 )
 from homeassistant.config_entries import ConfigEntry
-
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-
 from .coordinator import DreameVacuumDataUpdateCoordinator
 from .entity import DreameVacuumEntity, DreameVacuumEntityDescription
 
@@ -32,7 +30,11 @@ BINARY_SENSORS: tuple[BinarySensorEntityDescription, ...] = (
         key="charging_state",
         name="Charging State",
         device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
-        icon_fn=lambda value, device: "mdi:power-plug-battery" if device.status.charging else "mdi:power-plug-off" if not device.status.docked else "mdi:power-plug",
+        icon_fn=lambda value, device: "mdi:power-plug-battery"
+        if device.status.charging
+        else "mdi:power-plug-off"
+        if not device.status.docked
+        else "mdi:power-plug",
         value_fn=lambda value, device: device.status.charging,
     ),
 )

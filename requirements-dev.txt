@@ -1,0 +1,28 @@
+# Development dependencies for Dreame Vacuum integration
+
+# Code quality tools
+ruff>=0.8.0
+pre-commit>=4.0.0
+codespell>=2.4.0
+
+# Testing tools
+pytest>=8.0.0
+pytest-cov>=6.0.0
+pytest-asyncio>=0.24.0
+
+# Home Assistant testing
+homeassistant>=2025.1.0
+
+# Type checking
+mypy>=1.13.0
+types-requests>=2.32.0
+
+# Runtime dependencies (for development)
+pillow>=11.0.0
+numpy>=2.2.0
+pybase64>=1.4.0
+requests>=2.32.0
+pycryptodome>=3.21.0
+python-miio>=0.5.12
+mini-racer>=0.12.0
+paho-mqtt>=2.1.0

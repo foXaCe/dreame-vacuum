@@ -1,0 +1,75 @@
+# Pre-commit hooks for Dreame Vacuum integration
+# See https://pre-commit.com for more information
+
+repos:
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      # Run the formatter
+      - id: ruff-format
+
+  # Code spell checker (disabled - too many false positives in resources.py)
+  # - repo: https://github.com/codespell-project/codespell
+  #   rev: v2.4.0
+  #   hooks:
+  #     - id: codespell
+  #       args:
+  #         - --ignore-words-list=hass,HA
+  #         - --skip="*.js,*.json,*.pyc"
+  #         - --quiet-level=2
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: ^\.github/workflows/
+      - id: check-json
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-private-key
+
+  # Python syntax checks
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-check-blanket-noqa
+      - id: python-check-blanket-type-ignore
+      # python-no-eval disabled - legitimate use in map.py for JS optimizer
+      # - id: python-no-eval
+      - id: python-use-type-annotations
+
+  # YAML formatting (disabled temporarily - args incompatible)
+  # - repo: https://github.com/google/yamlfmt
+  #   rev: v0.14.0
+  #   hooks:
+  #     - id: yamlfmt
+  #       exclude: ^\.github/workflows/
+
+# Global settings
+default_language_version:
+  python: python3.13
+
+# Exclude certain paths
+exclude: |
+  (?x)^(
+      \.git/|
+      \.github/|
+      __pycache__/|
+      \.pytest_cache/|
+      \.venv/|
+      venv/|
+      .*\.pyc
+  )$

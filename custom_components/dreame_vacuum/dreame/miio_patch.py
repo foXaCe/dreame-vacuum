@@ -8,9 +8,9 @@ This patch can be removed once python-miio releases a version including
 the fix from PR #1993: https://github.com/rytilahti/python-miio/pull/1993
 """
 
+import logging
 import sys
 import warnings
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,10 +30,10 @@ def apply_miio_patch():
     try:
         # Add a filter to suppress the specific FutureWarning from miio
         warnings.filterwarnings(
-            'ignore',
+            "ignore",
             category=FutureWarning,
-            message=r'.*functools\.partial will be a method descriptor.*',
-            module=r'miio\.miot_device'
+            message=r".*functools\.partial will be a method descriptor.*",
+            module=r"miio\.miot_device",
         )
 
         _LOGGER.debug("Applied warning filter for python-miio Python 3.13 compatibility")

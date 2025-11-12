@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import copy
-from enum import IntEnum
-import voluptuous as vol
-from typing import Any
 from collections.abc import Callable
+import copy
 from dataclasses import dataclass
+from enum import IntEnum
 from functools import partial
 
 from homeassistant.components.select import (
@@ -15,70 +13,67 @@ from homeassistant.components.select import (
     SelectEntity,
     SelectEntityDescription,
 )
-
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_platform, entity_registry
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+import voluptuous as vol
 
 from .const import (
     DOMAIN,
-    UNIT_TIMES,
-    UNIT_AREA,
     INPUT_CYCLE,
-    SERVICE_SELECT_NEXT,
-    SERVICE_SELECT_PREVIOUS,
     SERVICE_SELECT_FIRST,
     SERVICE_SELECT_LAST,
+    SERVICE_SELECT_NEXT,
+    SERVICE_SELECT_PREVIOUS,
+    UNIT_AREA,
+    UNIT_TIMES,
 )
-
 from .coordinator import DreameVacuumDataUpdateCoordinator
+from .dreame import (
+    CLEANING_MODE_CODE_TO_NAME,
+    CLEANING_ROUTE_TO_NAME,
+    CUSTOM_MOPPING_ROUTE_TO_NAME,
+    FLOOR_MATERIAL_CODE_TO_NAME,
+    FLOOR_MATERIAL_DIRECTION_CODE_TO_NAME,
+    MOP_PAD_HUMIDITY_CODE_TO_NAME,
+    SEGMENT_VISIBILITY_CODE_TO_NAME,
+    SUCTION_LEVEL_CODE_TO_NAME,
+    WATER_VOLUME_CODE_TO_NAME,
+    DreameVacuumAutoEmptyMode,
+    DreameVacuumAutoSwitchProperty,
+    DreameVacuumCarpetCleaning,
+    DreameVacuumCarpetSensitivity,
+    DreameVacuumCleanGenius,
+    DreameVacuumCleanGeniusMode,
+    DreameVacuumCleaningMode,
+    DreameVacuumCleaningRoute,
+    DreameVacuumCustomMoppingRoute,
+    DreameVacuumFloorMaterial,
+    DreameVacuumFloorMaterialDirection,
+    DreameVacuumMopExtendFrequency,
+    DreameVacuumMopPadHumidity,
+    DreameVacuumMopPadSwing,
+    DreameVacuumMoppingType,
+    DreameVacuumMopWashLevel,
+    DreameVacuumProperty,
+    DreameVacuumSecondCleaning,
+    DreameVacuumSegmentVisibility,
+    DreameVacuumSelfCleanFrequency,
+    DreameVacuumSuctionLevel,
+    DreameVacuumWashingMode,
+    DreameVacuumWaterTemperature,
+    DreameVacuumWaterVolume,
+    DreameVacuumWiderCornerCoverage,
+)
+from .dreame.const import ATTR_VALUE, STATE_NOT_SET
+from .dreame.types import ATTR_MAP_ID, ATTR_MAP_INDEX
 from .entity import (
     DreameVacuumEntity,
     DreameVacuumEntityDescription,
-)
-
-from .dreame.const import ATTR_VALUE, STATE_NOT_SET
-from .dreame.types import ATTR_MAP_INDEX, ATTR_MAP_ID
-from .dreame import (
-    DreameVacuumProperty,
-    DreameVacuumAutoSwitchProperty,
-    DreameVacuumSuctionLevel,
-    DreameVacuumCleaningMode,
-    DreameVacuumWaterVolume,
-    DreameVacuumMopPadHumidity,
-    DreameVacuumCarpetSensitivity,
-    DreameVacuumCarpetCleaning,
-    DreameVacuumMopWashLevel,
-    DreameVacuumMopCleanFrequency,
-    DreameVacuumMoppingType,
-    DreameVacuumWiderCornerCoverage,
-    DreameVacuumMopPadSwing,
-    DreameVacuumMopExtendFrequency,
-    DreameVacuumWashingMode,
-    DreameVacuumWaterTemperature,
-    DreameVacuumSecondCleaning,
-    DreameVacuumCleaningRoute,
-    DreameVacuumCustomMoppingRoute,
-    DreameVacuumSelfCleanFrequency,
-    DreameVacuumAutoEmptyMode,
-    DreameVacuumCleanGenius,
-    DreameVacuumCleanGeniusMode,
-    DreameVacuumFloorMaterial,
-    DreameVacuumFloorMaterialDirection,
-    DreameVacuumSegmentVisibility,
-    SUCTION_LEVEL_CODE_TO_NAME,
-    WATER_VOLUME_CODE_TO_NAME,
-    MOP_PAD_HUMIDITY_CODE_TO_NAME,
-    CLEANING_MODE_CODE_TO_NAME,
-    FLOOR_MATERIAL_CODE_TO_NAME,
-    FLOOR_MATERIAL_DIRECTION_CODE_TO_NAME,
-    SEGMENT_VISIBILITY_CODE_TO_NAME,
-    CUSTOM_MOPPING_ROUTE_TO_NAME,
-    CLEANING_ROUTE_TO_NAME,
 )
 
 SUCTION_LEVEL_TO_ICON = {
@@ -210,8 +205,7 @@ SELECTS: tuple[DreameVacuumSelectEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: device.capability.mop_pad_unmounting
         or device.capability.auto_carpet_cleaning
-        or device.capability.mop_pad_lifting_plus
-        and DreameVacuumEntityDescription().exists_fn(description, device),
+        or (device.capability.mop_pad_lifting_plus and DreameVacuumEntityDescription().exists_fn(description, device)),
     ),
     DreameVacuumSelectEntityDescription(
         property_key=DreameVacuumProperty.AUTO_EMPTY_FREQUENCY,
@@ -656,7 +650,7 @@ SEGMENT_SELECTS: tuple[DreameVacuumSelectEntityDescription, ...] = (
         segment_available_fn=lambda device, segment: bool(
             device.status.current_segments
             and segment.floor_material is not None
-            and segment.visibility != False
+            and segment.visibility
             and not device.status.started
             and not device.status.fast_mapping
             and not device.status.has_temporary_map
@@ -682,7 +676,7 @@ SEGMENT_SELECTS: tuple[DreameVacuumSelectEntityDescription, ...] = (
         segment_available_fn=lambda device, segment: bool(
             device.status.current_segments
             and segment.floor_material == 1
-            and segment.visibility != False
+            and segment.visibility
             and not device.status.started
             and not device.status.fast_mapping
             and not device.status.has_temporary_map

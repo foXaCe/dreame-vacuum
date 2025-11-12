@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
-from dataclasses import dataclass
 from collections.abc import Callable
-from functools import partial
 import copy
+from dataclasses import dataclass
+from functools import partial
+from typing import Any
 
 from homeassistant.components.button import (
     ENTITY_ID_FORMAT,
@@ -14,18 +14,16 @@ from homeassistant.components.button import (
     ButtonEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers import entity_registry
-from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
-
 from .coordinator import DreameVacuumDataUpdateCoordinator
-from .entity import DreameVacuumEntity, DreameVacuumEntityDescription
 from .dreame import DreameVacuumAction
+from .entity import DreameVacuumEntity, DreameVacuumEntityDescription
 
 
 @dataclass
@@ -41,8 +39,7 @@ BUTTONS: tuple[ButtonEntityDescription, ...] = (
         icon="mdi:car-turbocharger",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
-            DreameVacuumEntityDescription().exists_fn(description, device)
-            and device.status.main_brush_life is not None
+            DreameVacuumEntityDescription().exists_fn(description, device) and device.status.main_brush_life is not None
         ),
     ),
     DreameVacuumButtonEntityDescription(
@@ -50,8 +47,7 @@ BUTTONS: tuple[ButtonEntityDescription, ...] = (
         icon="mdi:pinwheel-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
-            DreameVacuumEntityDescription().exists_fn(description, device)
-            and device.status.side_brush_life is not None
+            DreameVacuumEntityDescription().exists_fn(description, device) and device.status.side_brush_life is not None
         ),
     ),
     DreameVacuumButtonEntityDescription(
@@ -81,8 +77,7 @@ BUTTONS: tuple[ButtonEntityDescription, ...] = (
         icon="mdi:shimmer",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
-            DreameVacuumEntityDescription().exists_fn(description, device)
-            and device.status.silver_ion_life is not None
+            DreameVacuumEntityDescription().exists_fn(description, device) and device.status.silver_ion_life is not None
         ),
     ),
     DreameVacuumButtonEntityDescription(
@@ -148,7 +143,9 @@ BUTTONS: tuple[ButtonEntityDescription, ...] = (
         icon_fn=lambda value, device: (
             "mdi:delete-off"
             if not device.status.dust_collection_available
-            else "mdi:delete-restore" if device.status.auto_emptying else "mdi:delete-empty"
+            else "mdi:delete-restore"
+            if device.status.auto_emptying
+            else "mdi:delete-empty"
         ),
         exists_fn=lambda description, device: bool(
             DreameVacuumEntityDescription().exists_fn(description, device) and device.capability.auto_empty_base
@@ -179,7 +176,9 @@ BUTTONS: tuple[ButtonEntityDescription, ...] = (
         name_fn=lambda value, device: (
             "Self-Clean Resume"
             if (device.status.washing_paused or device.status.returning_to_wash_paused)
-            else "Self-Clean Pause" if device.status.washing else "Self-Clean"
+            else "Self-Clean Pause"
+            if device.status.washing
+            else "Self-Clean"
         ),
         key="self_clean",
         icon_fn=lambda value, device: (
@@ -285,9 +284,9 @@ def async_update_buttons(
     new_entities = []
     if coordinator.device.capability.shortcuts:
         if coordinator.device.status.shortcuts:
-            new_ids = set([k for k, v in coordinator.device.status.shortcuts.items()])
+            new_ids = {k for k, v in coordinator.device.status.shortcuts.items()}
         else:
-            new_ids = set([])
+            new_ids = set()
 
         current_ids = set(current_shortcut)
 
@@ -312,7 +311,7 @@ def async_update_buttons(
             new_entities = new_entities + current_shortcut[shortcut_id]
 
     if coordinator.device.capability.backup_map:
-        new_indexes = set([k for k in range(1, len(coordinator.device.status.map_list) + 1)])
+        new_indexes = set(range(1, len(coordinator.device.status.map_list) + 1))
         current_ids = set(current_map)
 
         for map_index in current_ids - new_indexes:

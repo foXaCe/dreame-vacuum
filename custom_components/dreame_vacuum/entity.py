@@ -1,37 +1,35 @@
 from __future__ import annotations
 
-from typing import Any, Dict
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import partial
+from typing import Any
 
 from homeassistant.core import callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.helpers import entity_registry
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity import async_generate_entity_id
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from homeassistant.helpers.entity import DeviceInfo, async_generate_entity_id
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import DreameVacuumDataUpdateCoordinator
 from .const import DOMAIN, LOGGER
-from .dreame.const import ATTR_VALUE
+from .coordinator import DreameVacuumDataUpdateCoordinator
 from .dreame import (
-    DreameVacuumDevice,
-    DreameVacuumProperty,
-    DreameVacuumAutoSwitchProperty,
-    DreameVacuumStrAIProperty,
-    DreameVacuumAIProperty,
-    DreameVacuumAction,
-    DeviceException,
-    DeviceUpdateFailedException,
-    InvalidActionException,
-    InvalidValueException,
-    PROPERTY_TO_NAME,
+    ACTION_AVAILABILITY,
     ACTION_TO_NAME,
     PROPERTY_AVAILABILITY,
-    ACTION_AVAILABILITY,
+    PROPERTY_TO_NAME,
+    DeviceException,
+    DeviceUpdateFailedException,
+    DreameVacuumAction,
+    DreameVacuumAIProperty,
+    DreameVacuumAutoSwitchProperty,
+    DreameVacuumDevice,
+    DreameVacuumProperty,
+    DreameVacuumStrAIProperty,
+    InvalidActionException,
+    InvalidValueException,
 )
+from .dreame.const import ATTR_VALUE
 
 
 @dataclass
@@ -45,8 +43,7 @@ class DreameVacuumEntityDescription:
         (description.action_key is not None and description.action_key in device.action_mapping)
         or description.property_key is None
         or (
-            isinstance(description.property_key, DreameVacuumProperty)
-            and description.property_key.value in device.data
+            isinstance(description.property_key, DreameVacuumProperty) and description.property_key.value in device.data
         )
         or (
             isinstance(description.property_key, DreameVacuumAutoSwitchProperty)
@@ -68,7 +65,7 @@ class DreameVacuumEntityDescription:
     available_fn: Callable[[object], bool] = None
     icon_fn: Callable[[str, object], str] = None
     name_fn: Callable[[str, object], str] = None
-    attrs_fn: Callable[[object, Dict]] = None
+    attrs_fn: Callable[[object, dict]] = None
 
 
 class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):

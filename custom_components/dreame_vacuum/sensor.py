@@ -13,31 +13,29 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.icon import icon_for_battery_level
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.icon import icon_for_battery_level
 
 from .const import (
     DOMAIN,
-    UNIT_MINUTES,
-    UNIT_HOURS,
-    UNIT_PERCENT,
     UNIT_AREA,
-    UNIT_TIMES,
     UNIT_DAYS,
+    UNIT_HOURS,
+    UNIT_MINUTES,
+    UNIT_PERCENT,
+    UNIT_TIMES,
 )
+from .coordinator import DreameVacuumDataUpdateCoordinator
 from .dreame import (
     DreameVacuumProperty,
     DreameVacuumRelocationStatus,
     DreameVacuumStreamStatus,
 )
 from .dreame.const import ATTR_VALUE
-from .dreame.types import ATTR_ROOM_ID, ATTR_ROOM_ICON
-
-from .coordinator import DreameVacuumDataUpdateCoordinator
+from .dreame.types import ATTR_ROOM_ICON, ATTR_ROOM_ID
 from .entity import DreameVacuumEntity, DreameVacuumEntityDescription
-
 
 STREAM_STATUS_TO_ICON = {
     DreameVacuumStreamStatus.IDLE: "mdi:webcam",
@@ -120,7 +118,9 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
         icon_fn=lambda value, device: (
             "mdi:delete-clock"
             if device.status.auto_emptying_not_performed
-            else "mdi:delete-restore" if device.status.auto_emptying else "mdi:delete"
+            else "mdi:delete-restore"
+            if device.status.auto_emptying
+            else "mdi:delete"
         ),
     ),
     DreameVacuumSensorEntityDescription(
@@ -156,7 +156,9 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
         icon_fn=lambda value, device: (
             "mdi:alert-circle-outline"
             if device.status.has_error
-            else "mdi:alert-outline" if device.status.has_warning else "mdi:check-circle-outline"
+            else "mdi:alert-outline"
+            if device.status.has_warning
+            else "mdi:check-circle-outline"
         ),
         attrs_fn=lambda device: {
             ATTR_VALUE: device.status.error,
@@ -402,9 +404,7 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
         icon="mdi:calendar-start",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda value, device: datetime.fromtimestamp(value).replace(
-            tzinfo=datetime.now().astimezone().tzinfo
-        ),
+        value_fn=lambda value, device: datetime.fromtimestamp(value).replace(tzinfo=datetime.now().astimezone().tzinfo),
         # entity_registry_enabled_default=False,
     ),
     DreameVacuumSensorEntityDescription(

@@ -1,40 +1,36 @@
-import logging
-import random
-import hashlib
-import json
 import base64
+import hashlib
 import hmac
-import requests
-import zlib
-import ssl
+import json
+import locale
+import logging
 import queue
+import random
+import ssl
 from threading import Thread, Timer
+import time
 from time import sleep
-import time, locale
+from typing import Any, Final
+import zlib
+
+from Crypto.Cipher import ARC4
 import paho.mqtt
 from paho.mqtt.client import Client
-from typing import Any, Dict, Final, Optional, Tuple
-from Crypto.Cipher import ARC4
+import requests
 
 # Apply python-miio patch before importing miio to prevent FutureWarning on Python 3.13
 from .miio_patch import apply_miio_patch
+
 apply_miio_patch()
 
 from miio.miioprotocol import MiIOProtocol
 
+from . import VERSION
 from .exceptions import DeviceException
 
-from . import VERSION
-
-DATA_URL: Final = (
-    "aHR0cHM6Ly93d3cuZ29vZ2xlLWFuYWx5dGljcy5jb20vbXAvY29sbGVjdD9tZWFzdXJlbWVudF9pZD1HLTcwN1g2N0MzWlAmYXBpX3NlY3JldD1jX2taVDJlV1N1Q3Q4Q2swTGdtaE1n"
-)
-DATA_JSON: Final = (
-    "e3siY2xpZW50X2lkIjoiezB9IiwiZXZlbnRzIjpbe3sicGFyYW1zIjp7eyJ2ZXJzaW9uIjoiezF9IiwibW9kZWwiOiJ7Mn0iLCJkZXZpY2VfaWQiOiJ7MH0iLCJzZXNzaW9uX2lkIjp7M30sImVuZ2FnZW1lbnRfdGltZV9tc2VjIjoxMDB9fSwibmFtZSI6Ins0fSJ9fV19fQ=="
-)
-DREAME_STRINGS: Final = (
-    "H4sICAAAAAAEAGNsb3VkX3N0cmluZ3MuanNvbgCFU9tuGjEQ/RUUKaiVysIuiKWKeKAgBK2qbbikIVWFBtvLuvFla5sQ+vUd26Q0fek+2HPmPsc7364Srl1CDQPJEsdIdfXuKu1m/RzvxegkNuPrUi4/1fn16ieqJsFxu5RgXKUla2dJmrxvvOFfKq3YTYMXy0Y6SHpJetNYEhCs3U06nbc+KRl0dt18kO+yrN/P8/6OUNIbpGU3p4MSetkO0g50O1AOUujTspVi0AewnDQeZh/F5msq7rPpkcw2z8Xj9PZeLrLbWT1ap9OHO1UVxWQ/xIBO+FCwDtzBoiDBOmbWnKK844pOtASuENRG18y4E4pIwZx6lQBXaiOH82LZtATtQxCiuTeg3NadEKKTYaVhtto6/chU8xXy5hqsPWpDmwfLjAIZYpov2gBCJiBEH5RD3I7st+DgqrYOZ8iGJnRi1sbkl9J/MHuuOSq2PBr3XHvBMeX7DROfU/teWjhlnNUjT0VEkamLhYIDH8meOGEoCG7dXebtqtTRUKzG8wi0I14KcxuQ9uwf8N5HS02ZCN0RHN9eWsJqLaKlfyqm6FhLCS8dlVz4UH95As9v5WM9c3hVWEIb/3J75iah0Uns2v6DJ7HYCElFtPY0jPZMuYtpIQgC76AN/wUucrgKHLbCXzHWyjEEq1gc6lpwEhzbP2zwrrd4bM/t6KMSGujaiKgorE3pK23cOamfoOU3Lok0fEb812KlSZb0/r9Y338DqLVvecIDAAA="
-)
+DATA_URL: Final = "aHR0cHM6Ly93d3cuZ29vZ2xlLWFuYWx5dGljcy5jb20vbXAvY29sbGVjdD9tZWFzdXJlbWVudF9pZD1HLTcwN1g2N0MzWlAmYXBpX3NlY3JldD1jX2taVDJlV1N1Q3Q4Q2swTGdtaE1n"
+DATA_JSON: Final = "e3siY2xpZW50X2lkIjoiezB9IiwiZXZlbnRzIjpbe3sicGFyYW1zIjp7eyJ2ZXJzaW9uIjoiezF9IiwibW9kZWwiOiJ7Mn0iLCJkZXZpY2VfaWQiOiJ7MH0iLCJzZXNzaW9uX2lkIjp7M30sImVuZ2FnZW1lbnRfdGltZV9tc2VjIjoxMDB9fSwibmFtZSI6Ins0fSJ9fV19fQ=="
+DREAME_STRINGS: Final = "H4sICAAAAAAEAGNsb3VkX3N0cmluZ3MuanNvbgCFU9tuGjEQ/RUUKaiVysIuiKWKeKAgBK2qbbikIVWFBtvLuvFla5sQ+vUd26Q0fek+2HPmPsc7364Srl1CDQPJEsdIdfXuKu1m/RzvxegkNuPrUi4/1fn16ieqJsFxu5RgXKUla2dJmrxvvOFfKq3YTYMXy0Y6SHpJetNYEhCs3U06nbc+KRl0dt18kO+yrN/P8/6OUNIbpGU3p4MSetkO0g50O1AOUujTspVi0AewnDQeZh/F5msq7rPpkcw2z8Xj9PZeLrLbWT1ap9OHO1UVxWQ/xIBO+FCwDtzBoiDBOmbWnKK844pOtASuENRG18y4E4pIwZx6lQBXaiOH82LZtATtQxCiuTeg3NadEKKTYaVhtto6/chU8xXy5hqsPWpDmwfLjAIZYpov2gBCJiBEH5RD3I7st+DgqrYOZ8iGJnRi1sbkl9J/MHuuOSq2PBr3XHvBMeX7DROfU/teWjhlnNUjT0VEkamLhYIDH8meOGEoCG7dXebtqtTRUKzG8wi0I14KcxuQ9uwf8N5HS02ZCN0RHN9eWsJqLaKlfyqm6FhLCS8dlVz4UH95As9v5WM9c3hVWEIb/3J75iah0Uns2v6DJ7HYCElFtPY0jPZMuYtpIQgC76AN/wUucrgKHLbCXzHWyjEEq1gc6lpwEhzbP2zwrrd4bM/t6KMSGujaiKgorE3pK23cOamfoOU3Lok0fEb812KlSZb0/r9Y338DqLVvecIDAAA="
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -173,7 +169,7 @@ class DreameVacuumDreameHomeCloudProtocol:
 
     @property
     def object_name(self) -> str:
-        return f"{self._model}/{self._uid}/{str(self._did)}/0"
+        return f"{self._model}/{self._uid}/{self._did!s}/0"
 
     @property
     def logged_in(self) -> bool:
@@ -268,7 +264,7 @@ class DreameVacuumDreameHomeCloudProtocol:
         if self._message_callback:
             try:
                 response = json.loads(message.payload.decode("utf-8"))
-                if "data" in response and response["data"]:
+                if response.get("data"):
                     self._client_queue.put((self._message_callback, response["data"]))
             except:
                 pass
@@ -492,7 +488,7 @@ class DreameVacuumDreameHomeCloudProtocol:
             return data
         return None
 
-    def get_info(self, mac: str) -> Tuple[Optional[str], Optional[str]]:
+    def get_info(self, mac: str) -> tuple[str | None, str | None]:
         if self._did is not None:
             return " ", self._host
         devices = self.get_devices()
@@ -715,7 +711,7 @@ class DreameVacuumDreameHomeCloudProtocol:
                 self._fail_count = 0
                 self._connected = True
                 return json.loads(response.text)
-            elif response.status_code == 401 and self._secondary_key:
+            if response.status_code == 401 and self._secondary_key:
                 _LOGGER.warning("Execute api call failed: Token Expired")
                 self.login()
             else:
@@ -753,9 +749,7 @@ class DreameVacuumDreameHomeCloudProtocol:
 
 
 class DreameVacuumMiHomeCloudProtocol:
-    def __init__(
-        self, username: str, password: str, country: str, auth_key: str = None, device_id: str = None
-    ) -> None:
+    def __init__(self, username: str, password: str, country: str, auth_key: str = None, device_id: str = None) -> None:
         self._username = username
         self._password = password
         self._country = country
@@ -861,7 +855,7 @@ class DreameVacuumMiHomeCloudProtocol:
 
     @property
     def object_name(self) -> str:
-        return f"{str(self._uid)}/{str(self._did)}/0"        
+        return f"{self._uid!s}/{self._did!s}/0"
 
     def check_login(self, response=None) -> bool:
         try:
@@ -924,24 +918,24 @@ class DreameVacuumMiHomeCloudProtocol:
         data = {
             "user": self._username,
             "hash": hashlib.md5(str.encode(self._password)).hexdigest().upper(),
-            "callback": "https://sts.api.io.mi.com/sts",            
+            "callback": "https://sts.api.io.mi.com/sts",
             "sid": "xiaomiio",
             "qs": "%3Fsid%3Dxiaomiio%26_json%3Dtrue",
         }
         if self._sign:
             data["_sign"] = self._sign
-        params = {'_json': 'true'}       
-        
+        params = {"_json": "true"}
+
         self.verification_url = None
         self.captcha_img = None
-        
+
         try:
             cookies = {}
             if self._captcha_code and self._captcha_ick:
-                data['captCode'] = self._captcha_code
-                params['_dc'] = int(time.time() * 1000)
-                cookies['ick'] = self._captcha_ick
-                
+                data["captCode"] = self._captcha_code
+                params["_dc"] = int(time.time() * 1000)
+                cookies["ick"] = self._captcha_ick
+
             response = self._session.post(
                 "https://account.xiaomi.com/pass/serviceLoginAuth2",
                 headers={
@@ -953,7 +947,7 @@ class DreameVacuumMiHomeCloudProtocol:
                 cookies=cookies,
                 timeout=5,
             )
-            if response is not None:                
+            if response is not None:
                 if response.status_code == 200:
                     data = self.to_json(response.text)
                     location = data.get("location")
@@ -967,15 +961,15 @@ class DreameVacuumMiHomeCloudProtocol:
                         self.verification_url = data["notificationUrl"]
                         if self.verification_url[:4] != "http":
                             self.verification_url = f"https://account.xiaomi.com{self.verification_url}"
-                            
+
                     if "captchaUrl" in data:
                         url = data["captchaUrl"]
                         if url:
-                            if url[:4] != 'http':
+                            if url[:4] != "http":
                                 url = f"https://account.xiaomi.com{url}"
-                            
+
                             response = self._session.get(url)
-                            if ick := response.cookies.get('ick'):                            
+                            if ick := response.cookies.get("ick"):
                                 self._captcha_ick = ick
                                 self.captcha_img = base64.b64encode(response.content).decode()
                 self._auth_failed = True
@@ -998,8 +992,7 @@ class DreameVacuumMiHomeCloudProtocol:
                     self._service_token = response.cookies.get("serviceToken")
                     self._auth_key = f"{self._service_token} {self._ssecurity} {self._userId} {self._client_id}"
                     return True
-                else:
-                    self._auth_failed = True
+                self._auth_failed = True
         except:
             pass
         return False
@@ -1084,7 +1077,7 @@ class DreameVacuumMiHomeCloudProtocol:
     def verify_captcha(self, code) -> bool:
         self._captcha_code = code
         return self.login() or self.captcha_img is None
-        
+
     def get_file(self, url: str, retry_count: int = 4) -> Any:
         retries = 0
         if not retry_count or retry_count < 0:
@@ -1101,7 +1094,7 @@ class DreameVacuumMiHomeCloudProtocol:
         return None
 
     def get_file_url(self, object_name: str = "") -> Any:
-        api_response = self._api_call(f'home/getfileurl{("_v3" if self._v3 else "")}', {"obj_name": object_name})
+        api_response = self._api_call(f"home/getfileurl{('_v3' if self._v3 else '')}", {"obj_name": object_name})
         _LOGGER.debug("Get file url result: %s = %s", object_name, api_response)
         if api_response is None or "result" not in api_response or "url" not in api_response["result"]:
             if api_response and api_response.get("code") == -8 and self._v3:
@@ -1114,7 +1107,7 @@ class DreameVacuumMiHomeCloudProtocol:
 
     def get_interim_file_url(self, object_name: str = "") -> str:
         api_response = self._api_call(
-            f'v2/home/get_interim_file_url{("_pro" if self._v3 else "")}',
+            f"v2/home/get_interim_file_url{('_pro' if self._v3 else '')}",
             {"obj_name": object_name},
         )
         _LOGGER.debug("Get interim file url result: %s = %s", object_name, api_response)
@@ -1171,7 +1164,7 @@ class DreameVacuumMiHomeCloudProtocol:
 
         return api_response["result"]
 
-    def get_info(self, mac: str) -> Tuple[Optional[str], Optional[str]]:
+    def get_info(self, mac: str) -> tuple[str | None, str | None]:
         devices = self.get_devices()
         if devices:
             found = list(filter(lambda d: str(d["mac"]) == mac, devices))
@@ -1325,7 +1318,7 @@ class DreameVacuumMiHomeCloudProtocol:
             return None
         return api_response["result"]
 
-    def request(self, url: str, params: Dict[str, str], retry_count=2) -> Any:
+    def request(self, url: str, params: dict[str, str], retry_count=2) -> Any:
         retries = 0
         if not retry_count or retry_count < 0:
             retry_count = 0
@@ -1400,10 +1393,10 @@ class DreameVacuumMiHomeCloudProtocol:
 
     @staticmethod
     def generate_client_id() -> str:
-        return "".join((chr(random.randint(97, 122)) for _ in range(16)))
+        return "".join(chr(random.randint(97, 122)) for _ in range(16))
 
     @staticmethod
-    def generate_signature(url, signed_nonce: str, nonce: str, params: Dict[str, str]) -> str:
+    def generate_signature(url, signed_nonce: str, nonce: str, params: dict[str, str]) -> str:
         signature_params = [url.split("com")[1], signed_nonce, nonce]
         for k, v in params.items():
             signature_params.append(f"{k}={v}")
@@ -1416,7 +1409,7 @@ class DreameVacuumMiHomeCloudProtocol:
         return base64.b64encode(signature.digest()).decode()
 
     @staticmethod
-    def generate_enc_signature(url, method: str, signed_nonce: str, params: Dict[str, str]) -> str:
+    def generate_enc_signature(url, method: str, signed_nonce: str, params: dict[str, str]) -> str:
         signature_params = [
             str(method).upper(),
             url.split("com")[1].replace("/app/", "/"),
@@ -1433,12 +1426,10 @@ class DreameVacuumMiHomeCloudProtocol:
         method: str,
         signed_nonce: str,
         nonce: str,
-        params: Dict[str, str],
+        params: dict[str, str],
         ssecurity: str,
-    ) -> Dict[str, str]:
-        params["rc4_hash__"] = DreameVacuumMiHomeCloudProtocol.generate_enc_signature(
-            url, method, signed_nonce, params
-        )
+    ) -> dict[str, str]:
+        params["rc4_hash__"] = DreameVacuumMiHomeCloudProtocol.generate_enc_signature(url, method, signed_nonce, params)
         for k, v in params.items():
             params[k] = DreameVacuumMiHomeCloudProtocol.encrypt_rc4(signed_nonce, v)
         params.update(

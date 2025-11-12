@@ -1,144 +1,145 @@
 from __future__ import annotations
-import io
-import math
-import time
+
 import base64
-import json
-import zlib
-import re
-import logging
-import traceback
 import copy
-import numpy as np
+from functools import cmp_to_key
 import hashlib
+import io
+from io import BytesIO
+import json
+import logging
+import math
+import re
 import textwrap
-from py_mini_racer import MiniRacer
+from threading import Timer
+import time
+from time import sleep
+import traceback
+from typing import Any
+import zlib
+
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+import numpy as np
 from PIL import (
     Image,
     ImageDraw,
-    ImageOps,
-    ImageFont,
     ImageEnhance,
-    PngImagePlugin,
     ImageFilter,
+    ImageFont,
+    ImageOps,
+    PngImagePlugin,
 )
-from typing import Any
-from time import sleep
-from io import BytesIO
-from typing import Optional, Tuple
-from functools import cmp_to_key
-from threading import Timer
-from .resources import *
-from .protocol import DreameVacuumProtocol
+from py_mini_racer import MiniRacer
+
+from .const import (
+    MAP_DATA_JSON_CLASS,
+    MAP_DATA_JSON_PARAMETER_ACTIVE,
+    MAP_DATA_JSON_PARAMETER_ACTIVE_ZONE,
+    MAP_DATA_JSON_PARAMETER_AVG,
+    MAP_DATA_JSON_PARAMETER_CHARGER_POSITION,
+    MAP_DATA_JSON_PARAMETER_CLASS,
+    MAP_DATA_JSON_PARAMETER_COMPRESSED_PIXELS,
+    MAP_DATA_JSON_PARAMETER_DIMENSIONS,
+    MAP_DATA_JSON_PARAMETER_ENTITIES,
+    MAP_DATA_JSON_PARAMETER_FLOOR,
+    MAP_DATA_JSON_PARAMETER_LAYERS,
+    MAP_DATA_JSON_PARAMETER_MAX,
+    MAP_DATA_JSON_PARAMETER_META_DATA,
+    MAP_DATA_JSON_PARAMETER_MID,
+    MAP_DATA_JSON_PARAMETER_MIN,
+    MAP_DATA_JSON_PARAMETER_NAME,
+    MAP_DATA_JSON_PARAMETER_NO_GO_AREA,
+    MAP_DATA_JSON_PARAMETER_NO_MOP_AREA,
+    MAP_DATA_JSON_PARAMETER_PATH,
+    MAP_DATA_JSON_PARAMETER_PIXEL_COUNT,
+    MAP_DATA_JSON_PARAMETER_PIXEL_SIZE,
+    MAP_DATA_JSON_PARAMETER_PIXELS,
+    MAP_DATA_JSON_PARAMETER_POINTS,
+    MAP_DATA_JSON_PARAMETER_ROBOT_POSITION,
+    MAP_DATA_JSON_PARAMETER_ROTATION,
+    MAP_DATA_JSON_PARAMETER_SEGMENT,
+    MAP_DATA_JSON_PARAMETER_SEGMENT_ID,
+    MAP_DATA_JSON_PARAMETER_SIZE,
+    MAP_DATA_JSON_PARAMETER_TYPE,
+    MAP_DATA_JSON_PARAMETER_VERSION,
+    MAP_DATA_JSON_PARAMETER_VIRTUAL_WALL,
+    MAP_DATA_JSON_PARAMETER_WALL,
+    MAP_DATA_JSON_PARAMETER_X,
+    MAP_DATA_JSON_PARAMETER_Y,
+    MAP_PARAMETER_ANGLE,
+    MAP_PARAMETER_CODE,
+    MAP_PARAMETER_CURR_ID,
+    MAP_PARAMETER_EXPIRES_TIME,
+    MAP_PARAMETER_MAP,
+    MAP_PARAMETER_MAPSTR,
+    MAP_PARAMETER_NAME,
+    MAP_PARAMETER_OUT,
+    MAP_PARAMETER_TIME,
+    MAP_PARAMETER_URL,
+    MAP_PARAMETER_VACUUM,
+    MAP_PARAMETER_VALUE,
+    MAP_REQUEST_PARAMETER_FORCE_TYPE,
+    MAP_REQUEST_PARAMETER_FRAME_ID,
+    MAP_REQUEST_PARAMETER_FRAME_TYPE,
+    MAP_REQUEST_PARAMETER_INDEX,
+    MAP_REQUEST_PARAMETER_MAP_ID,
+    MAP_REQUEST_PARAMETER_REQ_TYPE,
+    MAP_REQUEST_PARAMETER_ROOM_ID,
+    MAP_REQUEST_PARAMETER_TYPE,
+)
 from .exceptions import DeviceUpdateFailedException
+from .protocol import DreameVacuumProtocol
+from .resources import *
 from .types import (
-    PIID,
     DIID,
-    DreameVacuumProperty,
+    FURNITURE_TYPE_TO_DIMENSIONS,
+    FURNITURE_V2_TYPE_MIJIA_TO_DIMENSIONS,
+    FURNITURE_V2_TYPE_TO_DIMENSIONS,
+    MAP_COLOR_SCHEME_LIST,
+    MAP_ICON_SET_LIST,
+    PIID,
+    SEGMENT_TYPE_CODE_TO_HA_ICON,
+    SEGMENT_TYPE_CODE_TO_NAME,
+    ALine,
+    Angle,
+    Area,
+    Carpet,
+    CleansetType,
+    CLine,
+    Coordinate,
     DreameVacuumAction,
     DreameVacuumActionMapping,
     DreameVacuumDeviceCapability,
-    RobotType,
-    CleansetType,
-    ObstacleType,
-    Obstacle,
-    FurnitureType,
+    DreameVacuumProperty,
     Furniture,
-    PathType,
-    Point,
-    Coordinate,
-    MapDataPartial,
+    FurnitureType,
     MapData,
+    MapDataPartial,
     MapFrameType,
-    MapPixelType,
-    Path,
-    Area,
-    Wall,
-    Carpet,
-    Polygon,
-    Segment,
-    StartupMethod,
-    CleanupMethod,
-    TaskEndType,
-    RecoveryMapType,
-    ObstacleIgnoreStatus,
     MapImageDimensions,
-    MapRendererLayer,
+    MapPixelType,
     MapRendererColorScheme,
     MapRendererConfig,
     MapRendererData,
+    MapRendererLayer,
     MapRendererResources,
-    RecoveryMapInfo,
-    MAP_COLOR_SCHEME_LIST,
-    MAP_ICON_SET_LIST,
-    SEGMENT_TYPE_CODE_TO_NAME,
-    SEGMENT_TYPE_CODE_TO_HA_ICON,
-    FURNITURE_TYPE_TO_DIMENSIONS,
-    FURNITURE_V2_TYPE_TO_DIMENSIONS,
-    FURNITURE_V2_TYPE_MIJIA_TO_DIMENSIONS,
-    ALine,
-    CLine,
+    Obstacle,
+    ObstacleIgnoreStatus,
+    ObstacleType,
+    Path,
     Paths,
-    Angle,
-)
-from .const import (
-    MAP_PARAMETER_NAME,
-    MAP_PARAMETER_VALUE,
-    MAP_PARAMETER_TIME,
-    MAP_PARAMETER_CODE,
-    MAP_PARAMETER_OUT,
-    MAP_PARAMETER_MAP,
-    MAP_PARAMETER_ANGLE,
-    MAP_PARAMETER_MAPSTR,
-    MAP_PARAMETER_CURR_ID,
-    MAP_PARAMETER_VACUUM,
-    MAP_PARAMETER_EXPIRES_TIME,
-    MAP_PARAMETER_URL,
-    MAP_REQUEST_PARAMETER_MAP_ID,
-    MAP_REQUEST_PARAMETER_FRAME_ID,
-    MAP_REQUEST_PARAMETER_FRAME_TYPE,
-    MAP_REQUEST_PARAMETER_REQ_TYPE,
-    MAP_REQUEST_PARAMETER_FORCE_TYPE,
-    MAP_REQUEST_PARAMETER_TYPE,
-    MAP_REQUEST_PARAMETER_INDEX,
-    MAP_REQUEST_PARAMETER_ROOM_ID,
-    MAP_DATA_JSON_CLASS,
-    MAP_DATA_JSON_PARAMETER_CLASS,
-    MAP_DATA_JSON_PARAMETER_SIZE,
-    MAP_DATA_JSON_PARAMETER_X,
-    MAP_DATA_JSON_PARAMETER_Y,
-    MAP_DATA_JSON_PARAMETER_PIXEL_SIZE,
-    MAP_DATA_JSON_PARAMETER_LAYERS,
-    MAP_DATA_JSON_PARAMETER_ENTITIES,
-    MAP_DATA_JSON_PARAMETER_META_DATA,
-    MAP_DATA_JSON_PARAMETER_VERSION,
-    MAP_DATA_JSON_PARAMETER_ROTATION,
-    MAP_DATA_JSON_PARAMETER_TYPE,
-    MAP_DATA_JSON_PARAMETER_POINTS,
-    MAP_DATA_JSON_PARAMETER_PIXELS,
-    MAP_DATA_JSON_PARAMETER_SEGMENT_ID,
-    MAP_DATA_JSON_PARAMETER_ACTIVE,
-    MAP_DATA_JSON_PARAMETER_NAME,
-    MAP_DATA_JSON_PARAMETER_DIMENSIONS,
-    MAP_DATA_JSON_PARAMETER_MIN,
-    MAP_DATA_JSON_PARAMETER_MAX,
-    MAP_DATA_JSON_PARAMETER_MID,
-    MAP_DATA_JSON_PARAMETER_AVG,
-    MAP_DATA_JSON_PARAMETER_PIXEL_COUNT,
-    MAP_DATA_JSON_PARAMETER_COMPRESSED_PIXELS,
-    MAP_DATA_JSON_PARAMETER_ROBOT_POSITION,
-    MAP_DATA_JSON_PARAMETER_CHARGER_POSITION,
-    MAP_DATA_JSON_PARAMETER_NO_MOP_AREA,
-    MAP_DATA_JSON_PARAMETER_NO_GO_AREA,
-    MAP_DATA_JSON_PARAMETER_ACTIVE_ZONE,
-    MAP_DATA_JSON_PARAMETER_VIRTUAL_WALL,
-    MAP_DATA_JSON_PARAMETER_PATH,
-    MAP_DATA_JSON_PARAMETER_FLOOR,
-    MAP_DATA_JSON_PARAMETER_WALL,
-    MAP_DATA_JSON_PARAMETER_SEGMENT,
+    PathType,
+    Point,
+    Polygon,
+    RecoveryMapInfo,
+    RecoveryMapType,
+    RobotType,
+    Segment,
+    StartupMethod,
+    TaskEndType,
+    Wall,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -230,7 +231,7 @@ class DreameMapVacuumMapManager:
                 self._connected = False
                 self._map_data_changed()
             return False
-        elif not self._connected:
+        if not self._connected:
             self._connected = True
             self._map_data_changed()
 
@@ -356,10 +357,10 @@ class DreameMapVacuumMapManager:
 
     def _request_missing_p_map(self) -> bool:
         if self._map_data is None:
-            return
+            return None
 
         if self._partial_map_queue_size() == 0:
-            return
+            return None
 
         frame_id = self._current_frame_id + 1
         map_id = self._current_map_id
@@ -370,7 +371,7 @@ class DreameMapVacuumMapManager:
             and self._last_p_request_frame_id == frame_id
             and (time.time() - self._last_p_request_time) < 3
         ):
-            return
+            return None
 
         self._last_p_request_map_id = map_id
         self._last_p_request_frame_id = frame_id
@@ -388,8 +389,8 @@ class DreameMapVacuumMapManager:
 
     def _request_next_p_map(self, map_id: int, frame_id: int) -> bool:
         key = f"{map_id}:{frame_id}"
-        if key in self._request_queue and self._request_queue[key]:
-            return
+        if self._request_queue.get(key):
+            return None
 
         self._request_queue[key] = True
         _LOGGER.info("Request next P map: %s", frame_id)
@@ -506,12 +507,8 @@ class DreameMapVacuumMapManager:
                 del self._map_data_queue[self._latest_map_id][k]
 
     def _unqueue_next_partial_map(self) -> MapData | None:
-        if (
-            self._latest_map_id is None
-            or self._current_frame_id is None
-            or self._current_map_id != self._latest_map_id
-        ):
-            return
+        if self._latest_map_id is None or self._current_frame_id is None or self._current_map_id != self._latest_map_id:
+            return None
 
         frame_id = self._current_frame_id + 1
         if (
@@ -519,7 +516,7 @@ class DreameMapVacuumMapManager:
             or not self._map_data_queue[self._latest_map_id]
             or frame_id not in self._map_data_queue[self._latest_map_id]
         ):
-            return
+            return None
 
         map_data = self._map_data_queue[self._latest_map_id][frame_id]
 
@@ -528,11 +525,7 @@ class DreameMapVacuumMapManager:
             return map_data
 
     def _unqueue_partial_map(self, map_id: int, frame_id: int) -> MapData | None:
-        if (
-            map_id in self._map_data_queue
-            and self._map_data_queue[map_id]
-            and frame_id in self._map_data_queue[map_id]
-        ):
+        if map_id in self._map_data_queue and self._map_data_queue[map_id] and frame_id in self._map_data_queue[map_id]:
             map_data = self._map_data_queue[map_id][frame_id]
             del self._map_data_queue[map_id][frame_id]
             return map_data
@@ -546,7 +539,7 @@ class DreameMapVacuumMapManager:
 
         return len(self._map_data_queue[self._latest_map_id])
 
-    def _get_object_file_data(self, object_name: str = "", timestamp=None) -> Tuple[Any, Optional[str]]:
+    def _get_object_file_data(self, object_name: str = "", timestamp=None) -> tuple[Any, str | None]:
         key = None
         if object_name and "," in object_name:
             values = object_name.split(",")
@@ -591,7 +584,7 @@ class DreameMapVacuumMapManager:
         if self._file_urls and self._file_urls.get(object_name):
             object = self._file_urls[object_name]
             if object[MAP_PARAMETER_EXPIRES_TIME] - now > 60:
-                url = f"{object[MAP_PARAMETER_URL]}&current={str(now)}"
+                url = f"{object[MAP_PARAMETER_URL]}&current={now!s}"
 
         if url is None:
             response = (
@@ -726,10 +719,7 @@ class DreameMapVacuumMapManager:
             and self._current_frame_id is not None
             and partial_map.frame_id < self._current_frame_id
         ):
-            if (
-                partial_map.frame_type != MapFrameType.I.value
-                or partial_map.timestamp_ms <= self._current_timestamp_ms
-            ):
+            if partial_map.frame_type != MapFrameType.I.value or partial_map.timestamp_ms <= self._current_timestamp_ms:
                 _LOGGER.info(
                     "Skip frame, frame id %s:%s < %s:%s",
                     partial_map.map_id,
@@ -992,7 +982,7 @@ class DreameMapVacuumMapManager:
         for map_id, saved_map_data in sorted(self._saved_map_data.items()):
             new_map_list.append(map_id)
             if saved_map_data.custom_name is None:
-                saved_map_data.map_name = f"Map {str(index)}"
+                saved_map_data.map_name = f"Map {index!s}"
             else:
                 saved_map_data.map_name = saved_map_data.custom_name
             saved_map_data.map_index = index
@@ -1006,11 +996,9 @@ class DreameMapVacuumMapManager:
                 for recovery_map_data in saved_map_data.recovery_map_list:
                     map_type = recovery_map_data.map_type.name.replace("_", " ").title()
                     if saved_map_data.custom_name is None:
-                        recovery_map_data.map_name = f"Recovery Map {str(index)} ({map_type})"
+                        recovery_map_data.map_name = f"Recovery Map {index!s} ({map_type})"
                     else:
-                        recovery_map_data.map_name = (
-                            f"{saved_map_data.custom_name} Recovery Map {str(index)} ({map_type})"
-                        )
+                        recovery_map_data.map_name = f"{saved_map_data.custom_name} Recovery Map {index!s} ({map_type})"
                     recovery_map_data.map_index = index
                     index = index + 1
 
@@ -1138,7 +1126,7 @@ class DreameMapVacuumMapManager:
                                 map_data = self.optimizer.optimize(map_data, saved_map_data)
                                 map_data.need_optimization = False
                             return map_data
-            except Exception as ex:
+            except Exception:
                 _LOGGER.warning(
                     "History map decoding failed: %s",
                     traceback.format_exc(),
@@ -1160,7 +1148,7 @@ class DreameMapVacuumMapManager:
                                 recovery_map_list[index].raw_map = response.decode()
                         except Exception as ex:
                             _LOGGER.warning("Get Recovery Map Object failed: %s", ex)
-                            return
+                            return None
 
                     if recovery_map_list[index].raw_map:
                         recovery_map_list[index].map_data = DreameVacuumMapDecoder.decode_saved_map(
@@ -1371,15 +1359,14 @@ class DreameMapVacuumMapManager:
             if time.time() - self._new_map_request_time > 3:
                 self._new_map_request_time = time.time()
                 self._request_map_from_cloud()
-            return
+            return None
 
         self._new_map_request_time = time.time()
         if self._map_data is None:
             return self._request_i_map()
-        else:
-            result = self._request_map()
-            if result and result[MAP_PARAMETER_CODE] == 0 and not self._protocol.dreame_cloud:
-                self._request_map_from_cloud()
+        result = self._request_map()
+        if result and result[MAP_PARAMETER_CODE] == 0 and not self._protocol.dreame_cloud:
+            self._request_map_from_cloud()
 
     def request_next_map(self, request_new=False) -> None:
         self._map_request_count = 0
@@ -1456,7 +1443,7 @@ class DreameMapVacuumMapManager:
                                     int(v[MAP_PARAMETER_ANGLE]) if v.get(MAP_PARAMETER_ANGLE) else 0,
                                     self._aes_iv,
                                 )
-                            except Exception as ex:
+                            except Exception:
                                 _LOGGER.error("Parse saved map failed: %s", traceback.format_exc())
                                 return
 
@@ -1508,7 +1495,7 @@ class DreameMapVacuumMapManager:
                     self._selected_map_id = selected_map_id
                     changed = True
 
-                if changed == True:
+                if changed:
                     self._refresh_map_list()
                     if self._map_data:
                         self._map_data_changed(True)
@@ -1769,7 +1756,7 @@ class DreameMapVacuumMapEditor:
                 self._saved_map_data[map_id].map_name = name
             else:
                 self._saved_map_data[map_id].custom_name = None
-                self._saved_map_data[map_id].map_name = f"Map {str(self._saved_map_data[map_id].map_index)}"
+                self._saved_map_data[map_id].map_name = f"Map {self._saved_map_data[map_id].map_index!s}"
             self.refresh_map(map_id)
             self.refresh_map()
 
@@ -1808,11 +1795,7 @@ class DreameMapVacuumMapEditor:
 
     def set_carpets(self, carpets, ignored_carpets) -> None:
         map_data = self._map_data
-        if (
-            not map_data
-            or not self._selected_map_id
-            or (map_data.carpets is None and map_data.ignored_carpets is None)
-        ):
+        if not map_data or not self._selected_map_id or (map_data.carpets is None and map_data.ignored_carpets is None):
             return
 
         map_data.carpets = []
@@ -2521,7 +2504,7 @@ class DreameMapVacuumMapEditor:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments and not map_data.temporary_map:
             map_data.segments[segment_id].visibility = visibility
-            map_data.hidden_segments = [k for k, v in map_data.segments.items() if v.visibility == False]
+            map_data.hidden_segments = [k for k, v in map_data.segments.items() if not v.visibility]
             if (
                 self._saved_map_data
                 and self._selected_map_id is not None
@@ -2529,7 +2512,7 @@ class DreameMapVacuumMapEditor:
             ):
                 self._saved_map_data[self._selected_map_id].segments[segment_id].visibility = visibility
                 self._saved_map_data[self._selected_map_id].hidden_segments = [
-                    k for k, v in self._saved_map_data[self._selected_map_id].segments.items() if v.visibility == False
+                    k for k, v in self._saved_map_data[self._selected_map_id].segments.items() if not v.visibility
                 ]
 
             self._set_updated_frame_id(map_data.frame_id)
@@ -2657,11 +2640,7 @@ class DreameMapVacuumMapEditor:
             map_data.virtual_walls = []
 
         self._set_updated_frame_id(map_data.frame_id)
-        if (
-            self._saved_map_data
-            and self._selected_map_id is not None
-            and self._selected_map_id in self._saved_map_data
-        ):
+        if self._saved_map_data and self._selected_map_id is not None and self._selected_map_id in self._saved_map_data:
             self._saved_map_data[self._selected_map_id].no_go_areas = map_data.no_go_areas
             self._saved_map_data[self._selected_map_id].no_mopping_areas = map_data.no_mopping_areas
             self._saved_map_data[self._selected_map_id].virtual_walls = map_data.virtual_walls
@@ -2748,7 +2727,7 @@ class DreameVacuumMapDecoder:
             segment_id = pixel & 0x7F
             if segment_id == 1 or segment_id == 3:
                 return (MapPixelType.NEW_SEGMENT.value, carpet)
-            elif segment_id == 2:
+            if segment_id == 2:
                 return (MapPixelType.WALL.value, carpet)
         else:
             carpet = bool((pixel & 0x40) == 64)
@@ -2892,7 +2871,7 @@ class DreameVacuumMapDecoder:
         rotation: int = 0,
         iv: str = None,
         key: str = None,
-    ) -> Tuple[MapData, Optional[MapData]]:
+    ) -> tuple[MapData, MapData | None]:
         return DreameVacuumMapDecoder.decode_map_data_from_partial(
             DreameVacuumMapDecoder.decode_map_partial(raw_map, iv, key),
             vslam_map,
@@ -2904,11 +2883,9 @@ class DreameVacuumMapDecoder:
         return DreameVacuumMapDecoder.decode_map(raw_map, vslam_map, rotation, iv)[0]
 
     @staticmethod
-    def decode_map_data_from_partial(
-        partial_map: MapDataPartial, vslam_map: bool, rotation: int = 0
-    ) -> MapData | None:
+    def decode_map_data_from_partial(partial_map: MapDataPartial, vslam_map: bool, rotation: int = 0) -> MapData | None:
         if partial_map is None:
-            return
+            return None
 
         map_data = MapData()
         map_data.map_id = partial_map.map_id
@@ -2973,14 +2950,14 @@ class DreameVacuumMapDecoder:
                     map_data.remaining_battery = int(data_json["clean_finish_remain_electricity"])
 
                 map_data.customized_cleaning = data_json.get("customeClean")
-                map_data.docked = bool("oc" in data_json and data_json["oc"])
-                map_data.line_to_robot = bool("l2r" in data_json and data_json["l2r"])
+                map_data.docked = bool(data_json.get("oc"))
+                map_data.line_to_robot = bool(data_json.get("l2r"))
                 map_data.frame_map = bool(data_json.get("fsm") and data_json["fsm"] == 1)
                 map_data.restored_map = bool(data_json.get("rpur") and data_json["rpur"] == 1)
                 map_data.saved_map_status = -1
                 if "ris" in data_json:
                     map_data.saved_map_status = data_json["ris"]
-                map_data.clean_log = bool(data_json.get("iscleanlog") and data_json["iscleanlog"] == True)
+                map_data.clean_log = bool(data_json.get("iscleanlog") and data_json["iscleanlog"])
                 map_data.recovery_map = bool("us" in data_json and data_json["us"] == 1)
                 map_data.new_map = bool("risp" in data_json and data_json["risp"] == 0)
                 if "smd" in data_json:
@@ -3024,9 +3001,7 @@ class DreameVacuumMapDecoder:
                 if data_json.get("tr"):
                     matches = [
                         m.groupdict()
-                        for m in re.compile(r"(?P<operator>[MWSLl])(?P<x>-?\d+),(?P<y>-?\d+)").finditer(
-                            data_json["tr"]
-                        )
+                        for m in re.compile(r"(?P<operator>[MWSLl])(?P<x>-?\d+),(?P<y>-?\d+)").finditer(data_json["tr"])
                     ]
                     current_position = Point(0, 0)
                     map_data.path = []
@@ -3341,7 +3316,7 @@ class DreameVacuumMapDecoder:
                                         else:
                                             pixel_type[i, j] = segment_id
                                     elif j >= nj and i >= ni and j < njm and i < nim:
-                                        clean_value = int(map_data.pixel_type[(i - ni), ((j - nj))])
+                                        clean_value = int(map_data.pixel_type[(i - ni), (j - nj)])
                                         if clean_value == 255:
                                             pixel_type[i, j] = clean_value
                                         elif clean_value == 253:
@@ -4063,7 +4038,7 @@ class DreameVacuumMapDecoder:
         if cleaning_map_str and len(cleaning_map_str) > 1:
             partial_cleaning_map = DreameVacuumMapDecoder.decode_map_partial(cleaning_map_str)
             if partial_cleaning_map is None:
-                return
+                return None
 
         cleaning_map = MapData()
         if partial_cleaning_map:
@@ -4125,30 +4100,52 @@ class DreameVacuumMapDecoder:
         return cleaning_map
 
     @staticmethod
-    def extract_segment_outline(map_data: MapData, segment_id: int, x0_px: int, y0_px: int, x1_px: int, y1_px: int) -> list[list[int]]:
+    def extract_segment_outline(
+        map_data: MapData, segment_id: int, x0_px: int, y0_px: int, x1_px: int, y1_px: int
+    ) -> list[list[int]]:
         """Extract the real outline of a segment using Moore-Neighbor contour tracing"""
         # Validate indices are within bounds
-        if (x0_px < 0 or y0_px < 0 or
-            x1_px >= map_data.dimensions.width or
-            y1_px >= map_data.dimensions.height or
-            x0_px >= x1_px or y0_px >= y1_px):
+        if (
+            x0_px < 0
+            or y0_px < 0
+            or x1_px >= map_data.dimensions.width
+            or y1_px >= map_data.dimensions.height
+            or x0_px >= x1_px
+            or y0_px >= y1_px
+        ):
             # Return simple bounding box if indices are invalid
             return [
                 [
                     int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
-                    int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                    int(
+                        map_data.dimensions.top
+                        + (y0_px * map_data.dimensions.grid_size)
+                        - map_data.dimensions.grid_size
+                    ),
                 ],
                 [
-                    int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
-                    int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                    int(
+                        map_data.dimensions.left
+                        + (x1_px * map_data.dimensions.grid_size)
+                        + map_data.dimensions.grid_size
+                    ),
+                    int(
+                        map_data.dimensions.top
+                        + (y0_px * map_data.dimensions.grid_size)
+                        - map_data.dimensions.grid_size
+                    ),
                 ],
                 [
-                    int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
-                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
+                    int(
+                        map_data.dimensions.left
+                        + (x1_px * map_data.dimensions.grid_size)
+                        + map_data.dimensions.grid_size
+                    ),
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size)),
                 ],
                 [
                     int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
-                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size)),
                 ],
             ]
 
@@ -4167,19 +4164,35 @@ class DreameVacuumMapDecoder:
             return [
                 [
                     int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
-                    int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                    int(
+                        map_data.dimensions.top
+                        + (y0_px * map_data.dimensions.grid_size)
+                        - map_data.dimensions.grid_size
+                    ),
                 ],
                 [
-                    int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
-                    int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
+                    int(
+                        map_data.dimensions.left
+                        + (x1_px * map_data.dimensions.grid_size)
+                        + map_data.dimensions.grid_size
+                    ),
+                    int(
+                        map_data.dimensions.top
+                        + (y0_px * map_data.dimensions.grid_size)
+                        - map_data.dimensions.grid_size
+                    ),
                 ],
                 [
-                    int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
-                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
+                    int(
+                        map_data.dimensions.left
+                        + (x1_px * map_data.dimensions.grid_size)
+                        + map_data.dimensions.grid_size
+                    ),
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size)),
                 ],
                 [
                     int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
-                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size)),
                 ],
             ]
 
@@ -4206,10 +4219,14 @@ class DreameVacuumMapDecoder:
                 next_x, next_y = current_x + dx, current_y + dy
 
                 # Check bounds
-                if (next_x >= x0_px and next_x <= x1_px and
-                    next_y >= y0_px and next_y <= y1_px and
-                    next_x < map_data.dimensions.width and next_y < map_data.dimensions.height):
-
+                if (
+                    next_x >= x0_px
+                    and next_x <= x1_px
+                    and next_y >= y0_px
+                    and next_y <= y1_px
+                    and next_x < map_data.dimensions.width
+                    and next_y < map_data.dimensions.height
+                ):
                     if int(map_data.pixel_type[next_x, next_y]) == segment_id:
                         current_x, current_y = next_x, next_y
                         # Update search direction (backtrack 2 positions for next search)
@@ -4235,29 +4252,51 @@ class DreameVacuumMapDecoder:
         # Convert pixel coordinates to map coordinates
         outline = []
         for px, py in simplified:
-            outline.append([
-                int(map_data.dimensions.left + (px * map_data.dimensions.grid_size)),
-                int(map_data.dimensions.top + (py * map_data.dimensions.grid_size))
-            ])
+            outline.append(
+                [
+                    int(map_data.dimensions.left + (px * map_data.dimensions.grid_size)),
+                    int(map_data.dimensions.top + (py * map_data.dimensions.grid_size)),
+                ]
+            )
 
-        return outline if len(outline) > 0 else [
-            [
-                int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
-                int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
-            ],
-            [
-                int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
-                int(map_data.dimensions.top + (y0_px * map_data.dimensions.grid_size) - map_data.dimensions.grid_size)
-            ],
-            [
-                int(map_data.dimensions.left + (x1_px * map_data.dimensions.grid_size) + map_data.dimensions.grid_size),
-                int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
-            ],
-            [
-                int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
-                int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size))
-            ],
-        ]
+        return (
+            outline
+            if len(outline) > 0
+            else [
+                [
+                    int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
+                    int(
+                        map_data.dimensions.top
+                        + (y0_px * map_data.dimensions.grid_size)
+                        - map_data.dimensions.grid_size
+                    ),
+                ],
+                [
+                    int(
+                        map_data.dimensions.left
+                        + (x1_px * map_data.dimensions.grid_size)
+                        + map_data.dimensions.grid_size
+                    ),
+                    int(
+                        map_data.dimensions.top
+                        + (y0_px * map_data.dimensions.grid_size)
+                        - map_data.dimensions.grid_size
+                    ),
+                ],
+                [
+                    int(
+                        map_data.dimensions.left
+                        + (x1_px * map_data.dimensions.grid_size)
+                        + map_data.dimensions.grid_size
+                    ),
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size)),
+                ],
+                [
+                    int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
+                    int(map_data.dimensions.top + (y1_px * map_data.dimensions.grid_size)),
+                ],
+            ]
+        )
 
     @staticmethod
     def _simplify_contour(points: list, epsilon: float) -> list:
@@ -4279,7 +4318,7 @@ class DreameVacuumMapDecoder:
         # If max distance is greater than epsilon, recursively simplify
         if dmax > epsilon:
             # Recursive call
-            rec_results1 = DreameVacuumMapDecoder._simplify_contour(points[:index+1], epsilon)
+            rec_results1 = DreameVacuumMapDecoder._simplify_contour(points[: index + 1], epsilon)
             rec_results2 = DreameVacuumMapDecoder._simplify_contour(points[index:], epsilon)
 
             # Build the result list
@@ -4655,8 +4694,7 @@ class DreameVacuumMapDecoder:
                             carpet_pixels.append((x, y))
 
                 return carpet_pixels
-            else:
-                return saved_map_data.carpet_pixels
+            return saved_map_data.carpet_pixels
         return None
 
     @staticmethod
@@ -4679,7 +4717,9 @@ class DreameVacuumMapDecoder:
                         map_data.segments[segment_id].floor_material_rotated_direction = (
                             material_direction
                             if map_data.rotation == 0 or map_data.rotation == 180
-                            else 90 if material_direction == 0 else 0
+                            else 90
+                            if material_direction == 0
+                            else 0
                         )
 
                     floor_material[segment_id] = (
@@ -4711,7 +4751,7 @@ class DreameVacuumMapDecoder:
 class DreameVacuumMapDataJsonRenderer:
     HALF_INT16 = 32768
     HALF_INT16_UPPER_HALF = 32767
-    MAX = round(((HALF_INT16 + HALF_INT16_UPPER_HALF) / 10))
+    MAX = round((HALF_INT16 + HALF_INT16_UPPER_HALF) / 10)
 
     def __init__(self) -> None:
         self._map_data: MapData = None
@@ -4830,9 +4870,7 @@ class DreameVacuumMapDataJsonRenderer:
                         map_data.charger_position.x, map_data.charger_position.y
                     ),
                     MAP_DATA_JSON_PARAMETER_META_DATA: {
-                        MAP_PARAMETER_ANGLE: DreameVacuumMapDataJsonRenderer._convert_angle(
-                            map_data.charger_position.a
-                        )
+                        MAP_PARAMETER_ANGLE: DreameVacuumMapDataJsonRenderer._convert_angle(map_data.charger_position.a)
                     },
                 }
             map_data_json[MAP_DATA_JSON_PARAMETER_ENTITIES].append(self._layers[MapRendererLayer.CHARGER])
@@ -5406,9 +5444,7 @@ class DreameVacuumMapRenderer:
         if self.config.mopping_mode:
             self._cleaning_route_icon = [
                 Image.open(BytesIO(base64.b64decode(icon))).convert("RGBA")
-                for icon in (
-                    MAP_ICON_CLEANING_ROUTE_MATERIAL if self.icon_set == 3 else MAP_ICON_CLEANING_ROUTE_DREAME
-                )
+                for icon in (MAP_ICON_CLEANING_ROUTE_MATERIAL if self.icon_set == 3 else MAP_ICON_CLEANING_ROUTE_DREAME)
             ]
             self._custom_mopping_route_icon = [
                 Image.open(BytesIO(base64.b64decode(icon))).convert("RGBA")
@@ -5657,22 +5693,21 @@ class DreameVacuumMapRenderer:
                 int(math.ceil(((x_coords[0] + x_coords[1] - dimensions.left) / grid_size) + 1)),
                 int(math.ceil(((y_coords[0] + y_coords[1] - dimensions.top) / grid_size) + 1)),
             )
-        else:
-            left = dimensions.left
-            top = dimensions.top
-            if left % dimensions.grid_size != 0 or top % dimensions.grid_size != 0:
-                left = left + (dimensions.grid_size / 2)
-                top = top + (dimensions.grid_size / 2)
+        left = dimensions.left
+        top = dimensions.top
+        if left % dimensions.grid_size != 0 or top % dimensions.grid_size != 0:
+            left = left + (dimensions.grid_size / 2)
+            top = top + (dimensions.grid_size / 2)
 
-            x_coords = sorted([carpet.x0, carpet.x2])
-            y_coords = sorted([carpet.y0, carpet.y2])
+        x_coords = sorted([carpet.x0, carpet.x2])
+        y_coords = sorted([carpet.y0, carpet.y2])
 
-            return (
-                int(math.ceil((x_coords[0] - left) / grid_size)),
-                int(math.ceil((y_coords[0] - top) / grid_size)),
-                int(math.ceil((x_coords[1] - left) / grid_size)),
-                int(math.ceil((y_coords[1] - top) / grid_size)),
-            )
+        return (
+            int(math.ceil((x_coords[0] - left) / grid_size)),
+            int(math.ceil((y_coords[0] - top) / grid_size)),
+            int(math.ceil((x_coords[1] - left) / grid_size)),
+            int(math.ceil((y_coords[1] - top) / grid_size)),
+        )
 
     @staticmethod
     def _optimize_carpet_pixels(carpet_pixels, dimensions, pixel_type):
@@ -5733,9 +5768,9 @@ class DreameVacuumMapRenderer:
 
                 if sx == x and sy == y and tx == x and ty == y:
                     return True
-                if sy == ty and sy == y and (sx > x and tx < x or sx < x and tx > x):
+                if sy == ty and sy == y and ((sx > x and tx < x) or (sx < x and tx > x)):
                     return True
-                if sy < y and ty >= y or sy >= y and ty < y:
+                if (sy < y and ty >= y) or (sy >= y and ty < y):
                     xx = sx + (y - sy) * (tx - sx) / (ty - sy)
                     if xx == x:
                         return True
@@ -5881,7 +5916,7 @@ class DreameVacuumMapRenderer:
                     min_y,
                 ]
 
-            for layer in pixels.keys():
+            for layer in pixels:
                 current_x_start = -1
                 current_y = -1
                 current_count = 0
@@ -6496,7 +6531,9 @@ class DreameVacuumMapRenderer:
                     if (map_data.saved_map_status == 2 or map_data.restored_map)
                     and not map_data.recovery_map
                     and not map_data.history_map
-                    else 2 if (map_data.wifi_map or map_data.history_map) and self._cache else 3
+                    else 2
+                    if (map_data.wifi_map or map_data.history_map) and self._cache
+                    else 3
                 )
             )
             object_scale = 2
@@ -6948,7 +6985,7 @@ class DreameVacuumMapRenderer:
                     image = image.resize(
                         (
                             base_width,
-                            int((float(image.size[1]) * float((base_width / float(image.size[0]))))),
+                            int(float(image.size[1]) * float(base_width / float(image.size[0]))),
                         ),
                         Image.Resampling.LANCZOS,
                     )
@@ -6990,7 +7027,7 @@ class DreameVacuumMapRenderer:
                 if map_data.history_map and not map_data.task_cruise_points:
                     header_text = ""
                     if map_data.mop_wash_count:
-                        header_text = f"Self-Cleaned"
+                        header_text = "Self-Cleaned"
                         if map_data.mop_wash_count > 1:
                             header_text = f"{header_text} {map_data.mop_wash_count}x"
 
@@ -7043,7 +7080,7 @@ class DreameVacuumMapRenderer:
                     header_lines = [
                         (str(map_data.cleaning_time), f"{map_type} Time", "min"),
                         (
-                            "Interrupted" if map_data.completed == False else "Completed",
+                            "Interrupted" if not map_data.completed else "Completed",
                             f"{map_type} Status",
                             "",
                         ),
@@ -7554,31 +7591,22 @@ class DreameVacuumMapRenderer:
                         or bool((not map_data.saved_map or map_data.recovery_map) and self._map_data.cleanset)
                         != bool((not map_data.saved_map or map_data.recovery_map) and map_data.cleanset)
                         or bool(
-                            (
-                                (not map_data.active_segments or k in map_data.active_segments)
-                                and (not map_data.hidden_segments or k not in map_data.hidden_segments)
-                                and not map_data.cleaning_map
-                            )
+                            (not map_data.active_segments or k in map_data.active_segments)
+                            and (not map_data.hidden_segments or k not in map_data.hidden_segments)
+                            and not map_data.cleaning_map
                         )
                         != bool(
-                            (
-                                (not self._map_data.active_segments or k in self._map_data.active_segments)
-                                and (not self._map_data.hidden_segments or k not in self._map_data.hidden_segments)
-                                and not self._map_data.cleaning_map
-                            )
+                            (not self._map_data.active_segments or k in self._map_data.active_segments)
+                            and (not self._map_data.hidden_segments or k not in self._map_data.hidden_segments)
+                            and not self._map_data.cleaning_map
                         )
                         or bool(
-                            (
-                                map_data.cleaning_map
-                                and (map_data.neglected_segments and k in map_data.neglected_segments)
-                            )
+                            map_data.cleaning_map and (map_data.neglected_segments and k in map_data.neglected_segments)
                         )
                         != bool(
-                            (
-                                self._map_data.cleaning_map
-                                and self._map_data.neglected_segments
-                                and k in self._map_data.neglected_segments
-                            )
+                            self._map_data.cleaning_map
+                            and self._map_data.neglected_segments
+                            and k in self._map_data.neglected_segments
                         ),
                     ):
                         changed = True
@@ -7802,34 +7830,21 @@ class DreameVacuumMapRenderer:
                         )
 
                         if self.icon_set != 2:
-                            if charger_angle > -45 and charger_angle < 45:
-                                charger_angle = 0
-                            elif (
-                                charger_angle > -45
-                                and charger_angle <= 45
-                                or charger_angle > 315
-                                and charger_angle <= 405
+                            if (charger_angle > -45 and charger_angle < 45) or (
+                                (charger_angle > -45 and charger_angle <= 45)
+                                or (charger_angle > 315 and charger_angle <= 405)
                             ):
                                 charger_angle = 0
-                            elif (
-                                charger_angle > 45
-                                and charger_angle <= 135
-                                or charger_angle > -315
-                                and charger_angle <= -225
+                            elif (charger_angle > 45 and charger_angle <= 135) or (
+                                charger_angle > -315 and charger_angle <= -225
                             ):
                                 charger_angle = 90
-                            elif (
-                                charger_angle > 135
-                                and charger_angle <= 225
-                                or charger_angle > -225
-                                and charger_angle <= -135
+                            elif (charger_angle > 135 and charger_angle <= 225) or (
+                                charger_angle > -225 and charger_angle <= -135
                             ):
                                 charger_angle = 180
-                            elif (
-                                charger_angle > 225
-                                and charger_angle <= 315
-                                or charger_angle > -135
-                                and charger_angle <= -45
+                            elif (charger_angle > 225 and charger_angle <= 315) or (
+                                charger_angle > -135 and charger_angle <= -45
                             ):
                                 charger_angle = 270
                     else:
@@ -7917,9 +7932,7 @@ class DreameVacuumMapRenderer:
                         and v.type != ObstacleType.DRIED_STAIN
                         and v.type != ObstacleType.MIXED_STAIN
                         and v.type != ObstacleType.DETECTED_STAIN
-                    ):
-                        continue
-                    elif not self.config.pet and v.type == ObstacleType.PET:
+                    ) or (not self.config.pet and v.type == ObstacleType.PET):
                         continue
 
                     if (
@@ -7947,9 +7960,7 @@ class DreameVacuumMapRenderer:
 
                 if changed:
                     changes.append(layer)
-                    DreameVacuumMapRenderer._combine_layers(
-                        cached_layers, layer_size, layer, MapRendererLayer.OBSTACLE
-                    )
+                    DreameVacuumMapRenderer._combine_layers(cached_layers, layer_size, layer, MapRendererLayer.OBSTACLE)
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
             del cached_layers[layer]
@@ -8140,9 +8151,7 @@ class DreameVacuumMapRenderer:
             tp = DreameVacuumMapRenderer._coords_on_line(coords[6], coords[7], coords[4], coords[5], thickness * scale)
 
             for i in range(len(tp) - 1):
-                draw.line(
-                    [tp[i][0], tp[i][1], bp[i + 1][0], bp[i + 1][1]], color, width=(width * scale), joint="curve"
-                )
+                draw.line([tp[i][0], tp[i][1], bp[i + 1][0], bp[i + 1][1]], color, width=(width * scale), joint="curve")
         return new_layer
 
     def render_curtains(self, curtains, color, layer_size, dimensions, width, scale):
@@ -8360,9 +8369,7 @@ class DreameVacuumMapRenderer:
         icon_size = int(size * scale)
         if self.icon_set == 3:
             icon_size = int(icon_size * 1.2)
-        elif self.icon_set == 2:
-            icon_size = int(icon_size * 1.5)
-        elif self._robot_type == RobotType.VSLAM:
+        elif self.icon_set == 2 or self._robot_type == RobotType.VSLAM:
             icon_size = int(icon_size * 1.5)
 
         if self._charger_icon is None:
@@ -8391,10 +8398,7 @@ class DreameVacuumMapRenderer:
         charger_icon = self._charger_icon.resize((icon_size, icon_size), resample=Image.Resampling.NEAREST).rotate(
             (
                 charger_position.a
-                if self._robot_type == RobotType.VSLAM
-                or self.icon_set == 0
-                or self.icon_set == 2
-                or self.icon_set == 3
+                if self._robot_type == RobotType.VSLAM or self.icon_set == 0 or self.icon_set == 2 or self.icon_set == 3
                 else (-map_rotation)
             ),
             expand=1,
@@ -8763,11 +8767,11 @@ class DreameVacuumMapRenderer:
             if render_font and self._font_file:
                 text_font = ImageFont.truetype(
                     BytesIO(self._font_file),
-                    int((size * 1.9)) if segment.index or icon is None else int((size * 1.7)),
+                    int(size * 1.9) if segment.index or icon is None else int(size * 1.7),
                 )
 
             if active and segment.order and self.config.order and sequence:
-                order_font = ImageFont.truetype(BytesIO(self._font_file), int((size * 2.1)))
+                order_font = ImageFont.truetype(BytesIO(self._font_file), int(size * 2.1))
 
             p = Point(segment.x, segment.y).to_img(dimensions, False)
             x = p.x
@@ -8890,7 +8894,7 @@ class DreameVacuumMapRenderer:
                                     if name_background and self.config.name_background and self.icon_set != 2
                                     else self.color_scheme.icon_background
                                 ),
-                                radius=((size * scale)),
+                                radius=(size * scale),
                             )
 
                         icon_text = Image.new("RGBA", (tw, th), (255, 255, 255, 0))
@@ -9079,7 +9083,7 @@ class DreameVacuumMapRenderer:
                             ico,
                             (
                                 int(2 + ellipse_x1 + ((ellipse_x2 - ellipse_x1) / 2) - ico.size[0] / 2),
-                                int(((icon_h / 2) - ico.size[1] / 2)),
+                                int((icon_h / 2) - ico.size[1] / 2),
                             ),
                             ico,
                         )
@@ -9106,7 +9110,7 @@ class DreameVacuumMapRenderer:
                             ico,
                             (
                                 int(2 + ellipse_x1 + ((ellipse_x2 - ellipse_x1) / 2) - ico.size[0] / 2),
-                                int(((icon_h / 2) - ico.size[1] / 2)),
+                                int((icon_h / 2) - ico.size[1] / 2),
                             ),
                             ico,
                         )
@@ -9146,7 +9150,7 @@ class DreameVacuumMapRenderer:
                             ico,
                             (
                                 int(2 + ellipse_x1 + ((ellipse_x2 - ellipse_x1) / 2) - ico.size[0] / 2),
-                                int(((icon_h / 2) - ico.size[1] / 2)),
+                                int((icon_h / 2) - ico.size[1] / 2),
                             ),
                             ico,
                         )
@@ -9177,7 +9181,7 @@ class DreameVacuumMapRenderer:
                             ico,
                             (
                                 int(2 + ellipse_x1 + ((ellipse_x2 - ellipse_x1) / 2) - ico.size[0] / 2),
-                                int(((icon_h / 2) - ico.size[1] / 2)),
+                                int((icon_h / 2) - ico.size[1] / 2),
                             ),
                             ico,
                         )
@@ -9205,7 +9209,7 @@ class DreameVacuumMapRenderer:
                             ico,
                             (
                                 int(2 + ellipse_x1 + ((ellipse_x2 - ellipse_x1) / 2) - ico.size[0] / 2),
-                                int(((icon_h / 2) - ico.size[1] / 2)),
+                                int((icon_h / 2) - ico.size[1] / 2),
                             ),
                             ico,
                         )
@@ -9362,9 +9366,9 @@ class DreameVacuumMapRenderer:
             self._cruise_path_point_background = self._cruise_path_point_background.rotate(-rotation, expand=1)
 
         if cruise_point.type != 1 and self._cruise_point_background is None:
-            self._cruise_point_background = Image.open(
-                BytesIO(base64.b64decode(MAP_ICON_CRUISE_POINT_DREAME))
-            ).convert("RGBA")
+            self._cruise_point_background = Image.open(BytesIO(base64.b64decode(MAP_ICON_CRUISE_POINT_DREAME))).convert(
+                "RGBA"
+            )
             s = int(round(size * scale * 2))
             self._cruise_point_background.thumbnail((s, s), Image.Resampling.LANCZOS)
             self._cruise_point_background = self._cruise_point_background.rotate(-rotation, expand=1)
@@ -9428,7 +9432,7 @@ class DreameVacuumMapRenderer:
             if self._font_file is None:
                 self._font_file = zlib.decompress(base64.b64decode(MAP_FONT), zlib.MAX_WBITS | 32)
 
-            font = ImageFont.truetype(BytesIO(self._font_file), int((bg_size * 1.5 * scale)))
+            font = ImageFont.truetype(BytesIO(self._font_file), int(bg_size * 1.5 * scale))
 
             text = str(index)
             left, top, tw, th = text_box_draw.textbbox((0, 0), text, font)
@@ -10025,23 +10029,21 @@ class DreameVacuumMapRenderer:
                 }
                 for i in ObstacleType
             }
-            furniture_types = [i for i in FurnitureType]
+            furniture_types = list(FurnitureType)
             if not capability.pet_furniture:
                 furniture_types = list(
                     set(furniture_types)
-                    - set(
-                        [
-                            FurnitureType.LITTER_BOX,
-                            FurnitureType.PET_BED,
-                            FurnitureType.FOOD_BOWL,
-                            FurnitureType.PET_TOILET,
-                            FurnitureType.ENCLOSED_LITTER_BOX,
-                        ]
-                    )
+                    - {
+                        FurnitureType.LITTER_BOX,
+                        FurnitureType.PET_BED,
+                        FurnitureType.FOOD_BOWL,
+                        FurnitureType.PET_TOILET,
+                        FurnitureType.ENCLOSED_LITTER_BOX,
+                    }
                 )
 
             if not capability.extended_furnitures:
-                furniture_types = list(set(furniture_types) - set([i for i in FurnitureType if i.value > 13]))
+                furniture_types = list(set(furniture_types) - {i for i in FurnitureType if i.value > 13})
 
             if capability.new_furnitures:
                 if icon_set == 2 and capability.mijia:
@@ -10588,13 +10590,13 @@ class DreameVacuumMapOptimizer:
                                 del verticalLines[i]
                                 hasFind = True
                                 break
-                            elif lastLine.y == vLine.y[1]:
+                            if lastLine.y == vLine.y[1]:
                                 vLine.findEnd = False
                                 self._add_line(vLine, covertlines, allLines)
                                 del verticalLines[i]
                                 hasFind = True
                                 break
-                            elif lastLine.y > vLine.y[0] and lastLine.y < vLine.y[1]:
+                            if lastLine.y > vLine.y[0] and lastLine.y < vLine.y[1]:
                                 if lastLine.findEnd:
                                     nIndex = (lastLine.y + 1) * width + x - 1
                                     if nIndex < size and data[nIndex] == 0:
@@ -10643,13 +10645,13 @@ class DreameVacuumMapOptimizer:
                                 del horizontalLines[i]
                                 hasFind = True
                                 break
-                            elif lastLine.x == hLine.x[1]:
+                            if lastLine.x == hLine.x[1]:
                                 hLine.findEnd = False
                                 self._add_line(hLine, covertlines, allLines)
                                 del horizontalLines[i]
                                 hasFind = True
                                 break
-                            elif lastLine.x > hLine.x[0] and lastLine.x < hLine.x[1]:
+                            if lastLine.x > hLine.x[0] and lastLine.x < hLine.x[1]:
                                 if lastLine.findEnd:
                                     nIndex = (y - 1) * width + lastLine.x - 1
                                     if nIndex < size and data[nIndex] == 0:
@@ -10846,7 +10848,7 @@ class DreameVacuumMapOptimizer:
                     nLines = paths[i].alines
                     for j in range(len(nLines)):
                         nLine = nLines[j]
-                        if line.ishorizontal == False and nLine.ishorizontal == False:
+                        if not line.ishorizontal and not nLine.ishorizontal:
                             if line.direction != nLine.direction:
                                 if (line.x > nLine.x and line.direction == DIR_LEFT) or (
                                     line.x < nLine.x and line.direction == DIR_RIGHT
@@ -10858,7 +10860,7 @@ class DreameVacuumMapOptimizer:
                                             if line.x > nLine.x:
                                                 xs = [nLine.x + 1, line.x - 1]
                                             weight = self._find_original_points(original_data, data, width, xs, _ys)
-                        elif line.ishorizontal == True and nLine.ishorizontal == True:
+                        elif line.ishorizontal and nLine.ishorizontal:
                             if line.direction != nLine.direction:
                                 if (line.y > nLine.y and line.direction == DIR_BOTTOM) or (
                                     line.y < nLine.y and line.direction == DIR_TOP

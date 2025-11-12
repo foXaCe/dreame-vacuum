@@ -1,17 +1,20 @@
 """The Dreame Vacuum component."""
 
 from __future__ import annotations
+
+from pathlib import Path
+
+from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
-from pathlib import Path
-from .const import DOMAIN
 
+from .const import DOMAIN
 from .coordinator import DreameVacuumDataUpdateCoordinator
 
 # Apply patch for python-miio Python 3.13 compatibility
 from .dreame.miio_patch import apply_miio_patch
+
 apply_miio_patch()
 
 PLATFORMS = (
