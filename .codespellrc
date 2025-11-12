@@ -1,6 +1,6 @@
 [codespell]
 # Skip certain files and directories - use comma-separated list
-skip = *.js,*.json,*.pyc,.git,.github,__pycache__,*.egg-info,.pytest_cache,.venv,venv,dist,build,./custom_components/dreame_vacuum/dreame/resources.py,./custom_components/dreame_vacuum/dreame/const.py,./CI_STATUS.md,./CONTRIBUTING.md,./custom_components/dreame_vacuum/dreame/types.py
+skip = *.js,*.json,*.pyc,.git,.github,__pycache__,*.egg-info,.pytest_cache,.venv,venv,dist,build,./custom_components/dreame_vacuum/dreame/resources.py,./custom_components/dreame_vacuum/dreame/_resources_data.py,./custom_components/dreame_vacuum/dreame/const.py,./CI_STATUS.md,./CONTRIBUTING.md,./custom_components/dreame_vacuum/dreame/types.py
 
 # Ignore certain words that are legitimate or technical terms
 # French words from documentation and code: valide,mot,projet,branche,chambre,manger,espace
