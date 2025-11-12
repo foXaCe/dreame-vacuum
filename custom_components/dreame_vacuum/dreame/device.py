@@ -525,7 +525,7 @@ class DreameVacuumDevice:
     def _connected_callback(self):
         if not self._ready:
             return
-        _LOGGER.info("Requesting properties after connect")
+        _LOGGER.debug("Requesting properties after connect")
         self.available = True
         self.schedule_update(2, True)
         self._property_changed()
@@ -591,7 +591,7 @@ class DreameVacuumDevice:
                         self._dirty_data[did].value != value
                         and time.time() - self._dirty_data[did].update_time < self._discard_timeout
                     ):
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "Property %s Value Discarded: %s <- %s",
                             DreameVacuumProperty(did).name,
                             self._dirty_data[did].value,
@@ -622,14 +622,14 @@ class DreameVacuumDevice:
                     )
                     if not custom_property:
                         if current_value is not None:
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "Property %s Changed: %s -> %s",
                                 DreameVacuumProperty(did).name,
                                 current_value,
                                 value,
                             )
                         else:
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "Property %s Added: %s",
                                 DreameVacuumProperty(did).name,
                                 value,
@@ -767,7 +767,7 @@ class DreameVacuumDevice:
                 if not p.startswith("__") and not callable(getattr(self.capability, p)):
                     val = getattr(self.capability, p)
                     if isinstance(val, bool) and val:
-                        _LOGGER.info("Capability %s", p.upper())
+                        _LOGGER.debug("Capability %s", p.upper())
 
         return changed
 
@@ -853,7 +853,7 @@ class DreameVacuumDevice:
                     if object_name is None:
                         object_name = map_list.get("obj_name")
                     if object_name and object_name != "":
-                        _LOGGER.info("Property MAP_LIST Changed: %s", object_name)
+                        _LOGGER.debug("Property MAP_LIST Changed: %s", object_name)
                         self._map_manager.set_map_list_object_name(object_name, map_list.get("md5"))
                     else:
                         self._last_map_list_request = 0
@@ -1301,7 +1301,7 @@ class DreameVacuumDevice:
                             self._dirty_ai_data[prop.name].value != value
                             and time.time() - self._dirty_ai_data[prop.name].update_time < self._discard_timeout
                         ):
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "AI Property %s Value Discarded: %s <- %s",
                                 prop.name,
                                 self._dirty_ai_data[prop.name].value,
@@ -1314,7 +1314,7 @@ class DreameVacuumDevice:
                     current_value = self.ai_data.get(prop.name)
                     if current_value != value:
                         if current_value is not None:
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "AI Property %s Changed: %s -> %s",
                                 prop.name,
                                 current_value,
@@ -1326,7 +1326,7 @@ class DreameVacuumDevice:
                             ):
                                 self._map_property_changed(current_value)
                         else:
-                            _LOGGER.info("AI Property %s Added: %s", prop.name, value)
+                            _LOGGER.debug("AI Property %s Added: %s", prop.name, value)
                         changed = True
                         self.ai_data[prop.name] = value
         elif isinstance(ai_value, int):
@@ -1341,7 +1341,7 @@ class DreameVacuumDevice:
                         self._dirty_ai_data[prop.name].value != value
                         and time.time() - self._dirty_ai_data[prop.name].update_time < self._discard_timeout
                     ):
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "AI Property %s Value Discarded: %s <- %s",
                             prop.name,
                             self._dirty_ai_data[prop.name].value,
@@ -1354,7 +1354,7 @@ class DreameVacuumDevice:
                 current_value = self.ai_data.get(prop.name)
                 if current_value != value:
                     if current_value is not None:
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "AI Property %s Changed: %s -> %s",
                             prop.name,
                             current_value,
@@ -1366,7 +1366,7 @@ class DreameVacuumDevice:
                         ):
                             self._map_property_changed(current_value)
                     else:
-                        _LOGGER.info("AI Property %s Added: %s", prop.name, value)
+                        _LOGGER.debug("AI Property %s Added: %s", prop.name, value)
                     changed = True
                     self.ai_data[prop.name] = value
 
@@ -1408,7 +1408,7 @@ class DreameVacuumDevice:
                                 and time.time() - self._dirty_auto_switch_data[prop.name].update_time
                                 < self._discard_timeout
                             ):
-                                _LOGGER.info(
+                                _LOGGER.debug(
                                     "Property %s Value Discarded: %s <- %s",
                                     prop.name,
                                     self._dirty_auto_switch_data[prop.name].value,
@@ -1431,14 +1431,14 @@ class DreameVacuumDevice:
                                     self._previous_cleangenius = value
 
                             if current_value is not None:
-                                _LOGGER.info(
+                                _LOGGER.debug(
                                     "Property %s Changed: %s -> %s",
                                     prop.name,
                                     current_value,
                                     value,
                                 )
                             else:
-                                _LOGGER.info("Property %s Added: %s", prop.name, value)
+                                _LOGGER.debug("Property %s Added: %s", prop.name, value)
                             changed = True
                             self.auto_switch_data[prop.name] = value
 
@@ -1648,7 +1648,7 @@ class DreameVacuumDevice:
         ):
             self._cleaning_history_update = 0
 
-            _LOGGER.info("Get Cleaning History")
+            _LOGGER.debug("Get Cleaning History")
             try:
                 # Limit the results
                 start = None
@@ -1692,7 +1692,7 @@ class DreameVacuumDevice:
                             break
 
                     if self.status._cleaning_history != cleaning_history:
-                        _LOGGER.info("Cleaning History Changed")
+                        _LOGGER.debug("Cleaning History Changed")
                         self.status._cleaning_history = cleaning_history
                         self.status._cleaning_history_attrs = None
                         if cleaning_history:
@@ -2123,13 +2123,13 @@ class DreameVacuumDevice:
 
     def connect_device(self) -> None:
         """Connect to the device api."""
-        _LOGGER.info("Connecting to device")
+        _LOGGER.debug("Connecting to device")
         info = self._protocol.connect(self._message_callback, self._connected_callback)
         if info:
             self.info = DreameVacuumDeviceInfo(info)
             if self.mac is None:
                 self.mac = self.info.mac_address
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Connected to device: %s %s",
                 self.info.model,
                 self.info.firmware_version,
@@ -2208,7 +2208,7 @@ class DreameVacuumDevice:
 
     def disconnect(self) -> None:
         """Disconnect from device and cancel timers"""
-        _LOGGER.info("Disconnect")
+        _LOGGER.debug("Disconnect")
         self.disconnected = True
         self.schedule_update(-1)
         self._protocol.disconnect()
@@ -2548,7 +2548,7 @@ class DreameVacuumDevice:
 
                     self.schedule_update(2)
                     return False
-                _LOGGER.info("Update Property: %s: %s -> %s", prop.name, current_value, value)
+                _LOGGER.debug("Update Property: %s: %s -> %s", prop.name, current_value, value)
                 if prop.value in self._dirty_data:
                     self._dirty_data[prop.value].update_time = time.time()
 
@@ -3065,7 +3065,7 @@ class DreameVacuumDevice:
                     if v.previous_value is not None:
                         value = self.data.get(k)
                         if value is None or v.value == value:
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "Property %s Value Restored: %s <- %s",
                                 DreameVacuumProperty(k).name,
                                 v.previous_value,
@@ -3087,7 +3087,7 @@ class DreameVacuumDevice:
                         value = self.auto_switch_data.get(k)
                         ## TODO
                         # if value is None or v.value == value:
-                        #    _LOGGER.info(
+                        #    _LOGGER.debug(
                         #        "Property %s Value Restored: %s <- %s",
                         #        k,
                         #        v.previous_value,
@@ -3105,7 +3105,7 @@ class DreameVacuumDevice:
                         value = self.ai_data.get(k)
                         ## TODO
                         # if value is None or v.value == value:
-                        #    _LOGGER.info(
+                        #    _LOGGER.debug(
                         #        "AI Property %s Value Restored: %s <- %s",
                         #        k,
                         #        v.previous_value,
@@ -3326,7 +3326,7 @@ class DreameVacuumDevice:
         # Schedule update for retrieving new properties after action sent
         self.schedule_update(6, bool(not map_action and self._protocol.dreame_cloud))
         if result and result.get("code") == 0:
-            _LOGGER.info("Send action %s %s", action.name, parameters)
+            _LOGGER.debug("Send action %s %s", action.name, parameters)
             self._last_change = time.time()
             if not map_action:
                 self._last_settings_request = 0
@@ -3345,7 +3345,7 @@ class DreameVacuumDevice:
         self.schedule_update(10, True)
         response = self._protocol.send(command, parameters, 3)
         if response:
-            _LOGGER.info("Send command response: %s", response)
+            _LOGGER.debug("Send command response: %s", response)
         self.schedule_update(2, True)
 
     def set_volume(self, volume: int) -> bool:
@@ -4794,7 +4794,7 @@ class DreameVacuumDevice:
                         self.auto_switch_data[prop.name] = current_value
                         self._property_changed(False)
                     else:
-                        _LOGGER.info("Update Property: %s: %s -> %s", prop.name, current_value, value)
+                        _LOGGER.debug("Update Property: %s: %s -> %s", prop.name, current_value, value)
                         if prop.name in self._dirty_auto_switch_data:
                             self._dirty_auto_switch_data[prop.name].update_time = time.time()
                 except:
@@ -5097,7 +5097,7 @@ class DreameVacuumDevice:
 
         def callback(result):
             if result and result.get("code") == 0:
-                _LOGGER.info("Send action UPDATE_MAP_DATA async %s", parameters)
+                _LOGGER.debug("Send action UPDATE_MAP_DATA async %s", parameters)
                 self._last_change = time.time()
             else:
                 _LOGGER.error(

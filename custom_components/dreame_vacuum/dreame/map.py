@@ -288,7 +288,7 @@ class DreameMapVacuumMapManager:
         ]
 
         try:
-            _LOGGER.info("Request map from device %s", payload)
+            _LOGGER.debug("Request map from device %s", payload)
             mapping = DreameVacuumActionMapping[DreameVacuumAction.REQUEST_MAP]
             return self._protocol.action(mapping["siid"], mapping["aiid"], payload, 0)
         except Exception as ex:
@@ -311,7 +311,7 @@ class DreameMapVacuumMapManager:
         result = self._request_map(parameters)
         if result and result[MAP_PARAMETER_CODE] == 0:
             out = result[MAP_PARAMETER_OUT]
-            _LOGGER.info("Response from device %s", out)
+            _LOGGER.debug("Response from device %s", out)
             has_map = False
             object_name = None
             raw_map_data = None
@@ -377,7 +377,7 @@ class DreameMapVacuumMapManager:
         self._last_p_request_frame_id = frame_id
         self._last_p_request_time = time.time()
 
-        _LOGGER.info("Request missing P map: %s", frame_id)
+        _LOGGER.debug("Request missing P map: %s", frame_id)
         result = self._request_map(
             {
                 MAP_REQUEST_PARAMETER_MAP_ID: map_id,
@@ -393,7 +393,7 @@ class DreameMapVacuumMapManager:
             return None
 
         self._request_queue[key] = True
-        _LOGGER.info("Request next P map: %s", frame_id)
+        _LOGGER.debug("Request next P map: %s", frame_id)
         result = self._request_map(
             {
                 MAP_REQUEST_PARAMETER_MAP_ID: map_id,
@@ -422,7 +422,7 @@ class DreameMapVacuumMapManager:
             if object_name:
                 self._add_map_data_file(object_name, timestamp)
             if raw_map_data:
-                _LOGGER.info("Lost P map received: %s:%s", map_id, frame_id)
+                _LOGGER.debug("Lost P map received: %s:%s", map_id, frame_id)
                 self._add_raw_map_data(raw_map_data, timestamp)
 
             if not raw_map_data and self._vslam_map and not object_name:
@@ -438,7 +438,7 @@ class DreameMapVacuumMapManager:
 
     def _request_w_map(self) -> None:
         try:
-            _LOGGER.info("Request wifi map from device")
+            _LOGGER.debug("Request wifi map from device")
             mapping = DreameVacuumActionMapping[DreameVacuumAction.WIFI_MAP]
             return self._protocol.action(mapping["siid"], mapping["aiid"], None, 0)
         except Exception as ex:
@@ -551,7 +551,7 @@ class DreameMapVacuumMapManager:
     def _get_interim_file_data(self, object_name: str = "", timestamp=None) -> str | None:
         if self._protocol.cloud.logged_in:
             if object_name is None or object_name == "":
-                _LOGGER.info("Get object name from cloud")
+                _LOGGER.debug("Get object name from cloud")
                 if self._protocol.cloud.dreame_cloud:
                     object_name_result = self._protocol.cloud.get_properties(DIID(DreameVacuumProperty.OBJECT_NAME))
                     if object_name_result:
@@ -570,7 +570,7 @@ class DreameMapVacuumMapManager:
 
             url = self._get_file_url(object_name)
             if url:
-                _LOGGER.info("Request map data from cloud %s", url)
+                _LOGGER.debug("Request map data from cloud %s", url)
                 response = self._protocol.cloud.get_file(url)
                 if response is not None:
                     return response
@@ -645,7 +645,7 @@ class DreameMapVacuumMapManager:
 
         if object_name is not None:
             self._need_new_map = False
-            _LOGGER.info("New object name received: %s", object_name)
+            _LOGGER.debug("New object name received: %s", object_name)
             response, key = self._get_object_file_data(object_name, object_name_timestamp)
             if response:
                 partial_map = self._decode_map_partial(response.decode(), object_name_timestamp, key)
@@ -683,7 +683,7 @@ class DreameMapVacuumMapManager:
             and self._current_frame_id
             and self._current_timestamp_ms > partial_map.timestamp_ms
         ):
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Skip frame %s, timestamp %s:%s < %s:%s",
                 partial_map.frame_type,
                 partial_map.frame_id,
@@ -694,7 +694,7 @@ class DreameMapVacuumMapManager:
             return True
 
         if self._current_map_id is not None and self._current_map_id != self._latest_map_id:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Map ID Changed: %s -> %s",
                 self._current_map_id,
                 self._latest_map_id,
@@ -706,7 +706,7 @@ class DreameMapVacuumMapManager:
             # self.request_next_map_list()
 
         if partial_map.map_id != self._latest_map_id:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Skip frame, map_id %s != %s",
                 partial_map.map_id,
                 self._latest_map_id,
@@ -720,7 +720,7 @@ class DreameMapVacuumMapManager:
             and partial_map.frame_id < self._current_frame_id
         ):
             if partial_map.frame_type != MapFrameType.I.value or partial_map.timestamp_ms <= self._current_timestamp_ms:
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Skip frame, frame id %s:%s < %s:%s",
                     partial_map.map_id,
                     partial_map.frame_id,
@@ -790,7 +790,7 @@ class DreameMapVacuumMapManager:
                 self._current_map_id = map_data.map_id
                 self._current_timestamp_ms = map_data.timestamp_ms
 
-                _LOGGER.info("Decode P map %d %d", map_data.map_id, map_data.frame_id)
+                _LOGGER.debug("Decode P map %d %d", map_data.map_id, map_data.frame_id)
 
                 if not self._device_running or current_robot_position != map_data.robot_position:
                     self._map_data_changed()
@@ -853,7 +853,7 @@ class DreameMapVacuumMapManager:
                             saved_map_data.wifi_map_data.last_updated = saved_map_data.last_updated
                         self._saved_map_data[saved_map_data.map_id] = saved_map_data
 
-                        _LOGGER.info("Add saved map from new map %s", saved_map_data.map_id)
+                        _LOGGER.debug("Add saved map from new map %s", saved_map_data.map_id)
                         self._refresh_map_list()
                         if self._map_data:
                             self._map_data_changed()
@@ -953,11 +953,11 @@ class DreameMapVacuumMapManager:
                     self._current_timestamp_ms = map_data.timestamp_ms
 
                     if changed:
-                        _LOGGER.info("Decode I map %d %d", map_data.map_id, map_data.frame_id)
+                        _LOGGER.debug("Decode I map %d %d", map_data.map_id, map_data.frame_id)
                         self._map_data.last_updated = time.time()
                         self._map_data_changed()
                     else:
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "Decode map %d %d not changed",
                             map_data.map_id,
                             map_data.frame_id,
@@ -1065,7 +1065,7 @@ class DreameMapVacuumMapManager:
                         if self._protocol.dreame_cloud and obstacle.object_id
                         else obstacle.file_name
                     )
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "Obstacle image object name: %s",
                         object_name,
                     )
@@ -1105,7 +1105,7 @@ class DreameMapVacuumMapManager:
     def get_history_map(self, object_name, key=None):
         if object_name and len(object_name):
             try:
-                _LOGGER.info(
+                _LOGGER.debug(
                     "History map object name: %s",
                     object_name,
                 )
@@ -1169,7 +1169,7 @@ class DreameMapVacuumMapManager:
             if recovery_map_list and len(recovery_map_list) > index:
                 object_name = recovery_map_list[index].object_name
                 if object_name and object_name != "":
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "Recovery map object name: %s",
                         object_name,
                     )
@@ -1177,7 +1177,7 @@ class DreameMapVacuumMapManager:
                         object_name,
                         not (object_name.endswith("mb.tbz2") and not self._protocol.dreame_cloud),
                     )
-                    _LOGGER.info("Recovery map file url: %s = %s", object_name, map_url)
+                    _LOGGER.debug("Recovery map file url: %s = %s", object_name, map_url)
                     if map_url:
                         return (
                             self._protocol.cloud.get_file(map_url),
@@ -1254,7 +1254,7 @@ class DreameMapVacuumMapManager:
                 ):
                     self._updated_frame_id = None
                     if self._map_data and not self._map_data.empty_map:
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "Need map request: %.2f",
                             time.time() - (self._current_timestamp_ms / 1000.0),
                         )
@@ -1277,7 +1277,7 @@ class DreameMapVacuumMapManager:
                     )
                 ):
                     if self._map_data and not self._map_data.empty_map:
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "Need map request: %.2f",
                             time.time() - (self._map_data.last_updated),
                         )
@@ -1402,7 +1402,7 @@ class DreameMapVacuumMapManager:
 
     def request_map_list(self) -> None:
         if self._map_list_object_name and self._protocol.cloud.logged_in:
-            _LOGGER.info("Get Map List: %s", self._map_list_object_name)
+            _LOGGER.debug("Get Map List: %s", self._map_list_object_name)
             try:
                 response = self._get_interim_file_data(self._map_list_object_name)
             except Exception as ex:
@@ -1463,7 +1463,7 @@ class DreameMapVacuumMapManager:
                                 saved_map_data.cleanset = self._saved_map_data[map_id].cleanset
 
                             if self._saved_map_data[map_id] != saved_map_data:
-                                _LOGGER.info("Saved map changed: %s", map_id)
+                                _LOGGER.debug("Saved map changed: %s", map_id)
                                 changed = True
                                 saved_map_data.last_updated = now
                                 if saved_map_data.wifi_map_data:
@@ -1475,13 +1475,13 @@ class DreameMapVacuumMapManager:
                                     self._saved_map_data[map_id].custom_name = saved_map_data.custom_name
                                     self._saved_map_data[map_id].rotation = saved_map_data.rotation
                             else:
-                                _LOGGER.info("Saved map not changed: %s", map_id)
+                                _LOGGER.debug("Saved map not changed: %s", map_id)
                         else:
                             saved_map_data.last_updated = now
                             if saved_map_data.wifi_map_data:
                                 saved_map_data.wifi_map_data.last_updated = saved_map_data.last_updated
                             self._saved_map_data[map_id] = saved_map_data
-                            _LOGGER.info("Add saved map: %s", map_id)
+                            _LOGGER.debug("Add saved map: %s", map_id)
                             changed = True
 
                 selected_map_id = map_info[MAP_PARAMETER_CURR_ID]
@@ -1506,7 +1506,7 @@ class DreameMapVacuumMapManager:
             if self._vslam_map:
                 self._need_recovery_map_list_request = False
                 return
-            _LOGGER.info("Get Recovery Map List: %s", self._recovery_map_list_object_name)
+            _LOGGER.debug("Get Recovery Map List: %s", self._recovery_map_list_object_name)
             response = self._get_file_url(self._recovery_map_list_object_name)
             if response:
                 self._need_recovery_map_list_request = False
@@ -1557,7 +1557,7 @@ class DreameMapVacuumMapManager:
                             ):
                                 self._saved_map_data[map_id].last_updated = time.time()
                                 self._saved_map_data[map_id].recovery_map_list = recovery_map_list
-                                _LOGGER.info("Saved recovery map list changed: %s", map_id)
+                                _LOGGER.debug("Saved recovery map list changed: %s", map_id)
                                 changed = True
 
                     if changed:
@@ -1565,7 +1565,7 @@ class DreameMapVacuumMapManager:
                         if self._connected:
                             self._map_data_changed(True)
                     else:
-                        _LOGGER.info("Saved recovery map list not changed: %s", map_id)
+                        _LOGGER.debug("Saved recovery map list not changed: %s", map_id)
 
     @property
     def _request_i_map_available(self) -> bool:
@@ -3234,7 +3234,7 @@ class DreameVacuumMapDecoder:
                         map_data.wifi_map_data.router_position = map_data.router_position
 
             if "rism" in data_json:
-                _LOGGER.info("Decoding saved map: %s", map_data.map_id)
+                _LOGGER.debug("Decoding saved map: %s", map_data.map_id)
                 saved_map_data = DreameVacuumMapDecoder.decode_saved_map(
                     data_json["rism"],
                     vslam_map,
@@ -3242,7 +3242,7 @@ class DreameVacuumMapDecoder:
                 )
 
                 if saved_map_data is not None:
-                    _LOGGER.info("Decoded saved map: %s -> %s", map_data.map_id, saved_map_data.map_id)
+                    _LOGGER.debug("Decoded saved map: %s -> %s", map_data.map_id, saved_map_data.map_id)
                     saved_map_data.timestamp_ms = map_data.timestamp_ms
                     map_data.saved_map_id = saved_map_data.map_id
                     if saved_map_data.temporary_map:

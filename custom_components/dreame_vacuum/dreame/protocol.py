@@ -1100,7 +1100,7 @@ class DreameVacuumMiHomeCloudProtocol:
         _LOGGER.debug("Get file url result: %s = %s", object_name, api_response)
         if api_response is None or "result" not in api_response or "url" not in api_response["result"]:
             if api_response and api_response.get("code") == -8 and self._v3:
-                _LOGGER.info("get_file_url fallback to V2")
+                _LOGGER.debug("get_file_url fallback to V2")
                 self._v3 = False
                 return self.get_file_url(object_name)
             return None
@@ -1115,7 +1115,7 @@ class DreameVacuumMiHomeCloudProtocol:
         _LOGGER.debug("Get interim file url result: %s = %s", object_name, api_response)
         if api_response is None or not api_response.get("result") or "url" not in api_response["result"]:
             if api_response and api_response.get("code") == -8 and self._v3:
-                _LOGGER.info("get_interim_file_url fallback to V2")
+                _LOGGER.debug("get_interim_file_url fallback to V2")
                 self._v3 = False
                 return self.get_interim_file_url(object_name)
             return None
