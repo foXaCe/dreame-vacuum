@@ -1,12 +1,9 @@
 [codespell]
-# Skip certain files and directories
-skip = *.js,*.json,*.pyc,.git,.github,__pycache__,*.egg-info,.pytest_cache,.venv,venv,dist,build
+# Skip certain files and directories - use comma-separated list
+skip = *.js,*.json,*.pyc,.git,.github,__pycache__,*.egg-info,.pytest_cache,.venv,venv,dist,build,custom_components/dreame_vacuum/dreame/resources.py,custom_components/dreame_vacuum/dreame/const.py
 
 # Ignore certain words that are legitimate or technical terms
 ignore-words-list = hass,nd,te,whe,ot,ue,ane,thn,bu,fo,tre,wya,vas,dnd,dout
-
-# Skip files with too many false positives
-skip-paths = custom_components/dreame_vacuum/dreame/resources.py
 
 # Quiet level
 quiet-level = 2
