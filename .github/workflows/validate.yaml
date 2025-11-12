@@ -10,6 +10,8 @@ on:
 jobs:
   validate-hacs:
     runs-on: "ubuntu-latest"
+    permissions:
+      contents: read
     steps:
       - name: Skip HACS validation
         run: echo "HACS validation disabled"
