@@ -1,9 +1,11 @@
 [codespell]
 # Skip certain files and directories - use comma-separated list
-skip = *.js,*.json,*.pyc,.git,.github,__pycache__,*.egg-info,.pytest_cache,.venv,venv,dist,build,custom_components/dreame_vacuum/dreame/resources.py,custom_components/dreame_vacuum/dreame/const.py
+skip = *.js,*.json,*.pyc,.git,.github,__pycache__,*.egg-info,.pytest_cache,.venv,venv,dist,build,custom_components/dreame_vacuum/dreame/resources.py,custom_components/dreame_vacuum/dreame/const.py,CI_STATUS.md,CONTRIBUTING.md
 
 # Ignore certain words that are legitimate or technical terms
-ignore-words-list = hass,nd,te,whe,ot,ue,ane,thn,bu,fo,tre,wya,vas,dnd,dout
+# French words from documentation: valide,mot,projet,branche
+# Variable names from code: aline,laf,vor,fpr,ore,tey,oce,vog
+ignore-words-list = hass,nd,te,whe,ot,ue,ane,thn,bu,fo,tre,wya,vas,dnd,dout,valide,mot,projet,branche,clonez,formater,aline,laf,vor,fpr,ore,tey,oce,vog
 
 # Quiet level
 quiet-level = 2
