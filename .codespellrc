@@ -1,11 +1,11 @@
 [codespell]
 # Skip certain files and directories - use comma-separated list
-skip = *.js,*.json,*.pyc,.git,.github,__pycache__,*.egg-info,.pytest_cache,.venv,venv,dist,build,custom_components/dreame_vacuum/dreame/resources.py,custom_components/dreame_vacuum/dreame/const.py,CI_STATUS.md,CONTRIBUTING.md
+skip = *.js,*.json,*.pyc,.git,.github,__pycache__,*.egg-info,.pytest_cache,.venv,venv,dist,build,./custom_components/dreame_vacuum/dreame/resources.py,./custom_components/dreame_vacuum/dreame/const.py,./CI_STATUS.md,./CONTRIBUTING.md,./custom_components/dreame_vacuum/dreame/types.py
 
 # Ignore certain words that are legitimate or technical terms
-# French words from documentation: valide,mot,projet,branche
+# French words from documentation and code: valide,mot,projet,branche,chambre,manger,espace
 # Variable names from code: aline,laf,vor,fpr,ore,tey,oce,vog
-ignore-words-list = hass,nd,te,whe,ot,ue,ane,thn,bu,fo,tre,wya,vas,dnd,dout,valide,mot,projet,branche,clonez,formater,aline,laf,vor,fpr,ore,tey,oce,vog
+ignore-words-list = hass,nd,te,whe,ot,ue,ane,thn,bu,fo,tre,wya,vas,dnd,dout,valide,mot,projet,branche,clonez,formater,aline,laf,vor,fpr,ore,tey,oce,vog,chambre,manger,espace
 
 # Quiet level
 quiet-level = 2
