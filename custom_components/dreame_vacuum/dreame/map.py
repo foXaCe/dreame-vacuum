@@ -4261,7 +4261,7 @@ class DreameVacuumMapDecoder:
                 ]
             )
 
-        # Validate outline: must have at least 3 points and reasonable size
+        # Validate outline: must have at least 3 points and cover reasonable area
         # If outline is invalid (too few points or too small), use bounding box instead
         use_outline = False
         if len(outline) >= 3:
@@ -4270,11 +4270,22 @@ class DreameVacuumMapDecoder:
             ys = [p[1] for p in outline]
             width = max(xs) - min(xs)
             height = max(ys) - min(ys)
-            # If width or height is less than 10% of the bounding box, it's probably wrong
             bbox_width = int((x1_px - x0_px + 1) * map_data.dimensions.grid_size)
             bbox_height = int((y1_px - y0_px + 1) * map_data.dimensions.grid_size)
-            if width > bbox_width * 0.1 and height > bbox_height * 0.1:
-                use_outline = True
+
+            # Calculate approximate area coverage
+            # Outline area ≈ width * height (rough approximation)
+            # Bounding box area = bbox_width * bbox_height
+            # If outline covers less than 50% of bbox, it's probably incomplete
+            outline_area = width * height
+            bbox_area = bbox_width * bbox_height
+
+            if bbox_area > 0:
+                coverage_ratio = outline_area / bbox_area
+                # Use outline only if it covers at least 50% of the bounding box
+                # This ensures we don't use tiny fragments that only cover part of the room
+                if coverage_ratio >= 0.5:
+                    use_outline = True
 
         return (
             outline
