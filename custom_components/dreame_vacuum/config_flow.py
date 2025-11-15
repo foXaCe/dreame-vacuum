@@ -6,7 +6,7 @@ import base64
 from collections.abc import Mapping
 import json
 import re
-from typing import Any, Final
+from typing import Any
 import zlib
 
 from homeassistant.config_entries import (
@@ -33,7 +33,6 @@ from .const import (
     CONF_COLOR_SCHEME,
     CONF_COUNTRY,
     CONF_DID,
-    CONF_DONATED,
     CONF_HIDDEN_MAP_OBJECTS,
     CONF_ICON_SET,
     CONF_LOW_RESOLUTION,
@@ -41,27 +40,20 @@ from .const import (
     CONF_NOTIFY,
     CONF_PREFER_CLOUD,
     CONF_SQUARE,
-    CONF_TYPE,
     CONF_VERSION,
     DOMAIN,
     MAP_OBJECTS,
     NOTIFICATION,
-    SPONSOR,
     get_notification_labels,
 )
 from .dreame import DEVICE_INFO, MAP_COLOR_SCHEME_LIST, MAP_ICON_SET_LIST, VERSION, DreameVacuumProtocol
 
+# Account type constants
+# New integrations will use DREAME only, but keep others for backward compatibility
 ACCOUNT_TYPE_DREAME = "dreame"
-ACCOUNT_TYPE_MOVA = "mova"
-ACCOUNT_TYPE_MI = "mi"
-ACCOUNT_TYPE_LOCAL = "local"
-
-ACCOUNT_TYPE: Final = {
-    "Dreamehome Account": ACCOUNT_TYPE_DREAME,
-    "Xiaomi Home Account": ACCOUNT_TYPE_MI,
-    "Movahome Account": ACCOUNT_TYPE_MOVA,
-    "Manual Connection (Without map)": ACCOUNT_TYPE_LOCAL,
-}
+ACCOUNT_TYPE_MOVA = "mova"  # Keep for backward compatibility with existing configs
+ACCOUNT_TYPE_MI = "mi"  # Keep for backward compatibility with existing configs
+ACCOUNT_TYPE_LOCAL = "local"  # Keep for backward compatibility with existing configs
 
 
 class DreameVacuumOptionsFlowHandler(OptionsFlow):
@@ -117,15 +109,6 @@ class DreameVacuumOptionsFlowHandler(OptionsFlow):
                     }
                 )
 
-            data_schema = data_schema.extend(
-                {
-                    vol.Required(
-                        CONF_DONATED,
-                        default=False,
-                    ): bool
-                }
-            )
-
         return self.async_show_form(
             step_id="init",
             data_schema=data_schema,
@@ -174,17 +157,9 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
         if self._async_in_progress():
             return self.async_abort(reason="already_in_progress")
 
-        account_type = list(ACCOUNT_TYPE.keys())
-
-        if user_input is not None:
-            self.account_type = ACCOUNT_TYPE[user_input.get(CONF_TYPE, account_type[0])]
-            return await self.async_step_login()
-
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_TYPE, default=account_type[0]): vol.In(account_type)}),
-            errors={},
-        )
+        # Always use Dreame account type
+        self.account_type = ACCOUNT_TYPE_DREAME
+        return await self.async_step_login()
 
     async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
         """Perform reauth upon an authentication error or missing cloud credentials."""
@@ -510,7 +485,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                     raise AbortFlow("already_configured")
 
                 if len(self.devices) == 1:
-                    user_input = {"devices": list(self.devices.keys())[0]}
+                    user_input = {"devices": next(iter(self.devices.keys()))}
 
         if user_input is not None:
             self.extract_info(self.devices[user_input["devices"]])
@@ -537,7 +512,23 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                 CONF_PREFER_CLOUD: self.prefer_cloud,
             }
 
-            return await self.async_step_donation()
+            # Create entry directly without donation step
+            return self.async_create_entry(
+                title=self.name,
+                data={
+                    CONF_NAME: self.name,
+                    CONF_HOST: self.host,
+                    CONF_TOKEN: self.token,
+                    CONF_USERNAME: self.username,
+                    CONF_PASSWORD: self.password,
+                    CONF_COUNTRY: self.country,
+                    CONF_MAC: self.mac,
+                    CONF_DID: self.device_id,
+                    CONF_AUTH_KEY: self.protocol.cloud.auth_key if self.protocol and self.protocol.cloud else None,
+                    CONF_ACCOUNT_TYPE: self.account_type,
+                },
+                options=self.options | {CONF_VERSION: VERSION},
+            )
 
         notification_labels = get_notification_labels(self.hass.config.language)
         data_schema = vol.Schema(
@@ -576,41 +567,6 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
         return self.async_show_form(step_id="options", data_schema=data_schema, errors={})
-
-    async def async_step_donation(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        if user_input is not None:
-            self.options = self.options | {CONF_DONATED: user_input.get(CONF_DONATED, False), CONF_VERSION: VERSION}
-
-            return self.async_create_entry(
-                title=self.name,
-                data={
-                    CONF_NAME: self.name,
-                    CONF_HOST: self.host,
-                    CONF_TOKEN: self.token,
-                    CONF_USERNAME: self.username,
-                    CONF_PASSWORD: self.password,
-                    CONF_COUNTRY: self.country,
-                    CONF_MAC: self.mac,
-                    CONF_DID: self.device_id,
-                    CONF_AUTH_KEY: self.protocol.cloud.auth_key if self.protocol and self.protocol.cloud else None,
-                    CONF_ACCOUNT_TYPE: self.account_type,
-                },
-                options=self.options,
-            )
-
-        return self.async_show_form(
-            step_id="donation",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_DONATED,
-                        default=False,
-                    ): bool
-                }
-            ),
-            description_placeholders={"text": SPONSOR},
-            errors={},
-        )
 
     def extract_info(self, device_info: dict[str, Any]) -> None:
         """Extract the device info."""
