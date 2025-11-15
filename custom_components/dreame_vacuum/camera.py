@@ -91,9 +91,8 @@ CAMERAS: tuple[CameraEntityDescription, ...] = (
     DreameVacuumCameraEntityDescription(
         key="map_data",
         icon=MAP_ICON,
-        entity_category=EntityCategory.CONFIG,
         map_type=DreameVacuumMapType.JSON_MAP_DATA,
-        entity_registry_enabled_default=False,
+        entity_registry_enabled_default=True,
     ),
 )
 

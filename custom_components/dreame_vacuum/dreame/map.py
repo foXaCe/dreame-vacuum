@@ -4261,9 +4261,24 @@ class DreameVacuumMapDecoder:
                 ]
             )
 
+        # Validate outline: must have at least 3 points and reasonable size
+        # If outline is invalid (too few points or too small), use bounding box instead
+        use_outline = False
+        if len(outline) >= 3:
+            # Check if outline covers a reasonable area (not a tiny sliver)
+            xs = [p[0] for p in outline]
+            ys = [p[1] for p in outline]
+            width = max(xs) - min(xs)
+            height = max(ys) - min(ys)
+            # If width or height is less than 10% of the bounding box, it's probably wrong
+            bbox_width = int((x1_px - x0_px + 1) * map_data.dimensions.grid_size)
+            bbox_height = int((y1_px - y0_px + 1) * map_data.dimensions.grid_size)
+            if width > bbox_width * 0.1 and height > bbox_height * 0.1:
+                use_outline = True
+
         return (
             outline
-            if len(outline) > 0
+            if use_outline
             else [
                 [
                     int(map_data.dimensions.left + (x0_px * map_data.dimensions.grid_size)),
