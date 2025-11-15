@@ -44,6 +44,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
+    # Step 2: Initial device refresh (must be done BEFORE platform setup)
+    # This ensures the device is initialized before entities are created
+    t2 = time_module.time()
+    await coordinator.async_config_entry_first_refresh()
+    _LOGGER.debug("Device refresh took %.2f seconds", time_module.time() - t2)
+
     # Register frontend
     # frontend_js = f"/{DOMAIN}/frontend.js"
     # if DATA_EXTRA_MODULE_URL not in hass.data:
@@ -56,22 +62,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     #    hass.data[DATA_EXTRA_MODULE_URL].add(frontend_js)
     #    hass.http.register_static_path(frontend_js, str(Path(Path(__file__).parent / "frontend.js")), True)
 
-    # Step 2: Set up all platforms for this device/entry
-    t2 = time_module.time()
+    # Step 3: Set up all platforms for this device/entry
+    t3 = time_module.time()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    _LOGGER.debug("Platform setup took %.2f seconds", time_module.time() - t2)
+    _LOGGER.debug("Platform setup took %.2f seconds", time_module.time() - t3)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
-
-    # Step 3: Initial device refresh with timeout to avoid long blocking
-    # This ensures entities have data but won't block HA startup indefinitely
-    t3 = time_module.time()
-    try:
-        # Use a short timeout - if device takes too long, entities will be unavailable initially
-        await coordinator.async_config_entry_first_refresh()
-        _LOGGER.debug("Device refresh took %.2f seconds", time_module.time() - t3)
-    except Exception as ex:
-        _LOGGER.warning("Initial device refresh failed, entities will be unavailable: %s", ex)
 
     total_time = time_module.time() - setup_start
     _LOGGER.info("Dreame Vacuum integration setup completed in %.2f seconds", total_time)
