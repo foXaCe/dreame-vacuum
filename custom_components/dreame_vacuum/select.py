@@ -377,8 +377,10 @@ SELECTS: tuple[DreameVacuumSelectEntityDescription, ...] = (
         icon="mdi:atom",
         entity_category=None,
         value_int_fn=lambda value, device: DreameVacuumCleanGeniusMode[value.upper()].value,
-        exists_fn=lambda description, device: bool(
-            device.capability.cleangenius_mode and DreameVacuumEntityDescription().exists_fn(description, device)
+        exists_fn=lambda description, device: (
+            device.capability.cleangenius_mode
+            if device and hasattr(device, "capability") and hasattr(device.capability, "cleangenius_mode")
+            else False
         ),
     ),
     DreameVacuumSelectEntityDescription(
