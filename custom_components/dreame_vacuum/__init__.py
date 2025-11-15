@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import logging
+import time
 
-from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -16,6 +16,8 @@ from .coordinator import DreameVacuumDataUpdateCoordinator
 from .dreame.miio_patch import apply_miio_patch
 
 apply_miio_patch()
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = (
     Platform.VACUUM,
@@ -32,8 +34,18 @@ PLATFORMS = (
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Dreame Vacuum from a config entry."""
+    _LOGGER.info("Starting Dreame Vacuum integration setup for %s", entry.data.get("name", "unknown"))
+    setup_start = time.time()
+
+    # Step 1: Initialize coordinator
+    t0 = time.time()
     coordinator = DreameVacuumDataUpdateCoordinator(hass, entry=entry)
+    _LOGGER.debug("Coordinator initialization took %.2f seconds", time.time() - t0)
+
+    # Step 2: First device refresh (network operations)
+    t1 = time.time()
     await coordinator.async_config_entry_first_refresh()
+    _LOGGER.debug("First device refresh took %.2f seconds", time.time() - t1)
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
@@ -49,10 +61,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     #    hass.data[DATA_EXTRA_MODULE_URL].add(frontend_js)
     #    hass.http.register_static_path(frontend_js, str(Path(Path(__file__).parent / "frontend.js")), True)
 
-    # Set up all platforms for this device/entry.
+    # Step 3: Set up all platforms for this device/entry
+    t2 = time.time()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _LOGGER.debug("Platform setup took %.2f seconds", time.time() - t2)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
+
+    total_time = time.time() - setup_start
+    _LOGGER.info("Dreame Vacuum integration setup completed in %.2f seconds", total_time)
     return True
 
 
