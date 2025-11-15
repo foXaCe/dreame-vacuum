@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-import time
+import time as time_module
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -35,17 +35,12 @@ PLATFORMS = (
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Dreame Vacuum from a config entry."""
     _LOGGER.info("Starting Dreame Vacuum integration setup for %s", entry.data.get("name", "unknown"))
-    setup_start = time.time()
+    setup_start = time_module.time()
 
     # Step 1: Initialize coordinator
-    t0 = time.time()
+    t0 = time_module.time()
     coordinator = DreameVacuumDataUpdateCoordinator(hass, entry=entry)
-    _LOGGER.debug("Coordinator initialization took %.2f seconds", time.time() - t0)
-
-    # Step 2: First device refresh (network operations)
-    t1 = time.time()
-    await coordinator.async_config_entry_first_refresh()
-    _LOGGER.debug("First device refresh took %.2f seconds", time.time() - t1)
+    _LOGGER.debug("Coordinator initialization took %.2f seconds", time_module.time() - t0)
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
@@ -61,14 +56,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     #    hass.data[DATA_EXTRA_MODULE_URL].add(frontend_js)
     #    hass.http.register_static_path(frontend_js, str(Path(Path(__file__).parent / "frontend.js")), True)
 
-    # Step 3: Set up all platforms for this device/entry
-    t2 = time.time()
+    # Step 2: Set up all platforms for this device/entry
+    t2 = time_module.time()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    _LOGGER.debug("Platform setup took %.2f seconds", time.time() - t2)
+    _LOGGER.debug("Platform setup took %.2f seconds", time_module.time() - t2)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    total_time = time.time() - setup_start
+    # Step 3: Initial device refresh with timeout to avoid long blocking
+    # This ensures entities have data but won't block HA startup indefinitely
+    t3 = time_module.time()
+    try:
+        # Use a short timeout - if device takes too long, entities will be unavailable initially
+        await coordinator.async_config_entry_first_refresh()
+        _LOGGER.debug("Device refresh took %.2f seconds", time_module.time() - t3)
+    except Exception as ex:
+        _LOGGER.warning("Initial device refresh failed, entities will be unavailable: %s", ex)
+
+    total_time = time_module.time() - setup_start
     _LOGGER.info("Dreame Vacuum integration setup completed in %.2f seconds", total_time)
     return True
 

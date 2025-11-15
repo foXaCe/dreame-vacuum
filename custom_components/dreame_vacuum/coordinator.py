@@ -481,10 +481,10 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         self.hass.bus.fire(f"{DOMAIN}_{event_id}", event_data)
 
     async def _async_update_data(self) -> DreameVacuumDevice:
-        """Handle device update. This function is only called once when the integration is added to Home Assistant."""
+        """Update Dreame Vacuum."""
         try:
-            LOGGER.info("Integration starting...")
             await self.hass.async_add_executor_job(self._device.update)
+
             if self._device and not self._device.disconnected:
                 if self._device.auth_failed:
                     self._device.listen(None)
@@ -493,6 +493,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
                 self._device.schedule_update()
                 self.async_set_updated_data()
                 return self._device
+
         except Exception as ex:
             if self._device.auth_failed:
                 raise ConfigEntryAuthFailed("Authentication Failed!") from ex
