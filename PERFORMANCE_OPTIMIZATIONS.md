@@ -102,9 +102,75 @@ _LOGGER.debug("Loading resources module (~21MB) - happens once")
 
 ---
 
+### 4. Initialisation asynchrone progressive ✅ (Phase 3A)
+
+**Fichiers**: `custom_components/dreame_vacuum/coordinator.py`, `custom_components/dreame_vacuum/dreame/device.py`
+
+**Problème** : L'intégration attendait que le robot soit complètement connecté et que toutes les propriétés soient téléchargées (~8-9 secondes) avant de démarrer Home Assistant.
+
+**Solution implémentée** :
+
+**Approche en 2 phases** :
+1. **Phase 1 (Fast Init)** : Connexion rapide + propriétés essentielles uniquement
+   - État du robot
+   - Batterie
+   - Statut de charge
+   - Statut général
+
+2. **Phase 2 (Background)** : Chargement complet en arrière-plan
+   - Toutes les propriétés restantes
+   - Consommables
+   - Paramètres
+   - Cartes
+
+**Nouveau code dans device.py** :
+```python
+def fast_init(self) -> bool:
+    """Fast initialization - only essential properties"""
+    # Connect to device
+    self.connect_cloud()
+    self.connect_device()
+
+    # Get only 4 essential properties instead of 50+
+    essential_properties = [STATE, BATTERY, CHARGING, STATUS]
+    self._get_properties(essential_properties)
+```
+
+**Nouveau code dans coordinator.py** :
+```python
+# Phase 1: Fast init (non-blocking)
+fast_init_success = await async_add_executor_job(self._device.fast_init)
+
+if fast_init_success:
+    # HA can continue startup!
+    self.async_set_updated_data()
+
+    # Phase 2: Complete in background
+    hass.async_create_task(self._complete_initialization())
+```
+
+**Gain estimé** : **~7-8 secondes** - Home Assistant ne bloque plus sur la connexion robot
+
+**Avantages** :
+- ✅ HA démarre immédiatement sans attendre le robot
+- ✅ Entités créées rapidement (même si données partielles)
+- ✅ Mise à jour progressive en arrière-plan
+- ✅ Fallback automatique vers init complète si fast init échoue
+- ✅ Logs détaillés pour debugging
+
+**Comportement** :
+- Au démarrage HA, vous verrez les entités rapidement
+- Certaines entités peuvent être "indisponibles" quelques secondes
+- Après ~10 secondes en arrière-plan, toutes les données sont chargées
+- Logs montrent clairement Phase 1 → Phase 2
+
+**⚠️ Note importante** : Cette optimisation nécessite tests sur vrai robot pour validation complète.
+
+---
+
 ## Optimisations futures recommandées
 
-### 4. Externalisation des ressources statiques (PRIORITÉ HAUTE)
+### 5. Externalisation des ressources statiques (PRIORITÉ MOYENNE)
 
 **Impact** : ~5-7 secondes
 
@@ -115,16 +181,6 @@ Le fichier `_resources_data.py` (21 MB) contient toutes les images encodées en 
 - Charger les fichiers uniquement quand nécessaire
 - Possibilité d'optimiser/compresser les images (WebP, PNG optimisé)
 
-### 5. Initialisation asynchrone progressive (PRIORITÉ HAUTE)
-
-**Impact** : ~2-3 secondes
-
-Actuellement, Home Assistant attend que le device soit complètement connecté avant de démarrer.
-
-**Solution recommandée** :
-- Démarrer l'intégration avec des données en cache
-- Connecter le device en arrière-plan
-- Mettre à jour progressivement les entités
 
 ### 6. Cache persistant (PRIORITÉ MOYENNE)
 
