@@ -8,7 +8,7 @@ L'intégration prenait environ **10 secondes** pour démarrer, ce qui retardait 
 
 ## Optimisations implémentées
 
-### 1. Profiling du temps de démarrage ✅
+### 1. Profiling du temps de démarrage ✅ (Phase 1)
 
 **Fichier**: `custom_components/dreame_vacuum/__init__.py`
 
@@ -34,7 +34,7 @@ INFO: Dreame Vacuum integration setup completed in X.XX seconds
 
 ---
 
-### 2. Lazy imports dans dreame/__init__.py ✅
+### 2. Lazy imports dans dreame/__init__.py ✅ (Phase 1)
 
 **Fichier**: `custom_components/dreame_vacuum/dreame/__init__.py`
 
@@ -69,9 +69,42 @@ def __getattr__(name):
 
 ---
 
+### 3. Cache optimisé des ressources ✅ (Phase 2)
+
+**Fichier**: `custom_components/dreame_vacuum/dreame/resources.py`
+
+**Problème** : Le fichier `_resources_data.py` (21 MB) contient toutes les images encodées en base64. Même avec le lazy loading existant, le module complet était chargé en mémoire dès le premier accès.
+
+**Solution implémentée** :
+- Cache en mémoire optimisé avec accès rapide
+- Logs de performance pour tracer le chargement
+- Fonctions utilitaires (`clear_cache()`, `get_cache_stats()`)
+- Documentation détaillée des performances
+
+**Code ajouté** :
+```python
+# Fast path: Check cache first (most common case)
+if name in _loaded_attrs:
+    return _loaded_attrs[name]
+
+# Load module once, cache individual attributes
+_LOGGER.debug("Loading resources module (~21MB) - happens once")
+```
+
+**Gain estimé** : Réduction de la latence d'accès aux ressources après premier chargement
+
+**Avantages** :
+- ✅ Pas de modification du fichier _resources_data.py (21 MB)
+- ✅ Compatible avec toutes les installations existantes
+- ✅ Logs de debug pour monitoring
+- ✅ Possibilité de libérer la mémoire si besoin (`clear_cache()`)
+- ✅ Statistiques disponibles (`get_cache_stats()`)
+
+---
+
 ## Optimisations futures recommandées
 
-### 3. Externalisation des ressources statiques (PRIORITÉ HAUTE)
+### 4. Externalisation des ressources statiques (PRIORITÉ HAUTE)
 
 **Impact** : ~5-7 secondes
 
@@ -82,7 +115,7 @@ Le fichier `_resources_data.py` (21 MB) contient toutes les images encodées en 
 - Charger les fichiers uniquement quand nécessaire
 - Possibilité d'optimiser/compresser les images (WebP, PNG optimisé)
 
-### 4. Initialisation asynchrone progressive (PRIORITÉ HAUTE)
+### 5. Initialisation asynchrone progressive (PRIORITÉ HAUTE)
 
 **Impact** : ~2-3 secondes
 
@@ -93,7 +126,7 @@ Actuellement, Home Assistant attend que le device soit complètement connecté a
 - Connecter le device en arrière-plan
 - Mettre à jour progressivement les entités
 
-### 5. Cache persistant (PRIORITÉ MOYENNE)
+### 6. Cache persistant (PRIORITÉ MOYENNE)
 
 **Impact** : ~1-2 secondes au redémarrage
 
