@@ -12,7 +12,7 @@ pre-commit>=4.0.0
 codespell>=2.4.2
 
 # Type checking
-mypy>=1.13.0
+mypy>=2.1.0
 types-requests>=2.32.0
 
 # Runtime libraries (needed for mypy import resolution and local runs).
