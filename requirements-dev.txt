@@ -7,7 +7,7 @@
 -r requirements_test.txt
 
 # Code quality tools
-ruff>=0.15.12
+ruff>=0.15.16
 pre-commit>=4.6.0
 codespell>=2.4.2
 
