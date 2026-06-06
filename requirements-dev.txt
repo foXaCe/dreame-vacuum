@@ -13,7 +13,7 @@ codespell>=2.4.2
 
 # Type checking
 mypy>=2.1.0
-types-requests>=2.32.0
+types-requests>=2.33.0.20260518
 
 # Runtime libraries (needed for mypy import resolution and local runs).
 # pillow / numpy / requests / pycryptodome / paho-mqtt are left UNPINNED on
