@@ -1,0 +1,6 @@
+# Test dependencies for Dreame Vacuum integration.
+# pytest-homeassistant-custom-component pins pytest, pytest-cov and
+# pytest-asyncio to the exact versions it needs; adding our own ranges
+# causes resolution conflicts (especially on Python 3.11). Let the
+# plugin drive the pytest stack and only override what is strictly ours.
+pytest-homeassistant-custom-component>=0.13.0

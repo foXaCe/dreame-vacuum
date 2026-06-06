@@ -1,0 +1,675 @@
+"""DataUpdateCoordinator for Dreame Vacuum.
+
+Manages polling and real-time updates from Dreame vacuum devices. Handles
+device lifecycle (connect, update, disconnect), persistent notifications for
+consumables and errors, rate limit backoff, and event firing for task status
+changes.
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+from functools import partial
+import math
+import time
+import traceback
+
+from homeassistant.components import persistent_notification
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_TOKEN,
+    CONF_USERNAME,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.debounce import Debouncer
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import generate_entity_id
+from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue, async_delete_issue
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+from .const import (
+    CONF_ACCOUNT_TYPE,
+    CONF_AUTH_KEY,
+    CONF_COUNTRY,
+    CONF_DID,
+    CONF_HIDDEN_MAP_OBJECTS,
+    CONF_MAC,
+    CONF_MAP_OBJECTS,
+    CONF_NOTIFY,
+    CONF_PREFER_CLOUD,
+    CONF_VERSION,
+    CONSUMABLE_DEODORIZER,
+    CONSUMABLE_DETERGENT,
+    CONSUMABLE_DIRTY_WATER_TANK,
+    CONSUMABLE_FILTER,
+    CONSUMABLE_MAIN_BRUSH,
+    CONSUMABLE_MOP_PAD,
+    CONSUMABLE_ONBOARD_DIRTY_WATER_TANK,
+    CONSUMABLE_SCALE_INHIBITOR,
+    CONSUMABLE_SENSOR,
+    CONSUMABLE_SIDE_BRUSH,
+    CONSUMABLE_SILVER_ION,
+    CONSUMABLE_SQUEEGEE,
+    CONSUMABLE_TANK_FILTER,
+    CONSUMABLE_WHEEL,
+    CONTENT_TYPE,
+    DOMAIN,
+    EVENT_CONSUMABLE,
+    EVENT_DRAINAGE_STATUS,
+    EVENT_ERROR,
+    EVENT_INFORMATION,
+    EVENT_LOW_WATER,
+    EVENT_TASK_STATUS,
+    EVENT_WARNING,
+    LOGGER,
+    MAP_OBJECTS,
+    NOTIFICATION_ID_CLEAN_DIRTY_WATER_TANK,
+    NOTIFICATION_ID_CLEAN_ONBOARD_DIRTY_WATER_TANK,
+    NOTIFICATION_ID_CLEAN_SENSOR,
+    NOTIFICATION_ID_CLEAN_WHEEL,
+    NOTIFICATION_ID_CLEANING_PAUSED,
+    NOTIFICATION_ID_CLEANUP_COMPLETED,
+    NOTIFICATION_ID_CONSUMABLE,
+    NOTIFICATION_ID_DRAINAGE_STATUS,
+    NOTIFICATION_ID_DUST_COLLECTION,
+    NOTIFICATION_ID_ERROR,
+    NOTIFICATION_ID_INFORMATION,
+    NOTIFICATION_ID_LOW_WATER,
+    NOTIFICATION_ID_REPLACE_DEODORIZER,
+    NOTIFICATION_ID_REPLACE_DETERGENT,
+    NOTIFICATION_ID_REPLACE_FILTER,
+    NOTIFICATION_ID_REPLACE_MAIN_BRUSH,
+    NOTIFICATION_ID_REPLACE_MOP,
+    NOTIFICATION_ID_REPLACE_SCALE_INHIBITOR,
+    NOTIFICATION_ID_REPLACE_SIDE_BRUSH,
+    NOTIFICATION_ID_REPLACE_SQUEEGEE,
+    NOTIFICATION_ID_REPLACE_TANK_FILTER,
+    NOTIFICATION_ID_REPLACE_TEMPORARY_MAP,
+    NOTIFICATION_ID_SILVER_ION,
+    NOTIFICATION_ID_WARNING,
+    DreameVacuumConfigEntry,
+    get_notification_message,
+    translate_description,
+)
+from .dreame import VERSION, DreameVacuumDevice, DreameVacuumProperty, RateLimitError
+
+# NOTE: CONSUMABLE_IMAGE, DRAINAGE_STATUS_FAIL and DRAINAGE_STATUS_SUCCESS are imported
+# lazily inside the methods that actually need them. They live in the lightweight
+# _notification_images.py (~8.7MB) — split from the ~12MB _resources_data.py so that
+# notification-only code paths never parse the map-renderer resource module.
+
+
+class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice]):
+    """Class to manage fetching Dreame Vacuum data from single endpoint."""
+
+    config_entry: DreameVacuumConfigEntry
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        *,
+        entry: DreameVacuumConfigEntry,
+    ) -> None:
+        """Initialize global Dreame Vacuum data updater."""
+        self._device: DreameVacuumDevice | None = None
+        self._token = entry.data[CONF_TOKEN]
+        self._host = entry.data[CONF_HOST]
+        self._notify = entry.options.get(CONF_NOTIFY, True)
+        self._auth_key = entry.data.get(CONF_AUTH_KEY)
+        self._entry = entry
+        self._ready = False
+        self._available = False
+        self._has_warning = False
+        self._has_temporary_map = None
+        self._low_water = False
+        self._drainage_status = None
+        self._washing = None
+
+        LOGGER.info("Integration loading: %s", entry.data[CONF_NAME])
+
+        if entry.options.get(CONF_VERSION) != VERSION:
+            options = entry.options.copy()
+
+            ## Migration: Convert map objects to hidden map objects
+            if CONF_MAP_OBJECTS in entry.options and CONF_HIDDEN_MAP_OBJECTS not in options:
+                options[CONF_HIDDEN_MAP_OBJECTS] = []
+                for key in list(MAP_OBJECTS.keys()):
+                    if key not in options[CONF_MAP_OBJECTS] and key != "curtain" and key != "ramp":
+                        options[CONF_HIDDEN_MAP_OBJECTS].append(key)
+                del options[CONF_MAP_OBJECTS]
+
+            options[CONF_VERSION] = VERSION
+            hass.config_entries.async_update_entry(entry=entry, options=options)
+
+        self._device = DreameVacuumDevice(
+            entry.data[CONF_NAME],
+            self._host,
+            self._token,
+            entry.data.get(CONF_MAC),
+            entry.data.get(CONF_USERNAME),
+            entry.data.get(CONF_PASSWORD),
+            entry.data.get(CONF_COUNTRY),
+            entry.options.get(CONF_PREFER_CLOUD, False),
+            entry.data.get(CONF_ACCOUNT_TYPE, "mi"),
+            entry.data.get(CONF_DID),
+            self._auth_key,
+        )
+
+        self._device.listen(self._dust_collection_changed, DreameVacuumProperty.DUST_COLLECTION)
+        self._device.listen(self._error_changed, DreameVacuumProperty.ERROR)
+        self._device.listen(self._task_status_changed, DreameVacuumProperty.TASK_STATUS)
+        self._device.listen(self._cleaning_paused_changed, DreameVacuumProperty.CLEANING_PAUSED)
+        self._device.listen(self._low_water_warning_changed, DreameVacuumProperty.LOW_WATER_WARNING)
+        self._device.listen(self._drainage_status_changed, DreameVacuumProperty.DRAINAGE_STATUS)
+        self._device.listen(
+            self._self_wash_base_status_changed,
+            DreameVacuumProperty.SELF_WASH_BASE_STATUS,
+        )
+        self._device.listen(self.set_updated_data)
+        self._device.listen_error(self.set_update_error)
+
+        # The device already pushes changes via MQTT (`cloud_push` in the
+        # manifest), so the coordinator only needs a slow safety-net poll
+        # to recover from missed events rather than the former 30s cadence.
+        self._default_update_interval = timedelta(seconds=300)
+        super().__init__(
+            hass,
+            LOGGER,
+            name=DOMAIN,
+            update_interval=self._default_update_interval,
+            request_refresh_debouncer=Debouncer(
+                hass,
+                LOGGER,
+                cooldown=1.5,
+                immediate=False,
+            ),
+        )
+
+        self._unsub_dispatcher = async_dispatcher_connect(
+            hass,
+            persistent_notification.SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED,
+            self._notification_dismiss_listener,
+        )
+
+    def _dust_collection_changed(self, previous_value=None) -> None:
+        if self._device.status.auto_emptying_not_performed:
+            self._fire_event(EVENT_INFORMATION, {EVENT_INFORMATION: NOTIFICATION_ID_DUST_COLLECTION})
+
+            self._create_persistent_notification(
+                get_notification_message(self.hass.config.language, "dust_collection_not_performed"),
+                NOTIFICATION_ID_DUST_COLLECTION,
+            )
+        else:
+            self._remove_persistent_notification(NOTIFICATION_ID_DUST_COLLECTION)
+
+    def _cleaning_paused_changed(self, previous_value=None) -> None:
+        if self._device.status.cleaning_paused:
+            notification = get_notification_message(self.hass.config.language, "resume_cleaning")
+            if self._device.status.battery_level >= 80:
+                dnd_remaining = self._device.status.dnd_remaining
+                if dnd_remaining:
+                    hour = math.floor(dnd_remaining / 3600)
+                    minute = math.floor((dnd_remaining - hour * 3600) / 60)
+                    notification = get_notification_message(
+                        self.hass.config.language, "resume_cleaning_not_performed"
+                    ) + get_notification_message(
+                        self.hass.config.language, "resume_cleaning_timer", hour=hour, minute=minute
+                    )
+                self._fire_event(
+                    EVENT_INFORMATION,
+                    {EVENT_INFORMATION: NOTIFICATION_ID_CLEANING_PAUSED},
+                )
+            else:
+                self._fire_event(
+                    EVENT_INFORMATION,
+                    {EVENT_INFORMATION: NOTIFICATION_ID_CLEANING_PAUSED},
+                )
+
+            self._create_persistent_notification(notification, NOTIFICATION_ID_CLEANING_PAUSED)
+        else:
+            self._remove_persistent_notification(NOTIFICATION_ID_CLEANING_PAUSED)
+
+    def _task_status_changed(self, previous_value=None) -> None:
+        if previous_value is not None:
+            if self._device.status.cleanup_completed:
+                self._fire_event(EVENT_TASK_STATUS, self._device.status.job)
+                self._create_persistent_notification(
+                    get_notification_message(self.hass.config.language, "cleanup_completed"),
+                    NOTIFICATION_ID_CLEANUP_COMPLETED,
+                )
+                self._check_consumables()
+
+            elif previous_value == 0 and not self._device.status.fast_mapping and not self._device.status.cruising:
+                self._fire_event(EVENT_TASK_STATUS, self._device.status.job)
+        else:
+            self._check_consumables()
+
+    def _error_changed(self, previous_value=None) -> None:
+        has_warning = self._device.status.has_warning
+        description = translate_description(self.hass.config.language, self._device.status.error_description)
+        if has_warning:
+            content = description[0]
+            self._fire_event(
+                EVENT_WARNING,
+                {EVENT_WARNING: content, "code": self._device.status.error.value},
+            )
+
+            if len(description[1]) > 2:
+                content = f"### {content}\n{description[1]}"
+
+            image = self._device.status.error_image
+            if image:
+                content = f"{content}![image](data:{CONTENT_TYPE};base64,{image})"
+            self._create_persistent_notification(content, NOTIFICATION_ID_WARNING)
+        elif self._has_warning:
+            self._remove_persistent_notification(NOTIFICATION_ID_WARNING)
+
+        if self._device.status.has_error:
+            self._fire_event(
+                EVENT_ERROR,
+                {EVENT_ERROR: description[0], "code": self._device.status.error.value},
+            )
+
+            content = f"### {description[0]}\n{description[1]}"
+            image = self._device.status.error_image
+            if image:
+                content = f"{content}![image](data:{CONTENT_TYPE};base64,{image})"
+            self._create_persistent_notification(content, f"{NOTIFICATION_ID_ERROR}_{self._device.status.error.value}")
+
+        self._has_warning = has_warning
+
+    def _has_temporary_map_changed(self, previous_value=None) -> None:
+        if self._device.status.has_temporary_map:
+            message_key = "replace_multi_map" if self._device.status.multi_map else "replace_map"
+            self._fire_event(EVENT_WARNING, {EVENT_WARNING: message_key})
+
+            self._create_persistent_notification(
+                get_notification_message(self.hass.config.language, message_key),
+                NOTIFICATION_ID_REPLACE_TEMPORARY_MAP,
+            )
+        else:
+            self._fire_event(EVENT_WARNING, {EVENT_WARNING: NOTIFICATION_ID_REPLACE_TEMPORARY_MAP})
+
+            self._remove_persistent_notification(NOTIFICATION_ID_REPLACE_TEMPORARY_MAP)
+
+    def _low_water_warning_changed(self, previous_value=None) -> None:
+        low_water_warning = self._device.status.low_water_warning
+        if low_water_warning.value > 0 and (not previous_value or low_water_warning.value > 1):
+            low_water_warning_description = translate_description(
+                self.hass.config.language, self._device.status.low_water_warning_name_description
+            )
+            self._fire_event(
+                EVENT_LOW_WATER,
+                {EVENT_LOW_WATER: low_water_warning_description[0], "code": low_water_warning.value},
+            )
+
+            description = f"### {low_water_warning_description[0]}"
+            if len(low_water_warning_description[1]) > 2:
+                description = f"{description}\n{low_water_warning_description[1]}"
+            self._create_persistent_notification(description, NOTIFICATION_ID_LOW_WATER)
+        elif self._low_water:
+            self._remove_persistent_notification(NOTIFICATION_ID_LOW_WATER)
+
+        self._low_water = self._device.status.low_water
+
+    def _drainage_status_changed(self, previous_value=None) -> None:
+        if self._device.status.draining_complete:
+            from .dreame.resources import DRAINAGE_STATUS_FAIL, DRAINAGE_STATUS_SUCCESS
+
+            success = bool(self._device.status.drainage_status.value == 2)
+            if success:
+                description = f"{get_notification_message(self.hass.config.language, 'drainage_completed')}\n![image](data:{CONTENT_TYPE};base64,{DRAINAGE_STATUS_SUCCESS})"
+            else:
+                description = f"{get_notification_message(self.hass.config.language, 'drainage_failed')}\n![image](data:{CONTENT_TYPE};base64,{DRAINAGE_STATUS_FAIL})"
+
+            self._fire_event(EVENT_DRAINAGE_STATUS, {EVENT_DRAINAGE_STATUS: success})
+            self._create_persistent_notification(description, NOTIFICATION_ID_DRAINAGE_STATUS)
+        elif self._drainage_status:
+            self._remove_persistent_notification(NOTIFICATION_ID_DRAINAGE_STATUS)
+
+        self._drainage_status = self._device.status.draining_complete
+
+    def _self_wash_base_status_changed(self, previous_self_wash_base_status=None) -> None:
+        if self._washing is not None and self._device.status.washing != self._washing and self._device.status.started:
+            self._check_consumables()
+        self._washing = self._device.status.washing
+
+    def _check_consumable(self, consumable, notification_id, property):
+        description = self._device.status.consumable_life_warning_description(property)
+        if description:
+            from .dreame.resources import CONSUMABLE_IMAGE
+
+            description = translate_description(self.hass.config.language, description)
+
+            image = CONSUMABLE_IMAGE.get(consumable)
+            notification = f"### {description[0]}\n{description[1]}"
+            if image:
+                notification = f"{notification}\n![image](data:{CONTENT_TYPE};base64,{image})"
+            self._create_persistent_notification(
+                notification,
+                notification_id,
+            )
+
+            life_left = self._device.get_property(property)
+            self._fire_event(
+                EVENT_CONSUMABLE,
+                {
+                    EVENT_CONSUMABLE: consumable,
+                    "life_left": life_left,
+                },
+            )
+
+            # Create a repair issue for depleted consumables
+            if life_left is not None and life_left <= 0:
+                issue_id = f"consumable_depleted_{consumable}_{self._device.mac}"
+                self.hass.loop.call_soon_threadsafe(
+                    partial(
+                        async_create_issue,
+                        self.hass,
+                        DOMAIN,
+                        issue_id,
+                        is_fixable=False,
+                        severity=IssueSeverity.WARNING,
+                        translation_key="consumable_depleted",
+                        translation_placeholders={
+                            "consumable": consumable,
+                            "device_name": self._device.name,
+                        },
+                    )
+                )
+        else:
+            # Consumable is OK, clear any previous repair issue
+            issue_id = f"consumable_depleted_{consumable}_{self._device.mac}"
+            self.hass.loop.call_soon_threadsafe(partial(async_delete_issue, self.hass, DOMAIN, issue_id))
+
+    def _check_consumables(self):
+        self._check_consumable(
+            CONSUMABLE_MAIN_BRUSH,
+            NOTIFICATION_ID_REPLACE_MAIN_BRUSH,
+            DreameVacuumProperty.MAIN_BRUSH_LEFT,
+        )
+        self._check_consumable(
+            CONSUMABLE_SIDE_BRUSH,
+            NOTIFICATION_ID_REPLACE_SIDE_BRUSH,
+            DreameVacuumProperty.SIDE_BRUSH_LEFT,
+        )
+        self._check_consumable(
+            CONSUMABLE_FILTER,
+            NOTIFICATION_ID_REPLACE_FILTER,
+            DreameVacuumProperty.FILTER_LEFT,
+        )
+        self._check_consumable(
+            CONSUMABLE_TANK_FILTER,
+            NOTIFICATION_ID_REPLACE_TANK_FILTER,
+            DreameVacuumProperty.TANK_FILTER_LEFT,
+        )
+        if not self.device.capability.disable_sensor_cleaning:
+            self._check_consumable(
+                CONSUMABLE_SENSOR,
+                NOTIFICATION_ID_CLEAN_SENSOR,
+                DreameVacuumProperty.SENSOR_DIRTY_LEFT,
+            )
+        self._check_consumable(
+            CONSUMABLE_MOP_PAD,
+            NOTIFICATION_ID_REPLACE_MOP,
+            DreameVacuumProperty.MOP_PAD_LEFT,
+        )
+        self._check_consumable(
+            CONSUMABLE_SQUEEGEE,
+            NOTIFICATION_ID_REPLACE_SQUEEGEE,
+            DreameVacuumProperty.SQUEEGEE_LEFT,
+        )
+        self._check_consumable(
+            CONSUMABLE_ONBOARD_DIRTY_WATER_TANK,
+            NOTIFICATION_ID_CLEAN_ONBOARD_DIRTY_WATER_TANK,
+            DreameVacuumProperty.ONBOARD_DIRTY_WATER_TANK_LEFT,
+        )
+        self._check_consumable(
+            CONSUMABLE_DIRTY_WATER_TANK,
+            NOTIFICATION_ID_CLEAN_DIRTY_WATER_TANK,
+            DreameVacuumProperty.DIRTY_WATER_TANK_LEFT,
+        )
+        if self._device.capability.self_wash_base:
+            self._check_consumable(
+                CONSUMABLE_SILVER_ION,
+                NOTIFICATION_ID_SILVER_ION,
+                DreameVacuumProperty.SILVER_ION_LEFT,
+            )
+            self._check_consumable(
+                CONSUMABLE_DETERGENT,
+                NOTIFICATION_ID_REPLACE_DETERGENT,
+                DreameVacuumProperty.DETERGENT_LEFT,
+            )
+        if self._device.capability.deodorizer:
+            self._check_consumable(
+                CONSUMABLE_DEODORIZER,
+                NOTIFICATION_ID_REPLACE_DEODORIZER,
+                DreameVacuumProperty.DEODORIZER_LEFT,
+            )
+        if self._device.capability.wheel:
+            self._check_consumable(
+                CONSUMABLE_WHEEL,
+                NOTIFICATION_ID_CLEAN_WHEEL,
+                DreameVacuumProperty.WHEEL_DIRTY_LEFT,
+            )
+        if self._device.capability.scale_inhibitor:
+            self._check_consumable(
+                CONSUMABLE_SCALE_INHIBITOR,
+                NOTIFICATION_ID_REPLACE_SCALE_INHIBITOR,
+                DreameVacuumProperty.SCALE_INHIBITOR_LEFT,
+            )
+
+    def _create_persistent_notification(self, content, notification_id) -> None:
+        if not self.device.disconnected and self.device.device_connected and self._notify:
+            if isinstance(self._notify, list):
+                if notification_id == NOTIFICATION_ID_CLEANUP_COMPLETED:
+                    if NOTIFICATION_ID_CLEANUP_COMPLETED not in self._notify:
+                        return
+                    notification_id = f"{notification_id}_{int(time.time())}"
+                elif NOTIFICATION_ID_WARNING in notification_id or NOTIFICATION_ID_LOW_WATER in notification_id:
+                    if NOTIFICATION_ID_WARNING not in self._notify:
+                        return
+                elif NOTIFICATION_ID_ERROR in notification_id:
+                    if NOTIFICATION_ID_ERROR not in self._notify:
+                        return
+                elif (
+                    notification_id == NOTIFICATION_ID_DUST_COLLECTION
+                    or notification_id == NOTIFICATION_ID_CLEANING_PAUSED
+                ):
+                    if NOTIFICATION_ID_INFORMATION not in self._notify:
+                        return
+                elif (
+                    notification_id != NOTIFICATION_ID_REPLACE_TEMPORARY_MAP
+                    and notification_id != NOTIFICATION_ID_DRAINAGE_STATUS
+                ):
+                    if NOTIFICATION_ID_CONSUMABLE not in self._notify:
+                        return
+
+            self.hass.loop.call_soon_threadsafe(
+                persistent_notification.async_create,
+                self.hass,
+                content,
+                self._device.name,
+                f"{DOMAIN}_{self._device.mac}_{notification_id}",
+            )
+
+    def _remove_persistent_notification(self, notification_id) -> None:
+        self.hass.loop.call_soon_threadsafe(
+            persistent_notification.async_dismiss,
+            self.hass,
+            f"{DOMAIN}_{self._device.mac}_{notification_id}",
+        )
+
+    def _notification_dismiss_listener(self, notification_type, data) -> None:
+        if notification_type == persistent_notification.UpdateType.REMOVED and self._device:
+            notifications = self.hass.data.get(persistent_notification.DOMAIN)
+            notify_is_list = isinstance(self._notify, list)
+            if self._has_warning:
+                if f"{DOMAIN}_{self._device.mac}_{NOTIFICATION_ID_WARNING}" not in notifications:
+                    if not notify_is_list or NOTIFICATION_ID_WARNING in self._notify:
+                        self.hass.async_create_task(self._async_clear_warning(), name=f"{DOMAIN}_clear_warning")
+                    self._has_warning = self._device.status.has_warning
+
+            if self._low_water:
+                if f"{DOMAIN}_{self._device.mac}_{NOTIFICATION_ID_LOW_WATER}" not in notifications:
+                    if not notify_is_list or NOTIFICATION_ID_WARNING in self._notify:
+                        self.hass.async_create_task(self._async_clear_warning(), name=f"{DOMAIN}_clear_warning")
+                    self._low_water = self._device.status.low_water
+
+            if self._drainage_status:
+                if f"{DOMAIN}_{self._device.mac}_{NOTIFICATION_ID_DRAINAGE_STATUS}" not in notifications:
+                    if not notify_is_list or NOTIFICATION_ID_WARNING in self._notify:
+                        self.hass.async_create_task(self._async_clear_warning(), name=f"{DOMAIN}_clear_warning")
+                    self._drainage_status = self._device.status.draining_complete
+
+    async def _async_clear_warning(self) -> None:
+        """Clear the active device warning off the event loop.
+
+        ``clear_warning`` performs blocking MIoT network I/O (and may sleep), so it
+        must never run directly inside the persistent-notification dispatcher
+        callback, which executes on the event loop.
+        """
+        await self.hass.async_add_executor_job(self._device.clear_warning)
+
+    def _fire_event(self, event_id, data) -> None:
+        event_data = {ATTR_ENTITY_ID: generate_entity_id("vacuum.{}", self._device.name, hass=self.hass)}
+        if data:
+            event_data.update(data)
+        self.hass.loop.call_soon_threadsafe(self.hass.bus.async_fire, f"{DOMAIN}_{event_id}", event_data)
+
+    async def _async_update_data(self) -> DreameVacuumDevice:
+        """Update Dreame Vacuum."""
+        if self._device is None:
+            raise UpdateFailed("Device not initialized")
+        try:
+            await self.hass.async_add_executor_job(self._device.update)
+
+            if self._device and not self._device.disconnected:
+                if self._device.auth_failed:
+                    self._device.listen(None)
+                    self._device.disconnect()
+                    raise ConfigEntryAuthFailed()
+                if self.update_interval != self._default_update_interval:
+                    self.update_interval = self._default_update_interval
+                self._device.schedule_update()
+                self.async_set_updated_data()
+                return self._device
+
+            # update() succeeded but the device is disconnected (race with an
+            # unload/cleanup, or a disconnect triggered mid-update). Do not
+            # return None implicitly: that would mark the refresh successful with
+            # data=None. Signal an update failure instead.
+            raise UpdateFailed("Device disconnected during update")
+
+        except RateLimitError as ex:
+            LOGGER.warning("Rate limited by API, backing off for %.0fs", ex.retry_after)
+            self.update_interval = timedelta(seconds=ex.retry_after)
+            raise UpdateFailed(f"Rate limited, retry after {ex.retry_after:.0f}s") from ex
+
+        except ConfigEntryAuthFailed:
+            raise
+
+        except Exception as ex:
+            if self._device is not None and self._device.auth_failed:
+                raise ConfigEntryAuthFailed(
+                    translation_domain=DOMAIN,
+                    translation_key="auth_failed",
+                ) from ex
+
+            # Do NOT destroy self._device on a transient error: keeping it lets
+            # _perform_update() retry connect_cloud()/connect_device() on the next
+            # refresh. Nulling it would make the device permanently unavailable
+            # ("Device not initialized") with no reconnection. The auth-failed
+            # path above already raises ConfigEntryAuthFailed, and cleanup() still
+            # tears the device down on unload.
+            LOGGER.warning("Update failed: %s", traceback.format_exc())
+            raise UpdateFailed(ex) from ex
+
+    @property
+    def device(self) -> DreameVacuumDevice:
+        return self._device
+
+    def cleanup(self) -> None:
+        """Clean up device resources. Call this before unloading the integration."""
+        if hasattr(self, "_unsub_dispatcher") and self._unsub_dispatcher:
+            self._unsub_dispatcher()
+            self._unsub_dispatcher = None
+        if self._device is not None:
+            self._device.listen(None)
+            self._device.disconnect()
+            self._device = None
+        # Release the shared proxy renderer built lazily by camera entities.
+        if hasattr(self, "_shared_proxy_renderer"):
+            self._shared_proxy_renderer = None
+
+    def set_update_error(self, ex=None) -> None:
+        self.hass.loop.call_soon_threadsafe(self.async_set_update_error, ex)
+
+    def set_updated_data(self, data=None) -> None:
+        self.hass.loop.call_soon_threadsafe(self.async_set_updated_data, data)
+
+    @callback
+    def async_set_updated_data(self, data: DreameVacuumDevice | None = None) -> None:
+        # `data` is accepted for Liskov compatibility with
+        # DataUpdateCoordinator.async_set_updated_data(self, data) and to absorb
+        # the no-arg device push callback; the coordinator is the source of
+        # truth, so we always publish ``self._device`` regardless of the input.
+        if not self._device or not self._device.status:
+            return
+        if self._has_temporary_map != self._device.status.has_temporary_map:
+            self._has_temporary_map_changed(self._has_temporary_map)
+            self._has_temporary_map = self._device.status.has_temporary_map
+
+        if not self._ready:
+            self._ready = True
+            if (self._device.token and self._device.token != self._token) or (
+                self._device.host and self._device.host != self._host
+            ):
+                data = self._entry.data.copy()
+                self._host = self._device.host
+                self._token = self._device.token
+                data[CONF_HOST] = self._host
+                data[CONF_TOKEN] = self._token
+                LOGGER.info("Update Host Config: %s", self._host)
+                self.hass.config_entries.async_update_entry(self._entry, data=data)
+
+            cloud_auth_key = self._device.cloud_auth_key
+            if cloud_auth_key and cloud_auth_key != self._auth_key:
+                self._auth_key = cloud_auth_key
+                data = self._entry.data.copy()
+                data[CONF_AUTH_KEY] = self._auth_key
+                # Once we hold a server-issued auth_key we no longer need the
+                # cleartext password in the config entry. Drop it so a leaked
+                # backup of .storage/core.config_entries does not expose the
+                # account credential; reauth via auth_key is already wired up.
+                if CONF_PASSWORD in data:
+                    data.pop(CONF_PASSWORD, None)
+                    LOGGER.info("Auth key captured; removing stored password from config entry")
+                self.hass.config_entries.async_update_entry(self._entry, data=data)
+        elif self._device.auth_failed:
+            ## Reload entry to trigger reauth and unload
+            self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
+            return
+
+        new_available = self._device is not None and self._device.available
+        if not self._available and new_available:
+            LOGGER.info("Device %s is now available", self._device.name)
+        self._available = new_available
+        super().async_set_updated_data(self._device)
+
+    @callback
+    def async_set_update_error(self, ex) -> None:
+        if self._available:
+            new_available = self._device is not None and self._device.available
+            if self._available and not new_available:
+                LOGGER.warning(
+                    "Device %s is unavailable: %s",
+                    self._device.name if self._device else "unknown",
+                    ex,
+                )
+            self._available = new_available
+            super().async_set_update_error(ex)

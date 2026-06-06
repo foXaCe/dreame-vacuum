@@ -1,0 +1,1181 @@
+"""Tests for the Dreame Vacuum camera platform logic.
+
+``camera.py`` is dominated by image rendering (numpy + PIL) and aiohttp
+HTTP views, neither of which is meaningfully unit-testable without a full
+device/cloud pipeline. These tests target the *logic* instead:
+
+* the pure query/filename helpers (header-injection sanitisation included),
+* ``_build_segment_map`` and its cache driver ``_async_update_segment_map``
+  (the recent pick-buffer fix) using small *real* numpy arrays,
+* the read-only ``extra_state_attributes`` cache contract,
+* ``async_camera_image``'s ``try/finally`` re-arming of ``_should_poll``,
+* ``async_setup_entry`` entity creation + idempotent HTTP-view registration.
+
+The HA ``camera`` component imports ``turbojpeg`` at module load and the
+Dreame map optimizer imports ``py_mini_racer``; neither native wheel is
+guaranteed in CI. We inject tiny stand-ins into ``sys.modules`` *before*
+importing the platform so the rest of the module loads unchanged. numpy and
+PIL are genuine dependencies and are used for real.
+"""
+
+from __future__ import annotations
+
+import base64
+from datetime import datetime
+import io
+import sys
+import types
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+
+# --------------------------------------------------------------------------- #
+# Native-dependency stand-ins (must be installed before importing camera.py).
+# --------------------------------------------------------------------------- #
+def _install_native_stubs() -> None:
+    if "turbojpeg" not in sys.modules:
+        tj = types.ModuleType("turbojpeg")
+        tj.TurboJPEG = type("TurboJPEG", (), {"__init__": lambda self, *a, **k: None})
+        sys.modules["turbojpeg"] = tj
+    if "py_mini_racer" not in sys.modules:
+        pmr = types.ModuleType("py_mini_racer")
+        pmr.MiniRacer = type("MiniRacer", (), {"__init__": lambda self, *a, **k: None})
+        sys.modules["py_mini_racer"] = pmr
+
+
+_install_native_stubs()
+
+import numpy as np
+
+import custom_components.dreame_vacuum.camera as cam
+from custom_components.dreame_vacuum.camera import (
+    _VIEWS_REGISTERED_KEY,
+    CAMERAS,
+    DreameVacuumCameraEntity,
+    DreameVacuumMapType,
+    _find_segment_at,
+    _query_bool,
+    _query_bool_default_true,
+    _safe_filename,
+    async_setup_entry,
+)
+from custom_components.dreame_vacuum.dreame.const import (
+    ATTR_CALIBRATION,
+    ATTR_ROOMS,
+    ATTR_SEGMENT_ID,
+    ATTR_SEGMENT_MAP,
+)
+
+
+# --------------------------------------------------------------------------- #
+# Helpers for building bare entity instances and fake map data.
+# --------------------------------------------------------------------------- #
+class _ImmediateHass:
+    """A minimal ``hass`` whose executor runs the job synchronously."""
+
+    async def async_add_executor_job(self, func, *args):
+        return func(*args)
+
+
+def _bare_camera() -> DreameVacuumCameraEntity:
+    """Create a camera instance bypassing the heavyweight ``__init__``.
+
+    ``__init__`` constructs real renderers and needs a live ``hass`` for entity
+    id / token generation. The logic under test only touches a handful of
+    attributes, so we set just those. ``device`` is a read-only property over
+    ``coordinator.device``, so callers set the device via ``_set_device``.
+    """
+    entity = object.__new__(DreameVacuumCameraEntity)
+    entity._segment_map_cache = (None, None, None)
+    entity._should_poll = True
+    entity._last_updated = -1
+    entity._last_rendered = -1
+    entity._last_map_request = 0
+    entity._image = b"default-image"
+    entity._calibration_points = None
+    entity._color_scheme = "Dreame Light"
+    entity.map_index = 0
+    entity.hass = _ImmediateHass()
+    entity.coordinator = MagicMock()
+    entity.coordinator.device = None
+    return entity
+
+
+def _set_device(entity: DreameVacuumCameraEntity, device) -> None:
+    """Assign the device behind the read-only ``device`` property."""
+    entity.coordinator.device = device
+
+
+def _fake_map_data(*, raw_at=(2, 2), raw_value=10, room_key=5, last_updated=1000):
+    """Build a tiny ``map_data`` accepted by ``_build_segment_map``.
+
+    The pixel_type is indexed ``pt[x, y]`` (shape ``(w, h)``), which is how the
+    renderer and ``_find_segment_at`` read it.
+    """
+    w, h = 6, 5
+    pt = np.zeros((w, h), dtype=np.uint8)
+    pt[raw_at] = raw_value
+    dims = SimpleNamespace(width=w, height=h, left=0, top=0, grid_size=1)
+    seg = SimpleNamespace(x=float(raw_at[0]), y=float(raw_at[1]))
+    return SimpleNamespace(
+        pixel_type=pt,
+        segments={room_key: seg},
+        dimensions=dims,
+        last_updated=last_updated,
+    )
+
+
+# ===========================================================================
+# Pure helpers
+# ===========================================================================
+class TestQueryBool:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (None, False),
+            ("", True),
+            ("true", True),
+            ("True", True),
+            ("TRUE", True),
+            ("1", True),
+            ("0", False),
+            ("false", False),
+            ("no", False),
+            ("anything", False),
+        ],
+    )
+    def test_query_bool(self, value, expected) -> None:
+        assert _query_bool(value) is expected
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (None, True),  # default-true: absent means True
+            ("", True),
+            ("true", True),
+            ("1", True),
+            ("0", False),
+            ("false", False),
+            ("nope", False),
+        ],
+    )
+    def test_query_bool_default_true(self, value, expected) -> None:
+        assert _query_bool_default_true(value) is expected
+
+
+class TestSafeFilename:
+    def test_plain_name_keeps_safe_chars(self) -> None:
+        assert _safe_filename("My_File-1.jpg") == "My_File-1.jpg"
+
+    def test_spaces_and_specials_replaced(self) -> None:
+        assert _safe_filename("my file (1).jpg") == "my_file__1_.jpg"
+
+    def test_none_returns_fallback(self) -> None:
+        assert _safe_filename(None) == "image"
+
+    def test_empty_returns_custom_fallback(self) -> None:
+        assert _safe_filename("", "recovery") == "recovery"
+
+    def test_only_dots_underscores_returns_fallback(self) -> None:
+        # ``strip("._")`` empties the string -> fallback kicks in.
+        assert _safe_filename("..__..") == "image"
+
+    def test_header_injection_crlf_stripped(self) -> None:
+        """CR/LF and the header separator must never survive into a header."""
+        out = _safe_filename("evil\r\nSet-Cookie: pwned=1")
+        assert "\r" not in out
+        assert "\n" not in out
+        assert ":" not in out
+        assert " " not in out
+        assert out == "evil__Set-Cookie__pwned_1"
+
+    def test_truncated_to_80_chars(self) -> None:
+        assert len(_safe_filename("a" * 250)) == 80
+
+    def test_leading_trailing_dots_stripped(self) -> None:
+        assert _safe_filename("...name...") == "name"
+
+
+class TestFindSegmentAt:
+    def test_direct_center_hit(self) -> None:
+        pt = np.zeros((10, 10), dtype=np.uint8)
+        pt[5, 5] = 7
+        assert _find_segment_at(pt, 5, 5, 10, 10) == 7
+
+    def test_spiral_finds_neighbour(self) -> None:
+        pt = np.zeros((10, 10), dtype=np.uint8)
+        pt[6, 5] = 3  # one ring out from (5,5)
+        assert _find_segment_at(pt, 5, 5, 10, 10) == 3
+
+    def test_background_returns_zero(self) -> None:
+        pt = np.zeros((10, 10), dtype=np.uint8)
+        assert _find_segment_at(pt, 5, 5, 10, 10) == 0
+
+    def test_out_of_segment_range_ignored(self) -> None:
+        # Values >= 64 (floor markers etc.) are not segments.
+        pt = np.full((10, 10), 200, dtype=np.uint8)
+        assert _find_segment_at(pt, 5, 5, 10, 10) == 0
+
+    def test_radius_bound_respected(self) -> None:
+        # Value sits outside the default search radius of 5 -> not found.
+        pt = np.zeros((30, 30), dtype=np.uint8)
+        pt[5 + 8, 5] = 12
+        assert _find_segment_at(pt, 5, 5, 30, 30) == 0
+        # ...but a wider radius reaches it.
+        assert _find_segment_at(pt, 5, 5, 30, 30, radius=8) == 12
+
+    def test_respects_image_bounds(self) -> None:
+        # Centre at the corner: out-of-range neighbours are skipped, no IndexError.
+        pt = np.zeros((10, 10), dtype=np.uint8)
+        pt[0, 0] = 9
+        assert _find_segment_at(pt, 0, 0, 10, 10) == 9
+
+
+# ===========================================================================
+# _build_segment_map (recent pick-buffer fix)
+# ===========================================================================
+class TestBuildSegmentMap:
+    def test_returns_b64_png_and_room_mapping(self) -> None:
+        entity = _bare_camera()
+        map_data = _fake_map_data(raw_at=(2, 2), raw_value=10, room_key=5)
+
+        result = entity._build_segment_map(map_data)
+        assert result is not None
+        b64, room_to_raw = result
+
+        # The room key maps back to the raw pixel value sampled at its centre.
+        assert room_to_raw == {5: 10}
+
+        # Decodes to a valid RGB PNG of the declared dimensions.
+        img_bytes = base64.b64decode(b64)
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(img_bytes))
+        assert img.mode == "RGB"
+        assert img.size == (6, 5)  # (width, height)
+
+        # Exactly one blue-channel pixel carries the remapped room key (==5).
+        arr = np.array(img)
+        assert arr[:, :, 0].sum() == 0  # red unused
+        assert arr[:, :, 1].sum() == 0  # green unused
+        assert int((arr[:, :, 2] == 5).sum()) == 1
+        assert int((arr[:, :, 2] > 0).sum()) == 1
+
+    def test_remaps_raw_value_to_room_key_in_blue_channel(self) -> None:
+        """Blue channel encodes the *room key*, not the raw pixel value."""
+        entity = _bare_camera()
+        # raw value 42 at centre, but the room key is 9.
+        map_data = _fake_map_data(raw_at=(3, 1), raw_value=42, room_key=9)
+        b64, room_to_raw = entity._build_segment_map(map_data)
+        assert room_to_raw == {9: 42}
+
+        from PIL import Image
+
+        arr = np.array(Image.open(io.BytesIO(base64.b64decode(b64))))
+        # The remapped value present in the buffer is the room key (9), never 42.
+        present = set(np.unique(arr[:, :, 2]).tolist())
+        assert 9 in present
+        assert 42 not in present
+
+    def test_none_when_pixel_type_missing(self) -> None:
+        entity = _bare_camera()
+        map_data = _fake_map_data()
+        map_data.pixel_type = None
+        assert entity._build_segment_map(map_data) is None
+
+    def test_none_when_segments_empty(self) -> None:
+        entity = _bare_camera()
+        map_data = _fake_map_data()
+        map_data.segments = {}
+        assert entity._build_segment_map(map_data) is None
+
+    def test_room_on_background_gets_no_mapping(self) -> None:
+        """A room whose centre lands on background (raw 0) is not mapped."""
+        entity = _bare_camera()
+        map_data = _fake_map_data(raw_at=(2, 2), raw_value=10, room_key=5)
+        # Point the (only) segment at an empty cell far from the painted pixel.
+        map_data.segments[5] = SimpleNamespace(x=0.0, y=0.0)
+        # Re-zero the painted pixel so nothing is in range.
+        map_data.pixel_type[2, 2] = 0
+        b64, room_to_raw = entity._build_segment_map(map_data)
+        assert room_to_raw == {}  # no raw value picked up
+
+    def test_segment_without_coordinates_skipped(self) -> None:
+        entity = _bare_camera()
+        map_data = _fake_map_data()
+        map_data.segments[5] = SimpleNamespace(x=None, y=None)
+        b64, room_to_raw = entity._build_segment_map(map_data)
+        assert room_to_raw == {}
+
+    def test_out_of_range_room_key_skipped(self) -> None:
+        """Room keys must satisfy 0 < key < 256 to be remapped."""
+        entity = _bare_camera()
+        map_data = _fake_map_data(raw_at=(2, 2), raw_value=10, room_key=5)
+        # Replace with an out-of-range key (>= 256).
+        map_data.segments = {300: SimpleNamespace(x=2.0, y=2.0)}
+        b64, room_to_raw = entity._build_segment_map(map_data)
+        assert room_to_raw == {}
+
+
+# ===========================================================================
+# _async_update_segment_map (recent fix: cache only on last_updated change)
+# ===========================================================================
+class TestAsyncUpdateSegmentMap:
+    async def test_populates_cache_first_time(self) -> None:
+        entity = _bare_camera()
+        map_data = _fake_map_data(last_updated=1000)
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+        ):
+            await entity._async_update_segment_map()
+
+        cache_key, b64, room_to_raw = entity._segment_map_cache
+        assert cache_key == 1000
+        assert isinstance(b64, str)
+        assert b64
+        assert room_to_raw == {5: 10}
+
+    async def test_skips_when_last_updated_unchanged(self) -> None:
+        entity = _bare_camera()
+        map_data = _fake_map_data(last_updated=1000)
+        # Pretend the cache already holds this exact frame.
+        entity._segment_map_cache = (1000, "CACHED", {5: 10})
+
+        build_spy = MagicMock(wraps=entity._build_segment_map)
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(entity, "_build_segment_map", build_spy),
+        ):
+            await entity._async_update_segment_map()
+
+        # No rebuild, cache untouched.
+        build_spy.assert_not_called()
+        assert entity._segment_map_cache == (1000, "CACHED", {5: 10})
+
+    async def test_rebuilds_when_last_updated_changes(self) -> None:
+        entity = _bare_camera()
+        entity._segment_map_cache = (1000, "OLD", {5: 10})
+        map_data = _fake_map_data(last_updated=2000, raw_value=11)
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+        ):
+            await entity._async_update_segment_map()
+
+        cache_key, b64, room_to_raw = entity._segment_map_cache
+        assert cache_key == 2000
+        assert b64 != "OLD"
+        assert room_to_raw == {5: 11}
+
+    async def test_skips_wifi_map(self) -> None:
+        entity = _bare_camera()
+        map_data = _fake_map_data()
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: True)),
+        ):
+            await entity._async_update_segment_map()
+        # wifi_map short-circuits before touching the cache.
+        assert entity._segment_map_cache == (None, None, None)
+
+    async def test_skips_when_no_map_data(self) -> None:
+        entity = _bare_camera()
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: None)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+        ):
+            await entity._async_update_segment_map()
+        assert entity._segment_map_cache == (None, None, None)
+
+    async def test_skips_when_segments_empty(self) -> None:
+        entity = _bare_camera()
+        map_data = _fake_map_data()
+        map_data.segments = {}
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+        ):
+            await entity._async_update_segment_map()
+        assert entity._segment_map_cache == (None, None, None)
+
+    async def test_cache_unchanged_when_build_returns_none(self) -> None:
+        """If the executor build yields None, the cache key is *not* advanced."""
+        entity = _bare_camera()
+        map_data = _fake_map_data(last_updated=3000)
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(entity, "_build_segment_map", return_value=None),
+        ):
+            await entity._async_update_segment_map()
+        assert entity._segment_map_cache == (None, None, None)
+
+
+# ===========================================================================
+# async_camera_image (recent fix: try/finally re-arms _should_poll)
+# ===========================================================================
+class TestAsyncCameraImage:
+    async def test_returns_cached_image(self) -> None:
+        entity = _bare_camera()
+        entity._should_poll = False  # not time to poll
+        entity._image = b"the-image"
+        result = await entity.async_camera_image()
+        assert result == b"the-image"
+
+    async def test_rearms_should_poll_on_success(self) -> None:
+        entity = _bare_camera()
+        entity._should_poll = True
+        _set_device(entity, MagicMock())
+        entity._renderer = MagicMock()
+        entity._renderer.render_complete = True
+        # last_updated == last_rendered so no re-render path is taken.
+        entity._last_updated = -1
+        entity._last_rendered = -1
+        with (
+            patch.object(entity, "update", MagicMock()),
+            patch.object(entity, "_async_update_segment_map", AsyncMock()),
+        ):
+            await entity.async_camera_image()
+        assert entity._should_poll is True
+
+    async def test_rearms_should_poll_even_when_update_raises(self) -> None:
+        """The try/finally must restore polling after a transient error."""
+        entity = _bare_camera()
+        entity._should_poll = True
+        _set_device(entity, MagicMock())
+        entity._renderer = MagicMock()
+
+        def boom():
+            raise RuntimeError("render pipeline blew up")
+
+        with (
+            patch.object(entity, "update", side_effect=boom),
+            patch.object(entity, "_async_update_segment_map", AsyncMock()),
+            pytest.raises(RuntimeError, match="render pipeline blew up"),
+        ):
+            await entity.async_camera_image()
+
+        # Without the finally clause the camera would stop refreshing forever.
+        assert entity._should_poll is True
+
+    async def test_calls_update_map_for_live_camera(self) -> None:
+        entity = _bare_camera()
+        entity._should_poll = True
+        entity.map_index = 0
+        device = MagicMock()
+        _set_device(entity, device)
+        entity._renderer = MagicMock()
+        entity._renderer.render_complete = True
+        with (
+            patch.object(entity, "update", MagicMock()),
+            patch.object(entity, "_async_update_segment_map", AsyncMock()),
+        ):
+            await entity.async_camera_image()
+        device.update_map.assert_called_once()
+
+    async def test_renders_when_map_updated(self) -> None:
+        entity = _bare_camera()
+        entity._should_poll = True
+        entity.map_index = 0
+        device = MagicMock()
+        _set_device(entity, device)
+        entity._renderer = MagicMock()
+        entity._renderer.render_complete = True
+        entity._last_updated = 5000  # truthy and != last_rendered
+        entity._last_rendered = 4000
+        update_image = AsyncMock()
+        with (
+            patch.object(entity, "update", MagicMock()),
+            patch.object(entity, "_async_update_segment_map", AsyncMock()),
+            patch.object(type(entity), "_map_data", new=property(lambda self: MagicMock())),
+            patch.object(entity, "_update_image", update_image),
+        ):
+            await entity.async_camera_image()
+        update_image.assert_awaited_once()
+        # After a successful render the rendered marker catches up.
+        assert entity._last_rendered == 5000
+
+
+# ===========================================================================
+# extra_state_attributes: read-only cache contract
+# ===========================================================================
+class TestExtraStateAttributes:
+    def _build_attr_entity(self, *, segments_present=True):
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity.access_tokens = ["tok-a", "tok-b"]
+        entity.entity_id = "camera.test_map"
+        # Renderer without a ``color_scheme`` attribute keeps the palette branch
+        # out of the way; we only assert on the segment-map cache contract here.
+        entity._renderer = MagicMock(spec=["calibration_points", "default_calibration_points"])
+        entity._renderer.calibration_points = [{"x": 1}]
+
+        rooms = {5: {"name": "Kitchen"}}
+        map_data = SimpleNamespace(
+            empty_map=False,
+            pixel_type=np.zeros((4, 4), dtype=np.uint8) if segments_present else None,
+            segments={5: SimpleNamespace(x=1.0, y=1.0)} if segments_present else {},
+            last_updated=1000,
+            obstacles=None,
+            recovery_map_list=None,
+            wifi_map_data=None,
+        )
+        map_data.as_dict = lambda: {ATTR_ROOMS: {5: {"name": "Kitchen"}}}
+
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = True
+        device.status.selected_map = None
+        device.status._cleaning_history = None
+        device.status._cruising_history = None
+        _set_device(entity, device)
+        return entity, map_data
+
+    def test_returns_empty_when_no_device(self) -> None:
+        entity = _bare_camera()
+        _set_device(entity, None)
+        assert entity.extra_state_attributes == {}
+
+    def test_reads_segment_map_from_cache(self) -> None:
+        entity, map_data = self._build_attr_entity()
+        # Pre-seed the cache exactly as _async_update_segment_map would.
+        entity._segment_map_cache = (1000, "BASE64PNG", {5: 42})
+
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+
+        # The property must *read* the cached PNG, never recompute it.
+        assert attrs[ATTR_SEGMENT_MAP] == "BASE64PNG"
+        # The raw pixel value is injected onto the room dict as ``segment_id``.
+        assert attrs[ATTR_ROOMS][5][ATTR_SEGMENT_ID] == 42
+
+    def test_no_segment_map_when_cache_empty(self) -> None:
+        entity, map_data = self._build_attr_entity()
+        entity._segment_map_cache = (None, None, None)  # nothing cached yet
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert ATTR_SEGMENT_MAP not in attrs
+        # No room enrichment without a mapping.
+        assert ATTR_SEGMENT_ID not in attrs[ATTR_ROOMS][5]
+
+    def test_calibration_points_present(self) -> None:
+        entity, map_data = self._build_attr_entity()
+        entity._segment_map_cache = (None, None, None)
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert attrs[ATTR_CALIBRATION] == [{"x": 1}]
+
+    def test_map_data_json_returns_none(self) -> None:
+        """For the JSON-data camera the property returns ``None`` (no attrs)."""
+        entity = _bare_camera()
+        _set_device(entity, MagicMock())
+        with patch.object(type(entity), "map_data_json", new=property(lambda self: True)):
+            assert entity.extra_state_attributes is None
+
+    def test_selected_flag_for_saved_map(self) -> None:
+        """A saved-map camera reports whether it is the currently selected map."""
+        entity = _bare_camera()
+        entity.map_index = 2
+        entity.access_tokens = ["t"]
+        entity._renderer = MagicMock(spec=["calibration_points"])
+        entity._renderer.calibration_points = []
+        map_data = SimpleNamespace(
+            empty_map=False,
+            pixel_type=None,
+            segments={},
+            last_updated=1000,
+            obstacles=None,
+            recovery_map_list=None,
+            wifi_map_data=None,
+        )
+        map_data.as_dict = dict
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = True
+        selected = MagicMock()
+        selected.map_index = 2
+        device.status.selected_map = selected
+        _set_device(entity, device)
+        from custom_components.dreame_vacuum.dreame.const import ATTR_SELECTED
+
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert attrs[ATTR_SELECTED] is True
+
+    def test_color_palette_and_history_and_obstacles(self) -> None:
+        """The current map exposes palette, history URLs and obstacle URLs."""
+        from custom_components.dreame_vacuum.dreame.const import (
+            ATTR_CLEANING_HISTORY_PICTURE,
+            ATTR_COLOR_PALETTE,
+            ATTR_CRUISING_HISTORY_PICTURE,
+            ATTR_OBSTACLE_PICTURE,
+            ATTR_RECOVERY_MAP_FILE,
+            ATTR_RECOVERY_MAP_PICTURE,
+            ATTR_ROOM_COLORS,
+            ATTR_WIFI_MAP_PICTURE,
+        )
+
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity.entity_id = "camera.test_map"
+        entity.access_tokens = ["tok"]
+        entity._segment_map_cache = (None, None, None)
+
+        # Renderer that exposes a colour scheme so the palette branch runs.
+        renderer = MagicMock(spec=["calibration_points", "color_scheme"])
+        renderer.calibration_points = []
+        # segment[i] == (border_rgba, fill_rgba); we read [1][:3] and [0][:3].
+        renderer.color_scheme.segment = [
+            ((10, 11, 12, 255), (20, 21, 22, 255)),
+            ((30, 31, 32, 255), (40, 41, 42, 255)),
+        ]
+        entity._renderer = renderer
+
+        # One room referencing color_index 1.
+        rooms = {5: {"name": "Kitchen", "color_index": 1}}
+
+        obstacle = MagicMock()
+        obstacle.type.value = 1
+        obstacle.type.name = "unknown_obstacle"
+        obstacle.id = "obs-1"
+        obstacle.possibility = 0
+        obstacle.segment = None
+        obstacle.ignore_status = None
+        obstacle.picture_status = None
+
+        recovery_entry = MagicMock()
+        recovery_entry.date.timestamp.return_value = 1_600_000_000
+        recovery_entry.map_type.name = "mopping"
+
+        wifi_sub = SimpleNamespace(last_updated=1_600_000_500)
+
+        map_data = SimpleNamespace(
+            empty_map=False,
+            pixel_type=None,
+            segments={},
+            last_updated=1_600_000_000,
+            obstacles={9: obstacle},
+            recovery_map_list=None,
+            wifi_map_data=None,
+        )
+        map_data.as_dict = lambda: {ATTR_ROOMS: dict(rooms)}
+
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = True
+        device.status._cleaning_history = None
+        device.status._cruising_history = None
+        device.status.ai_pet_detection = 1
+        device.status.ai_fluid_detection = True
+        device.capability.fluid_detection = False
+        selected = MagicMock()
+        selected.recovery_map_list = [recovery_entry]
+        selected.wifi_map_data = wifi_sub
+        device.status.selected_map = selected
+        _set_device(entity, device)
+
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+
+        # Palette: index -> RGB list.
+        assert attrs[ATTR_COLOR_PALETTE][1] == [40, 41, 42]
+        # Room colour resolved from its color_index.
+        assert attrs[ATTR_ROOMS][5]["color"] == [40, 41, 42]
+        assert attrs[ATTR_ROOM_COLORS]["5"] == [30, 31, 32]
+        # History dicts present (empty since histories are None).
+        assert ATTR_CLEANING_HISTORY_PICTURE not in attrs  # _cleaning_history is None
+        assert ATTR_CRUISING_HISTORY_PICTURE not in attrs
+        # Obstacle URL built and points at the right proxy.
+        obstacle_urls = attrs[ATTR_OBSTACLE_PICTURE]
+        assert len(obstacle_urls) == 1
+        assert "/api/camera_map_obstacle_proxy/camera.test_map" in next(iter(obstacle_urls.values()))
+        # Recovery map + file URLs.
+        assert len(attrs[ATTR_RECOVERY_MAP_PICTURE]) == 1
+        recovery_url = next(iter(attrs[ATTR_RECOVERY_MAP_PICTURE].values()))
+        assert "/api/camera_recovery_map_proxy/camera.test_map" in recovery_url
+        assert next(iter(attrs[ATTR_RECOVERY_MAP_FILE].values())).endswith("&file=1")
+        # Wifi map picture URL.
+        assert "/api/camera_wifi_map_proxy/camera.test_map" in attrs[ATTR_WIFI_MAP_PICTURE]
+
+    def test_obstacle_filtered_out_when_picture_pending(self) -> None:
+        """Obstacles whose picture is not ready (status != 2) are dropped."""
+        from custom_components.dreame_vacuum.dreame.const import ATTR_OBSTACLE_PICTURE
+
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity.entity_id = "camera.test_map"
+        entity.access_tokens = ["tok"]
+        entity._segment_map_cache = (None, None, None)
+        entity._renderer = MagicMock(spec=["calibration_points"])
+        entity._renderer.calibration_points = []
+
+        obstacle = MagicMock()
+        obstacle.type.value = 1
+        obstacle.picture_status = MagicMock()
+        obstacle.picture_status.value = 1  # not 2 -> filtered
+
+        map_data = SimpleNamespace(
+            empty_map=False,
+            pixel_type=None,
+            segments={},
+            last_updated=1000,
+            obstacles={9: obstacle},
+            recovery_map_list=None,
+            wifi_map_data=None,
+        )
+        map_data.as_dict = dict
+
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = True
+        device.status._cleaning_history = None
+        device.status._cruising_history = None
+        device.status.ai_pet_detection = 1
+        device.capability.fluid_detection = False
+        device.status.selected_map = None
+        _set_device(entity, device)
+
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert attrs[ATTR_OBSTACLE_PICTURE] == {}
+
+    def test_default_calibration_when_map_unavailable(self) -> None:
+        """Cloud connected but no usable map -> only default calibration points."""
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity.access_tokens = ["tok"]
+        entity._renderer = MagicMock(spec=["default_calibration_points", "calibration_points"])
+        entity._renderer.default_calibration_points = [{"d": 1}]
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = False  # not located -> map block skipped
+        device.status._cleaning_history = None
+        device.status._cruising_history = None
+        device.status.selected_map = None
+        _set_device(entity, device)
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: None)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert attrs[ATTR_CALIBRATION] == [{"d": 1}]
+
+
+# ===========================================================================
+# Simple properties / state
+# ===========================================================================
+class TestProperties:
+    def test_state_returns_internal_state(self) -> None:
+        entity = _bare_camera()
+        entity._state = "some-state"
+        assert entity.state == "some-state"
+
+    def test_available_always_true(self) -> None:
+        # The camera overrides the base entity to stay available so the map
+        # stays renderable even while the cloud is briefly down.
+        entity = _bare_camera()
+        assert entity.available is True
+
+    def test_frame_interval_constant(self) -> None:
+        assert _bare_camera().frame_interval == 0.25
+
+    def test_entity_picture_embeds_token_and_version(self) -> None:
+        entity = _bare_camera()
+        entity.entity_id = "camera.test_map"
+        entity.access_tokens = ["old", "current-token"]
+        map_data = SimpleNamespace(last_updated=1717)
+        with patch.object(type(entity), "_map_data", new=property(lambda self: map_data)):
+            url = entity.entity_picture
+        assert url == "/api/camera_proxy/camera.test_map?token=current-token&v=1717"
+
+    def test_entity_picture_without_map_data_uses_zero_version(self) -> None:
+        entity = _bare_camera()
+        entity.entity_id = "camera.test_map"
+        entity.access_tokens = ["old", "current-token"]
+        with patch.object(type(entity), "_map_data", new=property(lambda self: None)):
+            url = entity.entity_picture
+        assert url.endswith("v=0")
+
+    def test_wifi_map_flag(self) -> None:
+        entity = _bare_camera()
+        entity.entity_description = SimpleNamespace(map_type=DreameVacuumMapType.WIFI_MAP)
+        assert entity.wifi_map is True
+        entity.entity_description = SimpleNamespace(map_type=DreameVacuumMapType.FLOOR_MAP)
+        assert entity.wifi_map is False
+
+    def test_map_data_json_flag(self) -> None:
+        entity = _bare_camera()
+        entity.entity_description = SimpleNamespace(map_type=DreameVacuumMapType.JSON_MAP_DATA)
+        assert entity.map_data_json is True
+        entity.entity_description = SimpleNamespace(map_type=DreameVacuumMapType.FLOOR_MAP)
+        assert entity.map_data_json is False
+
+
+# ===========================================================================
+# _map_data / _default_map_image source properties
+# ===========================================================================
+class TestMapDataProperty:
+    def test_map_data_none_without_device(self) -> None:
+        entity = _bare_camera()
+        _set_device(entity, None)
+        assert entity._map_data is None
+
+    def test_map_data_returns_device_map(self) -> None:
+        entity = _bare_camera()
+        entity.map_index = 2
+        device = MagicMock()
+        raw_map = SimpleNamespace(map_id=7)
+        device.get_map.return_value = raw_map
+        _set_device(entity, device)
+        with patch.object(type(entity), "wifi_map", new=property(lambda self: False)):
+            assert entity._map_data is raw_map
+        device.get_map.assert_called_once_with(2)
+
+    def test_map_data_returns_wifi_submap(self) -> None:
+        entity = _bare_camera()
+        device = MagicMock()
+        wifi_sub = SimpleNamespace(name="wifi")
+        device.get_map.return_value = SimpleNamespace(wifi_map_data=wifi_sub)
+        _set_device(entity, device)
+        with patch.object(type(entity), "wifi_map", new=property(lambda self: True)):
+            assert entity._map_data is wifi_sub
+
+    def test_default_map_image_disconnected(self) -> None:
+        entity = _bare_camera()
+        entity._image = b"some-rendered-image"
+        renderer = MagicMock()
+        renderer.disconnected_map_image = b"DISCONNECTED"
+        renderer.default_map_image = b"DEFAULT"
+        entity._renderer = renderer
+        device = MagicMock()
+        device.cloud_connected = False
+        _set_device(entity, device)
+        # Cloud down + we already have an image -> show the disconnected banner.
+        assert entity._default_map_image == b"DISCONNECTED"
+
+    def test_default_map_image_connected_falls_back_to_default(self) -> None:
+        entity = _bare_camera()
+        entity._image = b"some-rendered-image"
+        renderer = MagicMock()
+        renderer.disconnected_map_image = b"DISCONNECTED"
+        renderer.default_map_image = b"DEFAULT"
+        entity._renderer = renderer
+        device = MagicMock()
+        device.cloud_connected = True
+        _set_device(entity, device)
+        assert entity._default_map_image == b"DEFAULT"
+
+
+# ===========================================================================
+# update() state machine
+# ===========================================================================
+class TestUpdate:
+    def test_sets_state_from_last_updated(self) -> None:
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity._default_map = True
+        entity._last_updated = -1
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = True
+        device.status.active = True
+        _set_device(entity, device)
+        map_data = SimpleNamespace(last_updated=1_600_000_000, timestamp_ms=None, frame_id=3)
+        with patch.object(type(entity), "_map_data", new=property(lambda self: map_data)):
+            entity.update()
+        # last_updated advanced and we left the default-map state.
+        assert entity._last_updated == 1_600_000_000
+        assert entity._frame_id == 3
+        assert entity._default_map is False
+        assert isinstance(entity._state, datetime)
+
+    def test_falls_back_to_default_when_disconnected(self) -> None:
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity._default_map = False  # was showing a live map
+        entity._renderer = MagicMock()
+        entity._renderer.default_map_image = b"DEFAULT"
+        entity._renderer.disconnected_map_image = b"DISCONNECTED"
+        device = MagicMock()
+        device.cloud_connected = False
+        device.status.located = True
+        _set_device(entity, device)
+        with patch.object(type(entity), "_map_data", new=property(lambda self: None)):
+            entity.update()
+        assert entity._state == cam.STATE_UNAVAILABLE
+        assert entity._default_map is True
+        assert entity._last_updated == -1
+        assert entity._frame_id == -1
+
+
+# ===========================================================================
+# _handle_coordinator_update state machine
+# ===========================================================================
+class TestHandleCoordinatorUpdate:
+    def test_no_device_just_writes_state(self) -> None:
+        entity = _bare_camera()
+        _set_device(entity, None)
+        with (
+            patch.object(entity, "async_write_ha_state", MagicMock()) as write,
+            patch.object(entity, "update", MagicMock()) as upd,
+        ):
+            entity._handle_coordinator_update()
+        write.assert_called_once()
+        upd.assert_not_called()
+
+    def test_disconnected_marks_unavailable(self) -> None:
+        entity = _bare_camera()
+        entity.map_index = 0
+        device = MagicMock()
+        device.cloud_connected = False
+        device.status.located = True
+        _set_device(entity, device)
+        with (
+            patch.object(entity, "async_write_ha_state", MagicMock()),
+            patch.object(entity, "update", MagicMock()) as upd,
+            patch.object(type(entity), "_map_data", new=property(lambda self: None)),
+        ):
+            entity._handle_coordinator_update()
+        upd.assert_called_once()
+        assert entity._state == cam.STATE_UNAVAILABLE
+        assert entity._last_map_request == 0
+
+    def test_live_map_update_refreshes_state(self) -> None:
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity._default_map = True  # forces the update() call path
+        entity._frame_id = -1
+        entity._last_updated = -1
+        entity._device_active = None
+        entity._error = None
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = True
+        device.status.active = True
+        device.status.error = 0
+        _set_device(entity, device)
+        map_data = SimpleNamespace(
+            last_updated=1_600_000_000,
+            timestamp_ms=None,
+            frame_id=4,
+            custom_name=None,
+            map_id=1,
+        )
+        with (
+            patch.object(entity, "async_write_ha_state", MagicMock()) as write,
+            patch.object(entity, "update", MagicMock()) as upd,
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            entity._handle_coordinator_update()
+        upd.assert_called_once()
+        write.assert_called_once()
+        assert isinstance(entity._state, datetime)
+        assert entity._frame_id == 4
+        # active/error snapshots refreshed.
+        assert entity._device_active is True
+        assert entity._error == 0
+
+    def test_saved_map_name_change_triggers_rename(self) -> None:
+        entity = _bare_camera()
+        entity.map_index = 2
+        entity._default_map = False
+        entity._map_name = "Old"
+        entity._map_id = 1
+        entity._frame_id = 7
+        entity._last_updated = 1_600_000_000
+        entity._device_active = False
+        entity._error = 0
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = True
+        device.status.active = False
+        device.status.error = 0
+        _set_device(entity, device)
+        map_data = SimpleNamespace(
+            last_updated=1_600_000_000,
+            timestamp_ms=None,
+            frame_id=7,
+            custom_name="New Name",
+            map_id=1,
+        )
+        with (
+            patch.object(entity, "async_write_ha_state", MagicMock()),
+            patch.object(entity, "update", MagicMock()),
+            patch.object(entity, "_set_map_name", MagicMock()) as set_name,
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            entity._handle_coordinator_update()
+        assert entity._map_name == "New Name"
+        set_name.assert_called_once_with(False)
+
+
+# ===========================================================================
+# Lifecycle helpers
+# ===========================================================================
+class TestLifecycle:
+    async def test_async_update_resets_frame_and_last_updated(self) -> None:
+        entity = _bare_camera()
+        entity._frame_id = 99
+        entity._last_updated = 1234
+        with patch.object(entity, "update", MagicMock()) as upd:
+            await entity.async_update()
+        assert entity._frame_id is None
+        assert entity._last_updated is None
+        upd.assert_called_once()
+
+    async def test_async_will_remove_drops_renderer_refs(self) -> None:
+        entity = _bare_camera()
+        entity._renderer = MagicMock()
+        entity._proxy_renderer = MagicMock()
+        await entity.async_will_remove_from_hass()
+        assert entity._renderer is None
+        assert entity._proxy_renderer is None
+
+
+# ===========================================================================
+# async_update_token throttling
+# ===========================================================================
+class TestTokenThrottle:
+    def test_first_call_updates_token(self) -> None:
+        entity = _bare_camera()
+        entity._access_token_update_counter = 0
+        with patch("homeassistant.components.camera.Camera.async_update_token") as super_update:
+            entity.async_update_token()
+        # Counter starts at 0 -> token refresh happens and counter resets to 1.
+        assert entity._access_token_update_counter == 1
+        super_update.assert_called_once()
+
+    def test_intermediate_calls_only_increment(self) -> None:
+        entity = _bare_camera()
+        entity._access_token_update_counter = 1
+        with patch("homeassistant.components.camera.Camera.async_update_token") as super_update:
+            entity.async_update_token()
+        # Below the threshold -> only the counter moves, no super() refresh.
+        assert entity._access_token_update_counter == 2
+        super_update.assert_not_called()
+
+    def test_threshold_triggers_refresh_and_reset(self) -> None:
+        from homeassistant.components.camera import TOKEN_CHANGE_INTERVAL
+
+        from custom_components.dreame_vacuum.camera import DREAME_TOKEN_CHANGE_INTERVAL
+
+        threshold = int(DREAME_TOKEN_CHANGE_INTERVAL.total_seconds() / TOKEN_CHANGE_INTERVAL.total_seconds())
+        entity = _bare_camera()
+        # One step before exceeding the window.
+        entity._access_token_update_counter = threshold
+        with patch("homeassistant.components.camera.Camera.async_update_token") as super_update:
+            entity.async_update_token()
+        # Counter would become threshold+1 (> threshold) -> refresh + reset to 1.
+        assert entity._access_token_update_counter == 1
+        super_update.assert_called_once()
+
+
+# ===========================================================================
+# CAMERAS descriptor table
+# ===========================================================================
+def test_cameras_table_shape() -> None:
+    keys = {c.key for c in CAMERAS}
+    assert keys == {"map", "map_data"}
+    map_data_desc = next(c for c in CAMERAS if c.key == "map_data")
+    assert map_data_desc.map_type == DreameVacuumMapType.JSON_MAP_DATA.value
+
+
+# ===========================================================================
+# async_setup_entry: entity creation + idempotent HTTP-view registration
+# ===========================================================================
+def _setup_entry_mocks(*, views_already_registered=False, capability_map=True):
+    """Build (hass, entry, async_add_entities, register_view_spy)."""
+    device = MagicMock()
+    device.capability.map = capability_map
+    device.capability.wifi_map = False
+    device.capability.robot_type = 0
+    device.status.map_list = []  # no saved maps -> only the two base cameras
+
+    coordinator = MagicMock()
+    coordinator.device = device
+    coordinator._shared_proxy_renderer = None
+
+    entry = MagicMock()
+    entry.runtime_data.coordinator = coordinator
+    entry.options = {}
+
+    hass = MagicMock()
+    hass.config.language = "en"
+    data = {"camera": MagicMock()}
+    if views_already_registered:
+        data[_VIEWS_REGISTERED_KEY] = True
+    hass.data = data
+
+    async_add_entities = MagicMock()
+    return hass, entry, async_add_entities, coordinator
+
+
+class TestAsyncSetupEntry:
+    async def test_skips_when_no_map_capability(self) -> None:
+        hass, entry, async_add_entities, _ = _setup_entry_mocks(capability_map=False)
+        await async_setup_entry(hass, entry, async_add_entities)
+        async_add_entities.assert_not_called()
+        hass.http.register_view.assert_not_called()
+
+    async def test_creates_cameras_and_registers_views(self) -> None:
+        hass, entry, async_add_entities, coordinator = _setup_entry_mocks()
+
+        platform = MagicMock()
+        with patch.object(cam.entity_platform, "current_platform") as current_platform:
+            current_platform.get.return_value = platform
+            await async_setup_entry(hass, entry, async_add_entities)
+
+        # The two base map cameras are added (generator consumed by add_entities).
+        assert async_add_entities.call_count >= 1
+        first_added = list(async_add_entities.call_args_list[0].args[0])
+        assert len(first_added) == 2
+        assert all(isinstance(e, DreameVacuumCameraEntity) for e in first_added)
+
+        # All seven HTTP views registered exactly once, flag set.
+        assert hass.http.register_view.call_count == 7
+        assert hass.data[_VIEWS_REGISTERED_KEY] is True
+
+        # The update entity-service is registered too.
+        platform.async_register_entity_service.assert_called_once()
+        coordinator.async_add_listener.assert_called_once()
+
+    async def test_views_not_reregistered_when_flag_set(self) -> None:
+        hass, entry, async_add_entities, _ = _setup_entry_mocks(views_already_registered=True)
+
+        platform = MagicMock()
+        with patch.object(cam.entity_platform, "current_platform") as current_platform:
+            current_platform.get.return_value = platform
+            await async_setup_entry(hass, entry, async_add_entities)
+
+        # Idempotent: views already registered -> register_view is never called.
+        hass.http.register_view.assert_not_called()

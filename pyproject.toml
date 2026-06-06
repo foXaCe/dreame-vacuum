@@ -1,0 +1,192 @@
+[project]
+name = "dreame-vacuum"
+version = "6.3.1"
+description = "Dreame Vacuum integration for Home Assistant"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+
+[tool.ruff]
+# Increase line length to match Home Assistant standards
+line-length = 120
+target-version = "py311"
+
+# Exclude common directories
+exclude = [
+    ".git",
+    ".github",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.pyc",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "C90",    # mccabe complexity
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "LOG",    # flake8-logging
+    "PIE",    # flake8-pie
+    "PT",     # flake8-pytest-style
+    "RET",    # flake8-return
+    "RUF",    # Ruff-specific rules
+]
+
+ignore = [
+    "E402",   # Module level import not at top (needed for miio_patch)
+    "E501",   # Line too long (handled by formatter)
+    "E712",   # Comparison to True/False
+    "E741",   # Ambiguous variable name (many legitimate short names)
+    "F403",   # Star imports (resources.py)
+    "F405",   # Undefined from star imports (resources.py)
+    "F507",   # %-format placeholder mismatch (to fix manually)
+    "F634",   # If test is tuple (complex condition)
+    "F841",   # Local variable assigned but never used
+    "B006",   # Mutable default argument (lots to fix)
+    "B007",   # Loop variable not used (common pattern)
+    "B008",   # Do not perform function call in argument defaults
+    "C901",   # Too complex
+    "DTZ005", # Use of datetime.now() without timezone
+    "DTZ006", # Use of datetime.fromtimestamp() without timezone
+    "RET503", # Missing explicit return (many to fix)
+    "RET504", # Unnecessary variable assignment before return
+    "SIM101", # Multiple isinstance (style preference)
+    "SIM102", # Use a single if statement instead of nested if
+    "SIM103", # Return condition directly (style preference)
+    "SIM105", # Use contextlib.suppress instead of try-except-pass
+    "SIM108", # Ternary operator (style preference)
+    "SIM109", # Multiple equality comparisons (style preference)
+    "SIM118", # Use key in dict instead of key in dict.keys()
+    "SIM210", # Use bool() instead of True if ... else False
+    "SIM212", # if not x else y -> y if y else x (confusing)
+    "SIM222", # Use True instead of ... or True (buggy detection)
+    "SIM401", # dict.get instead of if/else (style preference)
+    "C402",   # Unnecessary generator (dict comprehension)
+    "UP007",  # Use X | Y for type annotations (style preference)
+    "UP008",  # super() without arguments (style preference)
+    "UP031",  # Use format specifiers instead of % format
+    "RUF005", # Consider unpacking instead of concatenation
+    "RUF046", # int(round(...)) is intentional for coordinate conversion
+    "RUF059", # Unused unpacked variables (common pattern in this codebase)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# resources.py uses lazy-loading via __getattr__; names in __all__ are resolved at runtime
+"custom_components/dreame_vacuum/dreame/resources.py" = ["F822"]
+
+[tool.ruff.lint.mccabe]
+# Maximum allowed complexity
+max-complexity = 15
+
+[tool.ruff.lint.isort]
+# Home Assistant import order
+force-sort-within-sections = true
+known-first-party = ["custom_components.dreame_vacuum"]
+combine-as-imports = true
+
+[tool.ruff.format]
+# Use double quotes
+quote-style = "double"
+# Indent with spaces
+indent-style = "space"
+# Unix line endings
+line-ending = "lf"
+# Enable auto-formatting of code examples in docstrings
+docstring-code-format = true
+
+[tool.bandit]
+exclude_dirs = [".venv", "venv", ".git", "__pycache__"]
+skips = [
+    "B101",  # assert_used (common in tests and HA)
+    "B105",  # hardcoded_password_string (false positive - placeholders)
+    "B110",  # try_except_pass (intentional for robustness)
+    "B304",  # insecure cipher ARC4 (required by Dreame protocol)
+    "B305",  # insecure cipher mode ECB (required by Dreame map decryption)
+    "B311",  # random (not used for security, just IDs)
+    "B324",  # weak SHA1 (required by Dreame API signature)
+    "B413",  # pycrypto ARC4 import (required by Dreame protocol)
+]
+
+[tool.pytest.ini_options]
+addopts = "-p no:homeassistant"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["custom_components/dreame_vacuum"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+# Coverage floor — ratchet only upwards as the test suite grows.
+fail_under = 35
+show_missing = true
+
+[tool.mypy]
+python_version = "3.13"
+namespace_packages = true
+explicit_package_bases = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "py_mini_racer.*",
+    "pytest_homeassistant_custom_component.*",
+    "requests.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "custom_components.dreame_vacuum.*"
+ignore_errors = true
+
+# Type-checking ratchet: modules below are fully type-checked. Move modules out of
+# the blanket ignore above and into this list as they are cleaned up (do not flip
+# the blanket ignore wholesale — the package still has hundreds of type issues).
+[[tool.mypy.overrides]]
+module = [
+    "custom_components.dreame_vacuum",
+    "custom_components.dreame_vacuum.binary_sensor",
+    "custom_components.dreame_vacuum.button",
+    "custom_components.dreame_vacuum.const",
+    "custom_components.dreame_vacuum.diagnostics",
+    "custom_components.dreame_vacuum.config_flow",
+    "custom_components.dreame_vacuum.number",
+    "custom_components.dreame_vacuum.sensor",
+    "custom_components.dreame_vacuum.switch",
+    "custom_components.dreame_vacuum.time",
+    "custom_components.dreame_vacuum.logbook",
+    "custom_components.dreame_vacuum.recorder",
+    "custom_components.dreame_vacuum.dreame",
+    "custom_components.dreame_vacuum.dreame.const",
+    "custom_components.dreame_vacuum.dreame.device_info",
+    "custom_components.dreame_vacuum.dreame.exceptions",
+    "custom_components.dreame_vacuum.dreame.map",
+    "custom_components.dreame_vacuum.dreame.map_renderer",
+    "custom_components.dreame_vacuum.dreame.map_renderer._objects",
+    "custom_components.dreame_vacuum.dreame.map_renderer._shapes",
+    "custom_components.dreame_vacuum.dreame.map_optimizer",
+    "custom_components.dreame_vacuum.dreame.map_renderer._helpers",
+    "custom_components.dreame_vacuum.dreame.miio_patch",
+    "custom_components.dreame_vacuum.dreame.resilience",
+    "custom_components.dreame_vacuum.dreame.device_status",
+    "custom_components.dreame_vacuum.dreame.device_status._consumables",
+    "custom_components.dreame_vacuum.dreame.device_status._station",
+    "custom_components.dreame_vacuum.dreame._notification_images",
+    "custom_components.dreame_vacuum.dreame._resources_data",
+    "custom_components.dreame_vacuum.repairs",
+    "custom_components.dreame_vacuum.system_health",
+]
+# Deferred (need a typing pass, not just annotations): vacuum, coordinator, select,
+# camera and the low-level engine (device_*/map_*/vacuum_types, dreame.resources).
+# Shared root causes: ``self._device`` / current-platform accessed without a None-guard
+# (union-attr ~80 sites), plus a few HA @final/override clashes -> behaviour-analysed
+# retype required, tracked for a follow-up ratchet step.
+ignore_errors = false

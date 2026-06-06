@@ -1,0 +1,1915 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_account%]",
+      "already_in_progress": "[%key:common::config_flow::abort::already_in_progress%]",
+      "cannot_connect": "Failed to connect.",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
+    },
+    "error": {
+      "2fa_failed": "Verification failed.",
+      "cannot_connect": "Failed to connect.",
+      "credentials_incomplete": "Credentials incomplete, please fill in username, password and country",
+      "login_error": "Could not login, check the credentials.",
+      "no_devices": "No supported devices found in this account on selected country.{devices}",
+      "unsupported": "Device is not supported",
+      "wrong_captcha": "Wrong captcha.",
+      "wrong_token": "Checksum error, wrong token"
+    },
+    "step": {
+      "2fa": {
+        "data": {
+          "verification_code": "Two-factor verification code"
+        },
+        "data_description": {
+          "verification_code": "Enter the verification code sent to your phone or email."
+        },
+        "description": "## This login requires security verification\nPlease open the verification page to send the mobile/email verification code. After receiving the verification code, do not verify it on the webpage. Go back to HomeAssistant and enter it in the input box below.\n### [Send Verification Code]({url})"
+      },
+      "captcha": {
+        "data": {
+          "code": "Code"
+        },
+        "data_description": {
+          "code": "Enter the characters shown in the captcha image above."
+        },
+        "description": "## Captcha verification is required\n![captcha](data:image/jpeg;base64,{img})"
+      },
+      "devices": {
+        "data": {
+          "devices": "Supported Devices"
+        },
+        "data_description": {
+          "devices": "Select the vacuum device to configure."
+        },
+        "description": "Please select the Dreame Vacuum device you want to setup."
+      },
+      "dreame": {
+        "data": {
+          "country": "Server country",
+          "password": "Password",
+          "username": "Username"
+        },
+        "data_description": {
+          "country": "Cloud server region for your account.",
+          "password": "Dreamehome account password.",
+          "username": "Dreamehome account email or phone number."
+        },
+        "description": "Log in to the Dreamehome cloud."
+      },
+      "local": {
+        "data": {
+          "host": "Host",
+          "token": "Token"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the vacuum.",
+          "token": "32-character API token for local communication."
+        },
+        "description": "You will need the 32 character API Token, see [instructions]({token_url})."
+      },
+      "mi": {
+        "data": {
+          "country": "Server country",
+          "password": "Password",
+          "prefer_cloud": "Prefer cloud connection",
+          "username": "Username"
+        },
+        "data_description": {
+          "country": "Cloud server region for your account.",
+          "password": "Xiaomi account password.",
+          "prefer_cloud": "Use cloud connection instead of local when available.",
+          "username": "Xiaomi account email or phone number."
+        },
+        "description": "Log in to the Xiaomi Miio cloud, see [server list]({server_url}) for the cloud server to use."
+      },
+      "mova": {
+        "data": {
+          "country": "Server country",
+          "password": "Password",
+          "username": "Username"
+        },
+        "data_description": {
+          "country": "Cloud server region for your account.",
+          "password": "Movahome account password.",
+          "username": "Movahome account email or phone number."
+        },
+        "description": "Log in to the Movahome cloud."
+      },
+      "options": {
+        "data": {
+          "color_scheme": "Map color scheme",
+          "hidden_map_objects": "Hidden map objects",
+          "icon_set": "Map icon set",
+          "low_resolution": "Low resolution map",
+          "name": "Name",
+          "notify": "Notification",
+          "square": "Square map"
+        },
+        "data_description": {
+          "color_scheme": "Color theme used for the vacuum map.",
+          "hidden_map_objects": "Map elements to hide from the display.",
+          "icon_set": "Icon style used on the vacuum map.",
+          "low_resolution": "Use lower resolution for faster map rendering.",
+          "name": "Display name for this device in Home Assistant.",
+          "notify": "Select which notifications to receive from the device.",
+          "square": "Display the map as a square instead of its original aspect ratio."
+        }
+      },
+      "reauth_confirm": {
+        "description": "Dreame Vacuum integration needs to re-authenticate your account in order to update the tokens or add missing cloud credentials.",
+        "title": "Reauthenticate Integration"
+      },
+      "reconfigure_confirm": {
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "Updated IP address or hostname of the vacuum."
+        },
+        "description": "Update the device host address if it has changed.",
+        "title": "Reconfigure Integration"
+      },
+      "user": {
+        "data": {
+          "configuration_type": "Configuration Type"
+        },
+        "data_description": {
+          "configuration_type": "Choose between cloud connection (recommended, with map support) or manual local configuration."
+        },
+        "description": "Map feature requires cloud connection and provides automatic configuration. If you don't want to use the map feature, you can select manual configuration."
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "charging_state": {
+        "name": "Charging state"
+      }
+    },
+    "button": {
+      "backup": {
+        "name": "Backup"
+      },
+      "backup_map": {
+        "name": "Backup saved map {map_name}"
+      },
+      "base_station_cleaning": {
+        "name": "Base station cleaning"
+      },
+      "base_station_self_repair": {
+        "name": "Base station self-repair"
+      },
+      "clear_warning": {
+        "name": "Clear warning"
+      },
+      "empty_water_tank": {
+        "name": "Empty water tank"
+      },
+      "manual_drying": {
+        "name": "Manual drying"
+      },
+      "manual_drying_stop": {
+        "name": "Stop drying"
+      },
+      "reload_shortcuts": {
+        "name": "Reload shortcuts"
+      },
+      "reset_deodorizer": {
+        "name": "Reset deodorizer"
+      },
+      "reset_detergent": {
+        "name": "Reset detergent"
+      },
+      "reset_dirty_water_tank": {
+        "name": "Reset dirty water tank"
+      },
+      "reset_filter": {
+        "name": "Reset filter"
+      },
+      "reset_main_brush": {
+        "name": "Reset main brush"
+      },
+      "reset_mop_pad": {
+        "name": "Reset mop pad"
+      },
+      "reset_onboard_dirty_water_tank": {
+        "name": "Reset onboard dirty water tank"
+      },
+      "reset_scale_inhibitor": {
+        "name": "Reset scale inhibitor"
+      },
+      "reset_sensor": {
+        "name": "Reset sensor"
+      },
+      "reset_side_brush": {
+        "name": "Reset side brush"
+      },
+      "reset_silver_ion": {
+        "name": "Reset silver-ion"
+      },
+      "reset_squeegee": {
+        "name": "Reset squeegee"
+      },
+      "reset_wheel": {
+        "name": "Reset wheel"
+      },
+      "self_clean": {
+        "name": "Self-clean"
+      },
+      "self_clean_pause": {
+        "name": "Self-clean pause"
+      },
+      "self_clean_resume": {
+        "name": "Self-clean resume"
+      },
+      "shortcut": {
+        "name": "Shortcut"
+      },
+      "shortcut_named": {
+        "name": "Shortcut {name}"
+      },
+      "start_auto_empty": {
+        "name": "Start auto empty"
+      },
+      "start_fast_mapping": {
+        "name": "Start fast mapping"
+      },
+      "start_mapping": {
+        "name": "Start mapping"
+      },
+      "start_recleaning": {
+        "name": "Start re-cleaning"
+      },
+      "water_tank_draining": {
+        "name": "Water tank draining"
+      }
+    },
+    "camera": {
+      "current_map": {
+        "name": "Current map"
+      },
+      "current_map_data": {
+        "name": "Current map data"
+      },
+      "current_wifi_map": {
+        "name": "Current wifi map"
+      },
+      "current_wifi_map_data": {
+        "name": "Current wifi map data"
+      },
+      "map": {
+        "name": "Map"
+      },
+      "map_data": {
+        "name": "Map data"
+      },
+      "saved_map": {
+        "name": "Saved map"
+      },
+      "saved_map_indexed": {
+        "name": "Saved map {index}"
+      },
+      "saved_map_named": {
+        "name": "Saved map {map_name}"
+      },
+      "saved_wifi_map_indexed": {
+        "name": "Saved wifi map {index}"
+      },
+      "saved_wifi_map_named": {
+        "name": "Saved wifi map {map_name}"
+      },
+      "wifi_map": {
+        "name": "Wi-Fi map"
+      }
+    },
+    "number": {
+      "camera_light_brightness": {
+        "name": "Camera light brightness"
+      },
+      "drying_time": {
+        "name": "Drying time"
+      },
+      "mop_cleaning_remainder": {
+        "name": "Mop cleaning remainder"
+      },
+      "self_clean_area": {
+        "name": "Self-clean area"
+      },
+      "self_clean_time": {
+        "name": "Self-clean time"
+      },
+      "volume": {
+        "name": "Volume"
+      },
+      "wetness_level": {
+        "name": "Wetness level"
+      },
+      "wetness_level_room": {
+        "name": "Wetness level {room}"
+      }
+    },
+    "select": {
+      "auto_empty_frequency": {
+        "name": "Auto empty frequency"
+      },
+      "auto_empty_mode": {
+        "name": "Auto empty mode",
+        "state": {
+          "high_frequency": "High Frequency",
+          "low_frequency": "Low Frequency",
+          "off": "Off",
+          "standard": "Standard"
+        }
+      },
+      "auto_recleaning": {
+        "name": "Auto re-cleaning",
+        "state": {
+          "in_all_modes": "In All Modes",
+          "in_deep_mode": "In Deep Mode",
+          "off": "Off"
+        }
+      },
+      "auto_rewashing": {
+        "name": "Auto re-washing",
+        "state": {
+          "in_all_modes": "In All Modes",
+          "in_deep_mode": "In Deep Mode",
+          "off": "Off"
+        }
+      },
+      "carpet_cleaning": {
+        "name": "Carpet cleaning",
+        "state": {
+          "adaptation": "Adaptation",
+          "adaptation_without_route": "Adaptation Without Route",
+          "avoidance": "Avoidance",
+          "cross": "Cross",
+          "ignore": "Ignore",
+          "remove_mop": "Remove Mop",
+          "vacuum_and_mop": "Vacuum and Mop"
+        }
+      },
+      "carpet_sensitivity": {
+        "name": "Carpet sensitivity",
+        "state": {
+          "high": "High",
+          "low": "Low",
+          "medium": "Medium"
+        }
+      },
+      "cleangenius": {
+        "name": "CleanGenius",
+        "state": {
+          "deep_cleaning": "Deep Cleaning",
+          "off": "Off",
+          "routine_cleaning": "Routine Cleaning"
+        }
+      },
+      "cleangenius_mode": {
+        "name": "CleanGenius mode",
+        "state": {
+          "mop_after_vacuum": "Mop after Vacuum",
+          "vacuum_and_mop": "Vacuum and Mop"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Cleaning mode",
+        "state": {
+          "mopping": "Mopping",
+          "mopping_after_sweeping": "Mopping after sweeping",
+          "sweeping": "Sweeping",
+          "sweeping_and_mopping": "Sweeping and mopping"
+        }
+      },
+      "cleaning_mode_room": {
+        "name": "Cleaning mode {room}",
+        "state": {
+          "mopping": "Mopping",
+          "mopping_after_sweeping": "Mopping after sweeping",
+          "sweeping": "Sweeping",
+          "sweeping_and_mopping": "Sweeping and mopping"
+        }
+      },
+      "cleaning_route": {
+        "name": "Cleaning route",
+        "state": {
+          "deep": "Deep",
+          "intensive": "Intensive",
+          "quick": "Quick",
+          "standard": "Standard"
+        }
+      },
+      "cleaning_route_room": {
+        "name": "Cleaning route {room}",
+        "state": {
+          "deep": "Deep",
+          "intensive": "Intensive",
+          "quick": "Quick",
+          "standard": "Standard"
+        }
+      },
+      "cleaning_times": {
+        "name": "Cleaning times"
+      },
+      "cleaning_times_room": {
+        "name": "Cleaning times {room}"
+      },
+      "custom_mopping_route": {
+        "name": "Custom mopping route",
+        "state": {
+          "deep": "Deep",
+          "intensive": "Intensive",
+          "off": "Off",
+          "standard": "Standard"
+        }
+      },
+      "drying_time": {
+        "name": "Drying time"
+      },
+      "floor_material": {
+        "name": "Floor material",
+        "state": {
+          "carpet": "Carpet",
+          "low_pile_carpet": "Low pile carpet",
+          "medium_pile_carpet": "Medium pile carpet",
+          "none": "None",
+          "tile": "Floor Tile",
+          "wood": "Wood Floor"
+        }
+      },
+      "floor_material_direction": {
+        "name": "Floor material direction",
+        "state": {
+          "horizontal": "Horizontal",
+          "vertical": "Vertical"
+        }
+      },
+      "floor_material_direction_room": {
+        "name": "Floor material direction {room}",
+        "state": {
+          "horizontal": "Horizontal",
+          "vertical": "Vertical"
+        }
+      },
+      "floor_material_room": {
+        "name": "Floor material {room}",
+        "state": {
+          "carpet": "Carpet",
+          "low_pile_carpet": "Low pile carpet",
+          "medium_pile_carpet": "Medium pile carpet",
+          "none": "None",
+          "tile": "Floor Tile",
+          "wood": "Wood Floor"
+        }
+      },
+      "map_rotation": {
+        "name": "Map rotation"
+      },
+      "mop_clean_frequency": {
+        "name": "Mop clean frequency",
+        "state": {
+          "by_room": "By Room"
+        }
+      },
+      "mop_extend_frequency": {
+        "name": "Mop extend frequency",
+        "state": {
+          "high": "High",
+          "intelligent": "Intelligent",
+          "standard": "Standard"
+        }
+      },
+      "mop_pad_humidity": {
+        "name": "Mop pad humidity",
+        "state": {
+          "moist": "Moist",
+          "slightly_dry": "Slightly dry",
+          "wet": "Wet"
+        }
+      },
+      "mop_pad_humidity_room": {
+        "name": "Mop pad humidity {room}",
+        "state": {
+          "moist": "Moist",
+          "slightly_dry": "Slightly dry",
+          "wet": "Wet"
+        }
+      },
+      "mop_pad_swing": {
+        "name": "Mop pad swing",
+        "state": {
+          "auto": "Auto",
+          "daily": "Daily",
+          "off": "Off",
+          "weekly": "Weekly"
+        }
+      },
+      "mop_wash_level": {
+        "name": "Mop wash level",
+        "state": {
+          "daily": "Daily",
+          "deep": "Deep",
+          "water_saving": "Water saving"
+        }
+      },
+      "mopping_type": {
+        "name": "Mopping type",
+        "state": {
+          "accurate": "Accurate",
+          "daily": "Daily",
+          "deep": "Deep"
+        }
+      },
+      "name": {
+        "name": "Name"
+      },
+      "name_room": {
+        "name": "Name {room}"
+      },
+      "order": {
+        "name": "Order",
+        "state": {
+          "not_set": "Not Set"
+        }
+      },
+      "order_room": {
+        "name": "Order {room}",
+        "state": {
+          "not_set": "Not Set"
+        }
+      },
+      "room_name": {
+        "name": "Room {room_id} name"
+      },
+      "selected_map": {
+        "name": "Selected map"
+      },
+      "self_clean_frequency": {
+        "name": "Self-clean frequency",
+        "state": {
+          "by_area": "By Area",
+          "by_room": "By Room",
+          "by_time": "By Time"
+        }
+      },
+      "suction_level": {
+        "name": "Suction level",
+        "state": {
+          "quiet": "Quiet",
+          "standard": "Standard",
+          "strong": "Strong",
+          "turbo": "Turbo"
+        }
+      },
+      "suction_level_room": {
+        "name": "Suction level {room}",
+        "state": {
+          "quiet": "Quiet",
+          "standard": "Standard",
+          "strong": "Strong",
+          "turbo": "Turbo"
+        }
+      },
+      "visibility": {
+        "name": "Visibility",
+        "state": {
+          "hidden": "Hidden",
+          "visible": "Visible"
+        }
+      },
+      "visibility_room": {
+        "name": "Visibility {room}",
+        "state": {
+          "hidden": "Hidden",
+          "visible": "Visible"
+        }
+      },
+      "voice_assistant_language": {
+        "name": "Voice assistant language",
+        "state": {
+          "chinese": "Chinese",
+          "default": "Default",
+          "english": "English",
+          "german": "German"
+        }
+      },
+      "washing_mode": {
+        "name": "Washing mode",
+        "state": {
+          "deep": "Deep",
+          "light": "Light",
+          "standard": "Standard",
+          "ultra_washing": "Ultra Washing"
+        }
+      },
+      "water_temperature": {
+        "name": "Water temperature",
+        "state": {
+          "hot": "Hot",
+          "mild": "Mild",
+          "normal": "Normal",
+          "warm": "Warm"
+        }
+      },
+      "water_volume": {
+        "name": "Water volume",
+        "state": {
+          "high": "High",
+          "low": "Low",
+          "medium": "Medium"
+        }
+      },
+      "wider_corner_coverage": {
+        "name": "Wider corner coverage",
+        "state": {
+          "high_frequency": "High Frequency",
+          "low_frequency": "Low Frequency",
+          "off": "Off"
+        }
+      }
+    },
+    "sensor": {
+      "auto_empty_status": {
+        "name": "Auto empty status",
+        "state": {
+          "active": "Active",
+          "idle": "[%key:common::state::idle%]",
+          "not_performed": "Not performed",
+          "unknown": "Unknown"
+        }
+      },
+      "battery_level": {
+        "name": "Battery level"
+      },
+      "charging_status": {
+        "name": "Charging status",
+        "state": {
+          "charging": "Charging",
+          "charging_completed": "Charging completed",
+          "not_charging": "Not charging",
+          "return_to_charge": "Return to charge",
+          "unknown": "Unknown"
+        }
+      },
+      "clean_water_tank_status": {
+        "name": "Clean water tank status",
+        "state": {
+          "installed": "Installed",
+          "low_water": "Low water",
+          "not_available": "Not available",
+          "not_installed": "Not installed",
+          "unknown": "Unknown"
+        }
+      },
+      "cleaned_area": {
+        "name": "Cleaned area"
+      },
+      "cleaning_count": {
+        "name": "Cleaning count"
+      },
+      "cleaning_history": {
+        "name": "Cleaning history"
+      },
+      "cleaning_progress": {
+        "name": "Cleaning progress"
+      },
+      "cleaning_time": {
+        "name": "Cleaning time"
+      },
+      "cruising_history": {
+        "name": "Cruising history"
+      },
+      "current_room": {
+        "name": "Current room"
+      },
+      "deodorizer_left": {
+        "name": "Deodorizer left"
+      },
+      "deodorizer_time_left": {
+        "name": "Deodorizer time left"
+      },
+      "detergent_left": {
+        "name": "Detergent left"
+      },
+      "detergent_status": {
+        "name": "Detergent status",
+        "state": {
+          "disabled": "Disabled",
+          "installed": "Installed",
+          "low_detergent": "Low detergent",
+          "unknown": "Unknown"
+        }
+      },
+      "detergent_time_left": {
+        "name": "Detergent time left"
+      },
+      "dirty_water_tank_left": {
+        "name": "Dirty water tank left"
+      },
+      "dirty_water_tank_status": {
+        "name": "Dirty water tank status",
+        "state": {
+          "installed": "Installed",
+          "not_installed_or_full": "Not installed or full",
+          "unknown": "Unknown"
+        }
+      },
+      "dirty_water_tank_time_left": {
+        "name": "Dirty water tank time left"
+      },
+      "drainage_status": {
+        "name": "Drainage status",
+        "state": {
+          "draining": "Draining",
+          "draining_failed": "Draining failed",
+          "draining_successful": "Draining successful",
+          "idle": "[%key:common::state::idle%]",
+          "unknown": "Unknown"
+        }
+      },
+      "drying_progress": {
+        "name": "Drying progress"
+      },
+      "dust_bag_status": {
+        "name": "Dust bag status",
+        "state": {
+          "check": "Check",
+          "installed": "Installed",
+          "not_installed": "Not installed",
+          "unknown": "Unknown"
+        }
+      },
+      "dust_collection": {
+        "name": "Dust collection",
+        "state": {
+          "available": "Available",
+          "never": "Never",
+          "not_available": "Not available",
+          "over_use": "Over use",
+          "unknown": "Unknown"
+        }
+      },
+      "error": {
+        "name": "Error",
+        "state": {
+          "auto_key_trig": "Internal error",
+          "battery_fault": "Battery error",
+          "battery_low": "Low battery",
+          "battery_percentage": "Battery level error",
+          "bin_full": "The dust collection bag is full, or the air duct is blocked.",
+          "bin_open": "The upper cover of auto-empty base is not closed, or the dust collection bag is not installed.",
+          "blocked": "Cleanup route is blocked, returning to the dock.",
+          "bmi055_acce": "Accelerometer error",
+          "bmi055_gyro": "Gyro error",
+          "box_full": "The filter not dry or blocked",
+          "brush": "The main brush wrapped",
+          "bumper": "Collision sensor is stuck",
+          "bumper_repeat": "Collision sensor is stuck",
+          "camera_fault": "Camera error",
+          "camera_idle": "Internal error",
+          "camera_occlusion": "Visual positioning sensor error",
+          "carpet": "Please start the robot in non-carpet area.",
+          "charge_fault": "Charging error",
+          "charge_no_electric": "The charging dock is not powered on",
+          "charger_get": "Cannot find base",
+          "clean_mop_pad": "The cleaning task is complete, please clean the mop pad washboard.",
+          "clean_tank_level": "Check and fill the clean water tank.",
+          "cliff": "Cliff sensor error",
+          "dirty_tank_level": "The water level in the used water tank is too high.",
+          "dirty_tank_not_installed": "The used water tank of robot is not installed.",
+          "dirty_water_tank": "The dirty water tank is full or not installed.",
+          "dirty_water_tank_blocked": "Dirty water tank blocked.",
+          "dirty_water_tank_pump": "Dirty water tank pump error.",
+          "drop": "Wheels are suspended",
+          "drop_repeat": "Wheels are suspended",
+          "dust_bag_full": "Dust bag is full or vents are blocked.",
+          "edge": "Edge sensor error",
+          "fan": "The filter not dry or blocked",
+          "fan_speed_error": "Fan speed sensor error",
+          "filter_blocked": "The filter not dry or blocked",
+          "flow_error": "Flow sensor error",
+          "flow_shielding": "Optical sensor error",
+          "forward_suffocate": "The robot is stuck, or cannot go forward",
+          "gesture": "Robot is tilted",
+          "heart": "Internal error",
+          "infrared_fault": "Infrared error",
+          "infrared_shielding": "Infrared shielding error",
+          "laser": "The 3D obstacle avoidance sensor is malfunctioning.",
+          "lds_bumper": "Laser distance sensor bumper error",
+          "lds_error": "Laser distance sensor error",
+          "left_magnet": "Left magnet sensor error",
+          "left_wheel_motor": "The robot is stuck, or its left wheel may be blocked by foreign objects",
+          "left_wheel_speed": "Left wheel may be blocked by foreign objects",
+          "low_battery_turn_off": "Low battery. Robot will shut down soon.",
+          "mop_install_failed": "Mop pad installation failed.",
+          "mop_pad": "The washboard is not installed properly.",
+          "mop_pad_stop_rotate": "The mop pad has stopped rotating.",
+          "mop_removed": "The mop pad comes off during the cleaning task.",
+          "move": "Move sensor error",
+          "no_box": "Dust bin not installed",
+          "no_error": "No error",
+          "no_go_zone": "No-Go zone or virtual wall detected.",
+          "no_mop_in_station": "Mop pad is not in the station.",
+          "no_tank_box": "Water tank not installed",
+          "optical_flow": "Optical flow sensor error",
+          "p3v3": "Internal error",
+          "remove_mop": "Mopping completed. Please remove and clean the mop in time.",
+          "restricted": "Detected that the vacuum-mop is in a restricted area.",
+          "return_to_charge_failed": "Failed to return to charge.",
+          "right_magnet": "Right magnet sensor error",
+          "right_wheel_motor": "The robot is stuck, or its right wheel may be blocked by foreign objects",
+          "right_wheel_speed": "Right wheel may be blocked by foreign objects",
+          "robot_in_hidden_room": "Hidden area. Please move the robot to the appropriate area and retry.",
+          "route": "Cleanup route is blocked.",
+          "rtc": "RTC error",
+          "side_brush": "The side brush wrapped",
+          "station_disconnected": "Base station not powered on",
+          "strong_magnet": "Strong magnetic field detected",
+          "turn_suffocate": "The robot is stuck, or cannot turn",
+          "ultrasonic": "The ultrasonic sensor is malfunctioning.",
+          "unknown": "Unknown error code",
+          "washboard_level": "Water level in the washboard is too high.",
+          "washboard_not_working": "Washboard stops working.",
+          "water_box_empty": "Water tank is empty",
+          "water_pump": "Water pump error",
+          "water_tank": "The clean water tank is not installed.",
+          "water_tank_dry": "Low water level in the clean water tank, please fill with water timely.",
+          "wet_mop_pad": "The water level of the washboard is abnormal, please clean the washboard timely.",
+          "xv7001": "Gyro error"
+        }
+      },
+      "filter_left": {
+        "name": "Filter left"
+      },
+      "filter_time_left": {
+        "name": "Filter time left"
+      },
+      "firmware_version": {
+        "name": "Firmware version"
+      },
+      "first_cleaning_date": {
+        "name": "First cleaning date"
+      },
+      "hot_water_status": {
+        "name": "Hot water status",
+        "state": {
+          "disabled": "Disabled",
+          "enabled": "Enabled",
+          "unknown": "Unknown"
+        }
+      },
+      "low_water_warning": {
+        "name": "Low water warning",
+        "state": {
+          "low_water": "About to run out of water. Please fill the clean water tank.",
+          "no_warning": "No warning",
+          "no_water_for_clean": "Low water level in the clean water tank. Robot has switched to Vacuuming Mode.",
+          "no_water_left": "The water in the clean water tank is about to be used up. Check and fill the clean water tank promptly.",
+          "no_water_left_after_clean": "Mop pad has been cleaned. Detected that the water in the clean water tank is insufficient, please fill the clean water tank and empty the used water tank.",
+          "no_water_left_dismiss": "Please check the clean water tank.",
+          "tank_not_installed": "The clean water tank is not installed."
+        }
+      },
+      "main_brush_left": {
+        "name": "Main brush left"
+      },
+      "main_brush_time_left": {
+        "name": "Main brush time left"
+      },
+      "mapping_time": {
+        "name": "Mapping time"
+      },
+      "mop_pad": {
+        "name": "Mop pad",
+        "state": {
+          "installed": "Installed",
+          "mop_in_station": "In station",
+          "mop_installed": "Mop installed",
+          "not_installed": "Not installed",
+          "unknown": "Unknown"
+        }
+      },
+      "mop_pad_left": {
+        "name": "Mop pad left"
+      },
+      "mop_pad_time_left": {
+        "name": "Mop pad time left"
+      },
+      "onboard_dirty_water_tank_left": {
+        "name": "Onboard dirty water tank left"
+      },
+      "onboard_dirty_water_tank_time_left": {
+        "name": "Onboard dirty water tank time left"
+      },
+      "relocation_status": {
+        "name": "Relocation status",
+        "state": {
+          "failed": "Failed",
+          "located": "Located",
+          "locating": "Locating",
+          "success": "Success",
+          "unknown": "Unknown"
+        }
+      },
+      "scale_inhibitor_left": {
+        "name": "Scale inhibitor left"
+      },
+      "scale_inhibitor_time_left": {
+        "name": "Scale inhibitor time left"
+      },
+      "self_wash_base_status": {
+        "name": "Self-wash base status",
+        "state": {
+          "adding_water": "Adding water",
+          "clean_add_water": "Cleaning and adding water",
+          "drying": "Drying",
+          "idle": "[%key:common::state::idle%]",
+          "paused": "Paused",
+          "returning": "Returning to wash",
+          "unknown": "Unknown",
+          "washing": "Washing"
+        }
+      },
+      "sensor_dirty_left": {
+        "name": "Sensor dirty left"
+      },
+      "sensor_dirty_time_left": {
+        "name": "Sensor dirty time left"
+      },
+      "side_brush_left": {
+        "name": "Side brush left"
+      },
+      "side_brush_time_left": {
+        "name": "Side brush time left"
+      },
+      "silver_ion_left": {
+        "name": "Silver-ion left"
+      },
+      "silver_ion_time_left": {
+        "name": "Silver-ion time left"
+      },
+      "squeegee_left": {
+        "name": "Squeegee left"
+      },
+      "squeegee_time_left": {
+        "name": "Squeegee time left"
+      },
+      "state": {
+        "name": "State",
+        "state": {
+          "auto_emptying": "Auto-Emptying",
+          "auto_water_draining": "Auto water draining",
+          "building": "Building",
+          "charging": "Charging",
+          "charging_completed": "Charging completed",
+          "clean_add_water": "Cleaning and adding water",
+          "clean_summon": "Summon to clean",
+          "draining": "Draining",
+          "drying": "Drying",
+          "dust_bag_drying": "Dust bag drying",
+          "dust_bag_drying_paused": "Dust bag drying paused",
+          "emptying": "Emptying",
+          "error": "Error",
+          "extra_cleaning": "Extra cleaning",
+          "finding_pet": "Finding pet",
+          "finding_pet_paused": "Finding pet paused",
+          "heading_to_extra_cleaning": "Heading to extra cleaning",
+          "human_following": "Human following",
+          "idle": "[%key:common::state::idle%]",
+          "initial_deep_cleaning": "Initial deep cleaning",
+          "initial_deep_cleaning_paused": "Initial deep cleaning paused",
+          "monitoring": "Monitoring",
+          "monitoring_paused": "Monitoring paused",
+          "mopping": "Mopping",
+          "paused": "[%key:common::state::paused%]",
+          "remote_control": "Remote controlling",
+          "returning": "Returning to dock",
+          "returning_auto_empty": "Returning to Auto-Empty",
+          "returning_install_mop": "Returning to install mop",
+          "returning_remove_mop": "Returning to remove mop",
+          "returning_to_drain": "Returning to drain",
+          "returning_to_wash": "Returning to wash",
+          "sanitizing": "Sanitizing",
+          "sanitizing_with_dry": "Sanitizing with dry",
+          "second_cleaning": "Second time cleaning",
+          "shortcut": "Shortcut",
+          "smart_charging": "Smart charging",
+          "spot_cleaning": "Spot cleaning",
+          "station_cleaning": "Station cleaning",
+          "station_reset": "Station reset",
+          "sweeping": "Sweeping",
+          "sweeping_and_mopping": "Sweeping and mopping",
+          "unknown": "Unknown",
+          "upgrading": "Upgrading",
+          "waiting_for_task": "Waiting for task",
+          "washing": "Washing",
+          "washing_paused": "Washing paused",
+          "water_check": "Water checking"
+        }
+      },
+      "station_drainage_status": {
+        "name": "Station drainage status",
+        "state": {
+          "draining": "Draining",
+          "idle": "[%key:common::state::idle%]",
+          "unknown": "Unknown"
+        }
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "charging": "Charging",
+          "cleaning": "Cleaning",
+          "cruising_path": "Cruising on path",
+          "cruising_point": "Cruising to a point",
+          "error": "Error",
+          "factory": "Factory",
+          "factory_test": "Factory test",
+          "fast_mapping": "Fast mapping",
+          "fct": "FCT",
+          "follow_wall_cleaning": "Follow wall cleaning",
+          "idle": "[%key:common::state::idle%]",
+          "ota": "OTA",
+          "paused": "[%key:common::state::paused%]",
+          "person_follow": "Person follow",
+          "power_off": "Power off",
+          "remote_control": "Remote control",
+          "returning": "Returning to dock",
+          "room_cleaning": "Room cleaning",
+          "self_repair": "Self repair",
+          "shortcut": "Shortcut",
+          "sleeping": "Sleeping",
+          "spot_cleaning": "Spot cleaning",
+          "standby": "Standby",
+          "summon_clean": "Summon to clean",
+          "unknown": "Unknown",
+          "water_check": "Water checking",
+          "wifi_set": "WiFi set",
+          "zone_cleaning": "Zone cleaning"
+        }
+      },
+      "stream_status": {
+        "name": "Stream status",
+        "state": {
+          "audio": "Audio",
+          "idle": "[%key:common::state::idle%]",
+          "recording": "Recording",
+          "unknown": "Unknown",
+          "video": "Video"
+        }
+      },
+      "tank_filter_left": {
+        "name": "Tank filter left"
+      },
+      "tank_filter_time_left": {
+        "name": "Tank filter time left"
+      },
+      "task_status": {
+        "name": "Task status",
+        "state": {
+          "area_cleaning_washing_paused": "Area cleaning washing paused",
+          "auto_cleaning_washing_paused": "Auto cleaning washing paused",
+          "cleaning": "Cleaning",
+          "cleaning_paused": "Cleaning paused",
+          "completed": "Completed",
+          "cruising_path": "Cruising on path",
+          "cruising_path_paused": "Cruising on path paused",
+          "cruising_point": "Cruising to a point",
+          "cruising_point_paused": "Cruising to a point paused",
+          "custom_cleaning_washing_paused": "Custom cleaning washing paused",
+          "docking_paused": "Docking paused",
+          "fast_mapping": "Fast mapping",
+          "map_cleaning_paused": "Map cleaning paused",
+          "mopping_paused": "Mopping paused",
+          "pet_finding": "Pet finding",
+          "returning_to_install_mop": "Returning to install mop",
+          "returning_to_remove_mop": "Returning to remove mop",
+          "room_cleaning": "Room cleaning",
+          "room_cleaning_paused": "Room cleaning paused",
+          "room_docking_paused": "Room docking paused",
+          "room_mopping_paused": "Room mopping paused",
+          "spot_cleaning": "Spot cleaning",
+          "spot_cleaning_paused": "Spot cleaning paused",
+          "station_cleaning": "Station cleaning",
+          "summon_clean_paused": "Summon to clean paused",
+          "unknown": "Unknown",
+          "zone_cleaning": "Zone cleaning",
+          "zone_cleaning_paused": "Zone cleaning paused",
+          "zone_docking_paused": "Zone docking paused",
+          "zone_mopping_paused": "Zone mopping paused"
+        }
+      },
+      "task_type": {
+        "name": "Task type",
+        "state": {
+          "boosted_edge_cleaning": "Boosted edge cleaning",
+          "custom": "Custom cleaning",
+          "custom_paused": "Custom cleaning paused",
+          "hair_compressing": "Hair compressing",
+          "partial": "Partial cleaning",
+          "partial_paused": "Partial cleaning paused",
+          "scheduled": "Scheduled cleaning",
+          "scheduled_paused": "Scheduled cleaning paused",
+          "shortcut": "Shortcut cleaning",
+          "shortcut_paused": "Shortcut cleaning paused",
+          "smart": "Smart cleaning",
+          "smart_paused": "Smart cleaning paused",
+          "standard": "Standard cleaning",
+          "standard_paused": "Standard cleaning paused",
+          "summon": "Summon cleaning",
+          "summon_paused": "Summon cleaning paused",
+          "water_stain": "Water stain cleaning",
+          "water_stain_paused": "Water stain cleaning paused"
+        }
+      },
+      "total_cleaned_area": {
+        "name": "Total cleaned area"
+      },
+      "total_cleaning_time": {
+        "name": "Total cleaning time"
+      },
+      "water_tank": {
+        "name": "Water tank",
+        "state": {
+          "in_station": "In station",
+          "installed": "Installed",
+          "mop_installed": "Mop installed",
+          "not_installed": "Not installed",
+          "unknown": "Unknown"
+        }
+      },
+      "wheel_dirty_left": {
+        "name": "Wheel dirty left"
+      },
+      "wheel_dirty_time_left": {
+        "name": "Wheel dirty time left"
+      }
+    },
+    "switch": {
+      "ai_fluid_detection": {
+        "name": "AI fluid detection"
+      },
+      "ai_furniture_detection": {
+        "name": "AI furniture detection"
+      },
+      "ai_human_detection": {
+        "name": "AI human detection"
+      },
+      "ai_obstacle_detection": {
+        "name": "AI obstacle detection"
+      },
+      "ai_obstacle_image_upload": {
+        "name": "AI obstacle image upload"
+      },
+      "ai_obstacle_picture": {
+        "name": "AI obstacle picture"
+      },
+      "ai_pet_avoidance": {
+        "name": "AI pet avoidance"
+      },
+      "ai_pet_detection": {
+        "name": "AI pet detection"
+      },
+      "auto_add_detergent": {
+        "name": "Auto-add detergent"
+      },
+      "auto_charging": {
+        "name": "Auto charging"
+      },
+      "auto_drying": {
+        "name": "Auto drying"
+      },
+      "auto_dust_collecting": {
+        "name": "Auto dust collecting"
+      },
+      "auto_lds_lifting": {
+        "name": "Auto lds lifting"
+      },
+      "auto_mount_mop": {
+        "name": "Auto mount mop"
+      },
+      "auto_water_refilling": {
+        "name": "Auto water refilling"
+      },
+      "camera_light_brightness_auto": {
+        "name": "Camera light brightness auto"
+      },
+      "carpet_avoidance": {
+        "name": "Carpet avoidance"
+      },
+      "carpet_boost": {
+        "name": "Carpet boost"
+      },
+      "carpet_recognition": {
+        "name": "Carpet recognition"
+      },
+      "child_lock": {
+        "name": "Child lock"
+      },
+      "clean_carpets_first": {
+        "name": "Clean carpets first"
+      },
+      "cleaning_sequence": {
+        "name": "Cleaning sequence"
+      },
+      "collision_avoidance": {
+        "name": "Collision avoidance"
+      },
+      "customized_cleaning": {
+        "name": "Customized cleaning"
+      },
+      "dnd": {
+        "name": "DnD"
+      },
+      "dnd_disable_auto_empty": {
+        "name": "DnD disable auto empty"
+      },
+      "dnd_disable_resume_cleaning": {
+        "name": "DnD disable resume cleaning"
+      },
+      "dnd_reduce_volume": {
+        "name": "DnD reduce volume"
+      },
+      "fill_light": {
+        "name": "Fill light"
+      },
+      "floor_direction_cleaning": {
+        "name": "Floor direction cleaning"
+      },
+      "fuzzy_obstacle_detection": {
+        "name": "Fuzzy obstacle detection"
+      },
+      "gap_cleaning_extension": {
+        "name": "Gap cleaning extension"
+      },
+      "hair_compression": {
+        "name": "Hair compression"
+      },
+      "hot_washing": {
+        "name": "Hot washing"
+      },
+      "human_follow": {
+        "name": "Human follow"
+      },
+      "intelligent_recognition": {
+        "name": "Intelligent recognition"
+      },
+      "intensive_carpet_cleaning": {
+        "name": "Intensive carpet cleaning"
+      },
+      "large_particles_boost": {
+        "name": "Large particles boost"
+      },
+      "map_saving": {
+        "name": "Map saving"
+      },
+      "max_suction_power": {
+        "name": "Max suction power"
+      },
+      "mop_extend": {
+        "name": "Mop extend"
+      },
+      "mop_washing_with_detergent": {
+        "name": "Mop washing with detergent"
+      },
+      "mopping_under_furnitures": {
+        "name": "Mopping under furnitures"
+      },
+      "multi_floor_map": {
+        "name": "Multi floor map"
+      },
+      "obstacle_avoidance": {
+        "name": "Obstacle avoidance"
+      },
+      "off_peak_charging": {
+        "name": "Off-peak charging"
+      },
+      "pet_focused_cleaning": {
+        "name": "Pet focused cleaning"
+      },
+      "pet_focused_detection": {
+        "name": "Pet focused detection"
+      },
+      "pet_picture": {
+        "name": "Pet picture"
+      },
+      "resume_cleaning": {
+        "name": "Resume cleaning"
+      },
+      "self_clean": {
+        "name": "Self-clean"
+      },
+      "self_clean_by_zone": {
+        "name": "Self-clean by zone"
+      },
+      "side_brush_carpet_rotate": {
+        "name": "Side brush carpet rotate"
+      },
+      "side_reach": {
+        "name": "Side reach"
+      },
+      "silent_drying": {
+        "name": "Silent drying"
+      },
+      "smart_drying": {
+        "name": "Smart drying"
+      },
+      "smart_mop_washing": {
+        "name": "Smart mop washing"
+      },
+      "stain_avoidance": {
+        "name": "Stain avoidance"
+      },
+      "streaming_voice_prompt": {
+        "name": "Streaming voice prompt"
+      },
+      "tight_mopping": {
+        "name": "Tight mopping"
+      },
+      "ultra_clean_mode": {
+        "name": "Ultra clean mode"
+      },
+      "uv_sterilization": {
+        "name": "UV sterilization"
+      },
+      "voice_assistant": {
+        "name": "Voice assistant"
+      },
+      "water_electrolysis": {
+        "name": "Water electrolysis"
+      }
+    },
+    "time": {
+      "dnd_end": {
+        "name": "DnD end"
+      },
+      "dnd_start": {
+        "name": "DnD start"
+      },
+      "off_peak_charging_end": {
+        "name": "Off-peak charging end"
+      },
+      "off_peak_charging_start": {
+        "name": "Off-peak charging start"
+      }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Authentication failed."
+    },
+    "device_not_available": {
+      "message": "Device is not available."
+    },
+    "entity_unavailable": {
+      "message": "Entity is not available."
+    },
+    "fan_speed_cruising": {
+      "message": "Cannot change fan speed while cruising."
+    },
+    "fan_speed_customized_cleaning": {
+      "message": "Cannot change fan speed when customized cleaning is enabled."
+    },
+    "fan_speed_not_recognized": {
+      "message": "Fan speed not recognized. Valid options: {options}."
+    },
+    "invalid_fan_speed": {
+      "message": "Invalid fan speed."
+    },
+    "invalid_option": {
+      "message": "Invalid option for {name}: {option}. Valid options: {options}."
+    },
+    "invalid_value": {
+      "message": "Invalid value."
+    },
+    "map_data_unavailable": {
+      "message": "Map data is not available."
+    },
+    "not_implemented": {
+      "message": "This operation is not implemented."
+    }
+  },
+  "issues": {
+    "consumable_depleted": {
+      "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
+      "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "The map rooms changed (a room was added, removed, or re-numbered). Segment-based automations and scripts that reference room ids may no longer target the right rooms. Review them, then select **Submit** to dismiss this issue.",
+            "title": "Map segments changed"
+          }
+        }
+      },
+      "title": "Map segments changed on {device_name}"
+    }
+  },
+  "options": {
+    "error": {
+      "cloud_credentials_incomplete": "Cloud credentials incomplete, please fill in username, password and country"
+    },
+    "step": {
+      "init": {
+        "data": {
+          "color_scheme": "Map color scheme",
+          "configuration_type": "Configuration type",
+          "hidden_map_objects": "Hidden map objects",
+          "icon_set": "Map icon set",
+          "low_resolution": "Low resolution map",
+          "notify": "Notification",
+          "prefer_cloud": "Prefer cloud connection",
+          "square": "Square map"
+        },
+        "data_description": {
+          "color_scheme": "Color theme used for the vacuum map.",
+          "configuration_type": "Connection method for the vacuum device.",
+          "hidden_map_objects": "Map elements to hide from the display.",
+          "icon_set": "Icon style used on the vacuum map.",
+          "low_resolution": "Use lower resolution for faster map rendering.",
+          "notify": "Select which notifications to receive from the device.",
+          "prefer_cloud": "Use cloud connection instead of local when available.",
+          "square": "Display the map as a square instead of its original aspect ratio."
+        }
+      }
+    }
+  },
+  "services": {
+    "select_select_first": {
+      "description": "Select the first option of an select entity.",
+      "name": "Select First"
+    },
+    "select_select_last": {
+      "description": "Select the last option of an select entity.",
+      "name": "Select Last"
+    },
+    "select_select_next": {
+      "description": "Select the next options of an select entity.",
+      "fields": {
+        "cycle": {
+          "description": "If the option should cycle from the first to the last.",
+          "name": "Cycle"
+        }
+      },
+      "name": "Select Next"
+    },
+    "select_select_previous": {
+      "description": "Select the previous options of an select entity.",
+      "fields": {
+        "cycle": {
+          "description": "If the option should cycle from the first to the last.",
+          "name": "Cycle"
+        }
+      },
+      "name": "Select Previous"
+    },
+    "vacuum_backup_map": {
+      "description": "Backup a map to cloud.",
+      "fields": {
+        "map_id": {
+          "description": "ID of the map to be restored.",
+          "name": "Map ID"
+        }
+      },
+      "name": "Backup Map"
+    },
+    "vacuum_clean_segment": {
+      "description": "Start the cleaning operation in the selected rooms.",
+      "fields": {
+        "repeats": {
+          "description": "Number of cleaning passes for every selected room (unless it is overridden by customized cleaning parameter).",
+          "name": "Repeats"
+        },
+        "segments": {
+          "description": "List of rooms to be cleaned. Only room's Character or an array of room's character, cleaning times, fan speed and mop mode to override the default values per room.",
+          "name": "Segments"
+        },
+        "suction_level": {
+          "description": "Fan speed for every selected room (unless it is overridden by customized cleaning parameter).",
+          "name": "Suction Level"
+        },
+        "water_volume": {
+          "description": "Water level for every selected room (unless it is overridden by customized cleaning parameter).",
+          "name": "Water Volume"
+        }
+      },
+      "name": "Clean Segment"
+    },
+    "vacuum_clean_spot": {
+      "description": "Start the cleaning operation in the selected points on the map.",
+      "fields": {
+        "points": {
+          "description": "List of coordinates to be cleaned.",
+          "name": "Points"
+        },
+        "repeats": {
+          "description": "Number of cleaning passes for every selected zone.",
+          "name": "Repeats"
+        },
+        "suction_level": {
+          "description": "Fan speed for every selected zone.",
+          "name": "Suction Level"
+        },
+        "water_volume": {
+          "description": "Water level for every selected zone.",
+          "name": "Water Volume"
+        }
+      },
+      "name": "Clean Spot"
+    },
+    "vacuum_clean_zone": {
+      "description": "Start the cleaning operation in the selected area.",
+      "fields": {
+        "repeats": {
+          "description": "Number of cleaning passes for every selected zone.",
+          "name": "Repeats"
+        },
+        "suction_level": {
+          "description": "Fan speed for every selected zone.",
+          "name": "Suction Level"
+        },
+        "water_volume": {
+          "description": "Water level for every selected zone.",
+          "name": "Water Volume"
+        },
+        "zone": {
+          "description": "Coordinates.",
+          "name": "Zone"
+        }
+      },
+      "name": "Clean Zone"
+    },
+    "vacuum_delete_map": {
+      "description": "Delete a map.",
+      "fields": {
+        "map_id": {
+          "description": "ID of the map to be deleted.",
+          "name": "Map ID"
+        }
+      },
+      "name": "Delete map"
+    },
+    "vacuum_discard_temporary_map": {
+      "description": "Discard the temporary map.",
+      "name": "Discard Temporary Map"
+    },
+    "vacuum_follow_path": {
+      "description": "Follow list of coordinates on the map and return to base. (Only supported on vacuums with camera)",
+      "fields": {
+        "points": {
+          "description": "List of coordinates of the path.",
+          "name": "Points"
+        }
+      },
+      "name": "Follow Path"
+    },
+    "vacuum_goto": {
+      "description": "Go to the coordinate of the map and stop.",
+      "fields": {
+        "x": {
+          "description": "X Coordinate of the point.",
+          "name": "X"
+        },
+        "y": {
+          "description": "Y Coordinate of the point.",
+          "name": "Y"
+        }
+      },
+      "name": "Go To"
+    },
+    "vacuum_install_voice_pack": {
+      "description": "Install official or custom voice pack.",
+      "fields": {
+        "lang_id": {
+          "description": "Language ID of this pack.",
+          "name": "Language ID"
+        },
+        "md5": {
+          "description": "MD5 checksum of the language pack.",
+          "name": "MD5"
+        },
+        "size": {
+          "description": "Size of the language pack in bytes.",
+          "name": "Size"
+        },
+        "url": {
+          "description": "Url of this pack it should be reachable by the vacuum bot.",
+          "name": "URL"
+        }
+      },
+      "name": "Install Voice Pack"
+    },
+    "vacuum_merge_segments": {
+      "description": "Merge rooms.",
+      "fields": {
+        "map_id": {
+          "description": "ID of the map.",
+          "name": "Map ID"
+        },
+        "segments": {
+          "description": "Room IDs.",
+          "name": "Segments"
+        }
+      },
+      "name": "Merge Segments"
+    },
+    "vacuum_remote_control_move_step": {
+      "description": "Remotely control move the bot one step.",
+      "fields": {
+        "rotation": {
+          "description": "Turn in binary degrees between -128 and 128.",
+          "name": "Rotation"
+        },
+        "velocity": {
+          "description": "Move speed, from 100 (forward) to -300 (backward).",
+          "name": "Velocity"
+        }
+      },
+      "name": "Remote Control Move Step"
+    },
+    "vacuum_rename_map": {
+      "description": "Rename a map.",
+      "fields": {
+        "map_id": {
+          "description": "ID of the map.",
+          "name": "Map ID"
+        },
+        "map_name": {
+          "description": "New name of the map.",
+          "name": "Map Name"
+        }
+      },
+      "name": "Rename map"
+    },
+    "vacuum_rename_segment": {
+      "description": "Rename a segment.",
+      "fields": {
+        "segment_id": {
+          "description": "ID of the segment",
+          "name": "Segment ID"
+        },
+        "segment_name": {
+          "description": "New name of the segment",
+          "name": "Segment Name"
+        }
+      },
+      "name": "Rename Segment"
+    },
+    "vacuum_rename_shortcut": {
+      "description": "Rename a shortcut. (Only on supported devices)",
+      "fields": {
+        "shortcut_id": {
+          "description": "ID of the shortcut.",
+          "name": "Shortcut ID"
+        },
+        "shortcut_name": {
+          "description": "New name of the shortcut.",
+          "name": "Shortcut Name"
+        }
+      },
+      "name": "Rename Shortcut"
+    },
+    "vacuum_replace_temporary_map": {
+      "description": "Replace the temporary map with another saved map.",
+      "fields": {
+        "map_id": {
+          "description": "ID of the map to be replaced with.",
+          "name": "Map ID"
+        }
+      },
+      "name": "Replace Temporary Map"
+    },
+    "vacuum_request_map": {
+      "description": "Request map data",
+      "name": "Request Map"
+    },
+    "vacuum_reset_consumable": {
+      "description": "Reset a consumable.",
+      "fields": {
+        "consumable": {
+          "description": "Consumable type.",
+          "name": "Consumable"
+        }
+      },
+      "name": "Reset Consumable"
+    },
+    "vacuum_restore_map": {
+      "description": "Restore a map.",
+      "fields": {
+        "map_id": {
+          "description": "ID of the map to be restored.",
+          "name": "Map ID"
+        },
+        "recovery_map_index": {
+          "description": "Index of the saved recovery map",
+          "name": "Recovery Map Index"
+        }
+      },
+      "name": "Restore Map"
+    },
+    "vacuum_restore_map_from_file": {
+      "description": "Restore a map from file.",
+      "fields": {
+        "file_url": {
+          "description": "Url of the saved tbz2.gz or tar.gz file",
+          "name": "File Url"
+        },
+        "map_id": {
+          "description": "ID of the map to be restored.",
+          "name": "Map ID"
+        }
+      },
+      "name": "Restore Map From File"
+    },
+    "vacuum_save_temporary_map": {
+      "description": "Save the temporary map.",
+      "name": "Save Temporary Map"
+    },
+    "vacuum_select_map": {
+      "description": "Select current map. Used when having multiple maps/floors.",
+      "fields": {
+        "map_id": {
+          "description": "ID of the map to be selected.",
+          "name": "Map ID"
+        }
+      },
+      "name": "Select Map"
+    },
+    "vacuum_set_carpet_area": {
+      "description": "Define carpets and ignored carpets. (Only on supported devices)",
+      "fields": {
+        "carpets": {
+          "description": "Carpet areas.",
+          "name": "Carpets"
+        },
+        "ignored_carpets": {
+          "description": "Ignored carpet areas for deleting the automatically detected carpets.",
+          "name": "Ignored Carpets"
+        }
+      },
+      "name": "Set Carpet Area"
+    },
+    "vacuum_set_cleaning_sequence": {
+      "description": "Set room cleaning sequence. (Only on supported devices)",
+      "fields": {
+        "cleaning_sequence": {
+          "description": "Segment ID list of cleaning sequence.",
+          "name": "Cleaning sequence"
+        }
+      },
+      "name": "Set Cleaning Sequence"
+    },
+    "vacuum_set_custom_carpet_cleaning": {
+      "description": "Set custom cleaning setting for carpets. (Only on supported devices)",
+      "fields": {
+        "carpet_cleaning": {
+          "description": "Custom carpet cleaning setting for each carpet.",
+          "name": "Carpet Cleaning"
+        },
+        "carpet_settings": {
+          "description": "Custom carpet settings setting for each carpet with an array of enabled settings.",
+          "name": "Carpet Settings"
+        },
+        "id": {
+          "description": "Carpet IDs.",
+          "name": "Carpet ID"
+        },
+        "type": {
+          "description": "Type of the object with the ID. (0 = Automatically Detected Carpet, 1 = Manually Created Carpet, 2 = Room Carpet (If supported))",
+          "name": "Type of the object"
+        }
+      },
+      "name": "Set Custom Carpet Cleaning"
+    },
+    "vacuum_set_custom_cleaning": {
+      "description": "Set custom cleaning parameters. (Only on supported devices)",
+      "fields": {
+        "cleaning_mode": {
+          "description": "Cleaning for each room (only supported on vacuums with mop pad lifting feature).",
+          "name": "Cleaning Mode"
+        },
+        "repeats": {
+          "description": "Cleaning times for each room.",
+          "name": "Repeats"
+        },
+        "segment_id": {
+          "description": "Room IDs.",
+          "name": "Segment ID"
+        },
+        "suction_level": {
+          "description": "Suction level for each room.",
+          "name": "Suction Level"
+        },
+        "water_volume": {
+          "description": "Water volume for each room.",
+          "name": "Water Volume"
+        },
+        "wetness_level": {
+          "description": "Wetness level for each room. (On supported devices)",
+          "name": "Wetness Level"
+        }
+      },
+      "name": "Set Custom Cleaning"
+    },
+    "vacuum_set_obstacle_ignore": {
+      "description": "Set ignore status of an obstacle. (Only supported on vacuums with AI Obstacle detection feature)",
+      "fields": {
+        "obstacle_ignored": {
+          "description": "Obstacle is ignored or not.",
+          "name": "Obstacle Ignored"
+        },
+        "x": {
+          "description": "X Coordinate of the obstacle.",
+          "name": "X"
+        },
+        "y": {
+          "description": "Y Coordinate of the obstacle.",
+          "name": "Y"
+        }
+      },
+      "name": "Set Obstacle Ignore"
+    },
+    "vacuum_set_predefined_points": {
+      "description": "Define predefined coordinates on current map. (Only supported on vacuums with camera)",
+      "fields": {
+        "points": {
+          "description": "List of coordinates to be saved.",
+          "name": "Points"
+        }
+      },
+      "name": "Set Predefined Points"
+    },
+    "vacuum_set_restricted_zone": {
+      "description": "Define virtual walls, restricted zones, and/or no mop zones.",
+      "fields": {
+        "no_mops": {
+          "description": "No mop zones.",
+          "name": "No Mops"
+        },
+        "walls": {
+          "description": "Virtual walls.",
+          "name": "Walls"
+        },
+        "zones": {
+          "description": "No go zones.",
+          "name": "Zones"
+        }
+      },
+      "name": "Set Restricted Zone"
+    },
+    "vacuum_set_router_position": {
+      "description": "Set router position on current map. (Only supported on vacuums with WiFi map feature)",
+      "fields": {
+        "x": {
+          "description": "X Coordinate of the router.",
+          "name": "X"
+        },
+        "y": {
+          "description": "Y Coordinate of the router.",
+          "name": "Y"
+        }
+      },
+      "name": "Set router position"
+    },
+    "vacuum_set_virtual_threshold": {
+      "description": "Define virtual thresholds.",
+      "fields": {
+        "virtual_thresholds": {
+          "description": "Virtual threshold line coordinates.",
+          "name": "Virtual Thresholds"
+        }
+      },
+      "name": "Set Virtual Threshold"
+    },
+    "vacuum_split_segments": {
+      "description": "Split rooms.",
+      "fields": {
+        "line": {
+          "description": "Split line coordinates.",
+          "name": "Line"
+        },
+        "map_id": {
+          "description": "ID of the map.",
+          "name": "Map ID"
+        },
+        "segment": {
+          "description": "Room ID.",
+          "name": "Segment"
+        }
+      },
+      "name": "Split Segments"
+    },
+    "vacuum_start_shortcut": {
+      "description": "Start a shortcut task. (Only on supported devices)",
+      "fields": {
+        "shortcut_id": {
+          "description": "ID of the shortcut.",
+          "name": "Shortcut ID"
+        }
+      },
+      "name": "Start Shortcut"
+    }
+  }
+}

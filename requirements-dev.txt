@@ -1,0 +1,30 @@
+# Development dependencies for Dreame Vacuum integration.
+#
+# Reuses the test stack (requirements_test.txt) so the pinned, mutually
+# compatible Home Assistant / pytest versions drive resolution, then adds the
+# code-quality / type-checking tools and the integration's runtime libraries.
+
+-r requirements_test.txt
+
+# Code quality tools
+ruff>=0.15.12
+pre-commit>=4.0.0
+codespell>=2.4.2
+
+# Type checking
+mypy>=1.13.0
+types-requests>=2.32.0
+
+# Runtime libraries (needed for mypy import resolution and local runs).
+# pillow / numpy / requests / pycryptodome / paho-mqtt are left UNPINNED on
+# purpose: Home Assistant pins them, and adding tighter lower bounds makes the
+# install impossible (e.g. pillow>=12.2.0 conflicts with the Home Assistant
+# pin). Let Home Assistant drive their versions.
+pillow
+numpy
+pybase64
+requests
+pycryptodome
+python-miio
+mini-racer
+paho-mqtt

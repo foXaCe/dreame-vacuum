@@ -1,0 +1,1904 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Пристрій вже налаштовано",
+      "already_in_progress": "Configuration already in progress",
+      "cannot_connect": "Не вдалося підключитися.",
+      "reauth_successful": "Повторна автентифікація пройшла успішно"
+    },
+    "error": {
+      "2fa_failed": "Перевірка не вдалася.",
+      "cannot_connect": "Не вдалося підключитися.",
+      "credentials_incomplete": "Неповні облікові дані, будь ласка, введіть ім'я користувача, пароль та країну",
+      "login_error": "Не вдається ввійти, перевірте свої облікові дані",
+      "no_devices": "В обліковому записі для цього регіону не знайдено підтримуваних пристроїв{devices}",
+      "unsupported": "Пристрій не підтримується",
+      "wrong_captcha": "Невірний captcha.",
+      "wrong_token": "Помилка контрольної суми, неправильний токен"
+    },
+    "step": {
+      "2fa": {
+        "data": {
+          "verification_code": "Код двофакторної перевірки"
+        },
+        "data_description": {
+          "verification_code": "Enter the verification code sent to your phone or email."
+        },
+        "description": "## Для входу потрібна перевірка безпеки\nВідкрийте сторінку перевірки, щоб надіслати код підтвердження на мобільний телефон або електронну пошту. Після отримання коду не підтверджуйте його на веб-сторінці. Поверніться до HomeAssistant і введіть його в поле нижче.\n### [Надіслати код підтвердження]({url})"
+      },
+      "captcha": {
+        "data": {
+          "code": "Код"
+        },
+        "data_description": {
+          "code": "Enter the characters shown in the captcha image above."
+        },
+        "description": "## Потрібна перевірка captcha.\n![captcha](data:image/jpeg;base64,{img})"
+      },
+      "devices": {
+        "data": {
+          "devices": "Підтримувані пристрої"
+        },
+        "data_description": {
+          "devices": "Select the vacuum device to configure."
+        },
+        "description": "Будь ласка, виберіть робот-пилосос Dreame, який ви хочете налаштувати."
+      },
+      "dreame": {
+        "data": {
+          "country": "Країна сервера",
+          "password": "Пароль",
+          "username": "Ім'я користувача"
+        },
+        "data_description": {
+          "country": "Cloud server region for your account.",
+          "password": "Dreamehome account password.",
+          "username": "Dreamehome account email or phone number."
+        },
+        "description": "Увійдіть у хмару Dreamehome."
+      },
+      "local": {
+        "data": {
+          "host": "Хост",
+          "token": "Токен"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the vacuum.",
+          "token": "32-character API token for local communication."
+        },
+        "description": "Вам знадобиться 32-знаковий API-токен, див. {token_url} для інструкцій."
+      },
+      "mi": {
+        "data": {
+          "country": "Країна сервера",
+          "password": "Пароль",
+          "prefer_cloud": "Перевага хмарного з'єднання",
+          "username": "Ім'я користувача"
+        },
+        "data_description": {
+          "country": "Cloud server region for your account.",
+          "password": "Xiaomi account password.",
+          "prefer_cloud": "Use cloud connection instead of local when available.",
+          "username": "Xiaomi account email or phone number."
+        },
+        "description": "Увійдіть до хмари Xiaomi, див. {server_url} для використання хмарного сервера."
+      },
+      "mova": {
+        "data": {
+          "country": "Країна сервера",
+          "password": "Пароль",
+          "username": "Ім'я користувача"
+        },
+        "data_description": {
+          "country": "Cloud server region for your account.",
+          "password": "Movahome account password.",
+          "username": "Movahome account email or phone number."
+        },
+        "description": "Увійдіть у хмару Movahome."
+      },
+      "options": {
+        "data": {
+          "color_scheme": "Колірна схема мапи",
+          "hidden_map_objects": "Приховані об’єкти карти",
+          "icon_set": "Набір піктограм для мапи",
+          "low_resolution": "Карта низької роздільної здатності",
+          "name": "Назва",
+          "notify": "Сповіщення",
+          "square": "Квадратна карта"
+        },
+        "data_description": {
+          "color_scheme": "Color theme used for the vacuum map.",
+          "hidden_map_objects": "Map elements to hide from the display.",
+          "icon_set": "Icon style used on the vacuum map.",
+          "low_resolution": "Use lower resolution for faster map rendering.",
+          "name": "Display name for this device in Home Assistant.",
+          "notify": "Select which notifications to receive from the device.",
+          "square": "Display the map as a square instead of its original aspect ratio."
+        }
+      },
+      "reauth_confirm": {
+        "description": "Інтеграція Dreame Vacuum потребує повторної автентифікації вашого облікового запису для оновлення токенів або додавання відсутніх облікових даних хмари.",
+        "title": "Переаутентифікація Інтеграції"
+      },
+      "reconfigure_confirm": {
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "Updated IP address or hostname of the vacuum."
+        },
+        "description": "Update the device host address if it has changed.",
+        "title": "Reconfigure Integration"
+      },
+      "user": {
+        "data": {
+          "configuration_type": "Тип конфігурації"
+        },
+        "data_description": {
+          "configuration_type": "Choose between cloud connection (recommended, with map support) or manual local configuration."
+        },
+        "description": "Функція мапи потребує підключення до хмари та надає автоматичну конфігурацію. Якщо ви не хочете використовувати функцію мапи, ви можете вибрати ручну конфігурацію."
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "charging_state": {
+        "name": "Charging state"
+      }
+    },
+    "button": {
+      "backup": {
+        "name": "Backup"
+      },
+      "backup_map": {
+        "name": "Backup saved map {map_name}"
+      },
+      "base_station_cleaning": {
+        "name": "Base station cleaning"
+      },
+      "base_station_self_repair": {
+        "name": "Base station self-repair"
+      },
+      "clear_warning": {
+        "name": "Clear warning"
+      },
+      "empty_water_tank": {
+        "name": "Empty water tank"
+      },
+      "manual_drying": {
+        "name": "Manual drying"
+      },
+      "manual_drying_stop": {
+        "name": "Stop drying"
+      },
+      "reload_shortcuts": {
+        "name": "Reload shortcuts"
+      },
+      "reset_deodorizer": {
+        "name": "Reset deodorizer"
+      },
+      "reset_detergent": {
+        "name": "Reset detergent"
+      },
+      "reset_dirty_water_tank": {
+        "name": "Reset dirty water tank"
+      },
+      "reset_filter": {
+        "name": "Reset filter"
+      },
+      "reset_main_brush": {
+        "name": "Reset main brush"
+      },
+      "reset_mop_pad": {
+        "name": "Reset mop pad"
+      },
+      "reset_onboard_dirty_water_tank": {
+        "name": "Reset onboard dirty water tank"
+      },
+      "reset_scale_inhibitor": {
+        "name": "Reset scale inhibitor"
+      },
+      "reset_sensor": {
+        "name": "Reset sensor"
+      },
+      "reset_side_brush": {
+        "name": "Reset side brush"
+      },
+      "reset_silver_ion": {
+        "name": "Reset silver-ion"
+      },
+      "reset_squeegee": {
+        "name": "Reset squeegee"
+      },
+      "reset_wheel": {
+        "name": "Reset wheel"
+      },
+      "self_clean": {
+        "name": "Self-clean"
+      },
+      "self_clean_pause": {
+        "name": "Self-clean pause"
+      },
+      "self_clean_resume": {
+        "name": "Self-clean resume"
+      },
+      "shortcut": {
+        "name": "Shortcut"
+      },
+      "shortcut_named": {
+        "name": "Shortcut {name}"
+      },
+      "start_auto_empty": {
+        "name": "Start auto empty"
+      },
+      "start_fast_mapping": {
+        "name": "Start fast mapping"
+      },
+      "start_mapping": {
+        "name": "Start mapping"
+      },
+      "start_recleaning": {
+        "name": "Start re-cleaning"
+      },
+      "water_tank_draining": {
+        "name": "Water tank draining"
+      }
+    },
+    "camera": {
+      "current_map": {
+        "name": "Current map"
+      },
+      "current_map_data": {
+        "name": "Current map data"
+      },
+      "current_wifi_map": {
+        "name": "Current wifi map"
+      },
+      "current_wifi_map_data": {
+        "name": "Current wifi map data"
+      },
+      "map": {
+        "name": "Map"
+      },
+      "map_data": {
+        "name": "Map data"
+      },
+      "saved_map": {
+        "name": "Saved map"
+      },
+      "saved_map_indexed": {
+        "name": "Saved map {index}"
+      },
+      "saved_map_named": {
+        "name": "Saved map {map_name}"
+      },
+      "saved_wifi_map_indexed": {
+        "name": "Saved wifi map {index}"
+      },
+      "saved_wifi_map_named": {
+        "name": "Saved wifi map {map_name}"
+      },
+      "wifi_map": {
+        "name": "Wi-Fi map"
+      }
+    },
+    "number": {
+      "camera_light_brightness": {
+        "name": "Camera light brightness"
+      },
+      "drying_time": {
+        "name": "Drying time"
+      },
+      "mop_cleaning_remainder": {
+        "name": "Mop cleaning remainder"
+      },
+      "self_clean_area": {
+        "name": "Self-clean area"
+      },
+      "self_clean_time": {
+        "name": "Self-clean time"
+      },
+      "volume": {
+        "name": "Volume"
+      },
+      "wetness_level": {
+        "name": "Wetness level"
+      },
+      "wetness_level_room": {
+        "name": "Wetness level {room}"
+      }
+    },
+    "select": {
+      "auto_empty_frequency": {
+        "name": "Auto empty frequency"
+      },
+      "auto_empty_mode": {
+        "name": "Auto empty mode",
+        "state": {
+          "high_frequency": "Висока частота",
+          "low_frequency": "Низька частота",
+          "off": "Вимкнено",
+          "standard": "Стандартний"
+        }
+      },
+      "auto_recleaning": {
+        "name": "Auto re-cleaning",
+        "state": {
+          "in_all_modes": "У всіх режимах",
+          "in_deep_mode": "У глибокому режимі",
+          "off": "Вимкнено"
+        }
+      },
+      "auto_rewashing": {
+        "name": "Auto re-washing",
+        "state": {
+          "in_all_modes": "У всіх режимах",
+          "in_deep_mode": "У глибокому режимі",
+          "off": "Вимкнено"
+        }
+      },
+      "carpet_cleaning": {
+        "name": "Carpet cleaning",
+        "state": {
+          "adaptation": "Адаптація до килиму",
+          "adaptation_without_route": "Адаптація без маршруту",
+          "avoidance": "Уникання килима",
+          "cross": "Перетинати",
+          "ignore": "Ігнорувати",
+          "remove_mop": "Видалення швабри",
+          "vacuum_and_mop": "Пилосос і швабра"
+        }
+      },
+      "carpet_sensitivity": {
+        "name": "Carpet sensitivity",
+        "state": {
+          "high": "Висока",
+          "low": "Низька",
+          "medium": "Середня"
+        }
+      },
+      "cleangenius": {
+        "name": "CleanGenius",
+        "state": {
+          "deep_cleaning": "Глибоке очищення",
+          "off": "Вимкнено",
+          "routine_cleaning": "Регулярне прибирання"
+        }
+      },
+      "cleangenius_mode": {
+        "name": "CleanGenius mode",
+        "state": {
+          "mop_after_vacuum": "Швабри після вакууму",
+          "vacuum_and_mop": "Вакуум і швабра"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Cleaning mode",
+        "state": {
+          "mopping": "Миття",
+          "mopping_after_sweeping": "Миття після підмітання",
+          "sweeping": "Підмітання",
+          "sweeping_and_mopping": "Підмітання та миття"
+        }
+      },
+      "cleaning_mode_room": {
+        "name": "Cleaning mode {room}",
+        "state": {
+          "mopping": "Mopping",
+          "mopping_after_sweeping": "Mopping after sweeping",
+          "sweeping": "Sweeping",
+          "sweeping_and_mopping": "Sweeping and mopping"
+        }
+      },
+      "cleaning_route": {
+        "name": "Cleaning route",
+        "state": {
+          "deep": "Глибокий",
+          "intensive": "Інтенсивний",
+          "quick": "швидко",
+          "standard": "Стандартний"
+        }
+      },
+      "cleaning_route_room": {
+        "name": "Cleaning route {room}",
+        "state": {
+          "deep": "Deep",
+          "intensive": "Intensive",
+          "quick": "Quick",
+          "standard": "Standard"
+        }
+      },
+      "cleaning_times": {
+        "name": "Cleaning times"
+      },
+      "cleaning_times_room": {
+        "name": "Cleaning times {room}"
+      },
+      "custom_mopping_route": {
+        "name": "Custom mopping route",
+        "state": {
+          "deep": "Глибокий",
+          "intensive": "Інтенсивний",
+          "off": "Вимкнено",
+          "standard": "Стандартний"
+        }
+      },
+      "drying_time": {
+        "name": "Drying time"
+      },
+      "floor_material": {
+        "name": "Floor material",
+        "state": {
+          "carpet": "Carpet",
+          "low_pile_carpet": "Low pile carpet",
+          "medium_pile_carpet": "Medium pile carpet",
+          "none": "Не вибрано",
+          "tile": "Плитка",
+          "wood": "Дерево"
+        }
+      },
+      "floor_material_direction": {
+        "name": "Floor material direction",
+        "state": {
+          "horizontal": "Горизонтальний",
+          "vertical": "Вертикальний"
+        }
+      },
+      "floor_material_direction_room": {
+        "name": "Floor material direction {room}",
+        "state": {
+          "horizontal": "Horizontal",
+          "vertical": "Vertical"
+        }
+      },
+      "floor_material_room": {
+        "name": "Floor material {room}",
+        "state": {
+          "carpet": "Carpet",
+          "low_pile_carpet": "Low pile carpet",
+          "medium_pile_carpet": "Medium pile carpet",
+          "none": "None",
+          "tile": "Floor Tile",
+          "wood": "Wood Floor"
+        }
+      },
+      "map_rotation": {
+        "name": "Map rotation"
+      },
+      "mop_clean_frequency": {
+        "name": "Mop clean frequency",
+        "state": {
+          "by_room": "По кімнаті"
+        }
+      },
+      "mop_extend_frequency": {
+        "name": "Mop extend frequency",
+        "state": {
+          "high": "Високий",
+          "intelligent": "Розумний",
+          "standard": "Стандартний"
+        }
+      },
+      "mop_pad_humidity": {
+        "name": "Mop pad humidity",
+        "state": {
+          "moist": "Волога",
+          "slightly_dry": "Злегка суха",
+          "wet": "Мокра"
+        }
+      },
+      "mop_pad_humidity_room": {
+        "name": "Mop pad humidity {room}",
+        "state": {
+          "moist": "Moist",
+          "slightly_dry": "Slightly dry",
+          "wet": "Wet"
+        }
+      },
+      "mop_pad_swing": {
+        "name": "Mop pad swing",
+        "state": {
+          "auto": "Авто",
+          "daily": "Щодня",
+          "off": "Вимкнено",
+          "weekly": "Щотижня"
+        }
+      },
+      "mop_wash_level": {
+        "name": "Mop wash level",
+        "state": {
+          "daily": "Щоденно",
+          "deep": "Інтенсивно",
+          "water_saving": "Економія води"
+        }
+      },
+      "mopping_type": {
+        "name": "Mopping type",
+        "state": {
+          "accurate": "Точний",
+          "daily": "Щоденно",
+          "deep": "Інтенсивно"
+        }
+      },
+      "name": {
+        "name": "Name"
+      },
+      "name_room": {
+        "name": "Name {room}"
+      },
+      "order": {
+        "name": "Order",
+        "state": {
+          "not_set": "Не встановлено"
+        }
+      },
+      "order_room": {
+        "name": "Order {room}",
+        "state": {
+          "not_set": "Not Set"
+        }
+      },
+      "room_name": {
+        "name": "Room {room_id} name"
+      },
+      "selected_map": {
+        "name": "Selected map"
+      },
+      "self_clean_frequency": {
+        "name": "Self-clean frequency",
+        "state": {
+          "by_area": "За площею",
+          "by_room": "По кімнаті",
+          "by_time": "За часом"
+        }
+      },
+      "suction_level": {
+        "name": "Suction level",
+        "state": {
+          "quiet": "Тихий",
+          "standard": "Стандартний",
+          "strong": "Потужний",
+          "turbo": "Турбо"
+        }
+      },
+      "suction_level_room": {
+        "name": "Suction level {room}",
+        "state": {
+          "quiet": "Quiet",
+          "standard": "Standard",
+          "strong": "Strong",
+          "turbo": "Turbo"
+        }
+      },
+      "visibility": {
+        "name": "Visibility",
+        "state": {
+          "hidden": "Прихований",
+          "visible": "Видно"
+        }
+      },
+      "visibility_room": {
+        "name": "Visibility {room}",
+        "state": {
+          "hidden": "Hidden",
+          "visible": "Visible"
+        }
+      },
+      "voice_assistant_language": {
+        "name": "Voice assistant language",
+        "state": {
+          "chinese": "Китайська",
+          "default": "За замовчуванням",
+          "english": "Англійська",
+          "german": "Німецька"
+        }
+      },
+      "washing_mode": {
+        "name": "Washing mode",
+        "state": {
+          "deep": "Глибокий",
+          "light": "Світлий",
+          "standard": "Стандартний",
+          "ultra_washing": "Ультра прання"
+        }
+      },
+      "water_temperature": {
+        "name": "Water temperature",
+        "state": {
+          "hot": "Гарячий",
+          "mild": "Помірний",
+          "normal": "Нормальний",
+          "warm": "Зігрівати"
+        }
+      },
+      "water_volume": {
+        "name": "Water volume",
+        "state": {
+          "high": "Високий",
+          "low": "Низький",
+          "medium": "Середній"
+        }
+      },
+      "wider_corner_coverage": {
+        "name": "Wider corner coverage",
+        "state": {
+          "high_frequency": "Висока частота",
+          "low_frequency": "Низька частота",
+          "off": "Вимкнено"
+        }
+      }
+    },
+    "sensor": {
+      "auto_empty_status": {
+        "name": "Auto empty status",
+        "state": {
+          "active": "Активовано",
+          "idle": "Бездіяльність",
+          "not_performed": "Не виконано",
+          "unknown": "Невідомо"
+        }
+      },
+      "battery_level": {
+        "name": "Battery level"
+      },
+      "charging_status": {
+        "name": "Charging status",
+        "state": {
+          "charging": "Заряджається",
+          "charging_completed": "Заряджання завершено",
+          "not_charging": "Не заряджається",
+          "return_to_charge": "Повернення для Заряджання",
+          "unknown": "Невідомо"
+        }
+      },
+      "clean_water_tank_status": {
+        "name": "Clean water tank status",
+        "state": {
+          "installed": "Встановлений",
+          "low_water": "Низька вода",
+          "not_available": "Недоступний",
+          "not_installed": "Не встановлений",
+          "unknown": "Невідомий"
+        }
+      },
+      "cleaned_area": {
+        "name": "Cleaned area"
+      },
+      "cleaning_count": {
+        "name": "Cleaning count"
+      },
+      "cleaning_history": {
+        "name": "Cleaning history"
+      },
+      "cleaning_progress": {
+        "name": "Cleaning progress"
+      },
+      "cleaning_time": {
+        "name": "Cleaning time"
+      },
+      "cruising_history": {
+        "name": "Cruising history"
+      },
+      "current_room": {
+        "name": "Current room"
+      },
+      "deodorizer_left": {
+        "name": "Deodorizer left"
+      },
+      "deodorizer_time_left": {
+        "name": "Deodorizer time left"
+      },
+      "detergent_left": {
+        "name": "Detergent left"
+      },
+      "detergent_status": {
+        "name": "Detergent status",
+        "state": {
+          "disabled": "Інвалід",
+          "installed": "Встановлений",
+          "low_detergent": "Низький миючий засіб",
+          "unknown": "Невідомий"
+        }
+      },
+      "detergent_time_left": {
+        "name": "Detergent time left"
+      },
+      "dirty_water_tank_left": {
+        "name": "Dirty water tank left"
+      },
+      "dirty_water_tank_status": {
+        "name": "Dirty water tank status",
+        "state": {
+          "installed": "Встановлений",
+          "not_installed_or_full": "Не встановлено або повне",
+          "unknown": "Невідомий"
+        }
+      },
+      "dirty_water_tank_time_left": {
+        "name": "Dirty water tank time left"
+      },
+      "drainage_status": {
+        "name": "Drainage status",
+        "state": {
+          "draining": "Зливання",
+          "draining_failed": "Помилка зливання",
+          "draining_successful": "Зливання успішне",
+          "idle": "Бездіяльність",
+          "unknown": "Невідомо"
+        }
+      },
+      "drying_progress": {
+        "name": "Drying progress"
+      },
+      "dust_bag_status": {
+        "name": "Dust bag status",
+        "state": {
+          "check": "Перевіряти",
+          "installed": "Встановлений",
+          "not_installed": "Не встановлений",
+          "unknown": "Невідомий"
+        }
+      },
+      "dust_collection": {
+        "name": "Dust collection",
+        "state": {
+          "available": "Доступний",
+          "never": "Ніколи",
+          "not_available": "Не доступний",
+          "over_use": "Надмірне використання",
+          "unknown": "Невідомо"
+        }
+      },
+      "error": {
+        "name": "Error",
+        "state": {
+          "auto_key_trig": "Внутрішня помилка",
+          "battery_fault": "Помилка батареї",
+          "battery_low": "Низький рівень заряду батареї",
+          "battery_percentage": "Помилка рівня заряду батареї",
+          "bin_full": "Пилозбірник повний або повітряний канал заблокований.",
+          "bin_open": "Верхня кришка автоочищувальної бази не закрита або контейнер для сміття не встановлений.",
+          "blocked": "Маршрут очищення заблоковано, повертаюсь до док-станції.",
+          "bmi055_acce": "Помилка акселерометра",
+          "bmi055_gyro": "Помилка гіроскопа",
+          "box_full": "Фільтр не висох або заблокований",
+          "brush": "Щось намоталося на головну щітку",
+          "bumper": "Датчик зіткнення застряг",
+          "bumper_repeat": "Датчик зіткнення застряг",
+          "camera_fault": "Помилка камери",
+          "camera_idle": "Внутрішня помилка",
+          "camera_occlusion": "Помилка датчика візуального позиціонування",
+          "carpet": "Будь ласка, запустіть робота в зоні без килимів.",
+          "charge_fault": "Помилка під час зарядки",
+          "charge_no_electric": "Зарядна станція не підключена до джерела живлення",
+          "charger_get": "Не вдалося знайти базу",
+          "clean_mop_pad": "Прибирання завершено, будь ласка, очистіть станцію для чищення серветок.",
+          "clean_tank_level": "Перевірте бак і заповніть його якомога швидше.",
+          "cliff": "Помилка датчика падіння",
+          "dirty_tank_level": "Рівень води в резервуарі для використаної води занадто високий.",
+          "dirty_tank_not_installed": "Бак для використаної води робота не встановлено.",
+          "dirty_water_tank": "Резервуар для брудної води заповнений або не встановлено",
+          "dirty_water_tank_blocked": "Резервуар для брудної води заблокований.",
+          "dirty_water_tank_pump": "Помилка насоса резервуару для брудної води.",
+          "drop": "Колеса підвішені",
+          "drop_repeat": "Колеса підвішені",
+          "dust_bag_full": "Мішок для пилу заповнений або вентиляційні отвори заблоковані.",
+          "edge": "Помилка датчика краю",
+          "fan": "Фільтр не висох або заблокований",
+          "fan_speed_error": "Помилка датчика потужності всмоктування",
+          "filter_blocked": "Фільтр не висох або заблокований",
+          "flow_error": "Помилка датчика потоку",
+          "flow_shielding": "Помилка оптичного датчика",
+          "forward_suffocate": "Робот застряг і не може рухатися вперед",
+          "gesture": "Робот нахилено",
+          "heart": "Внутрішня помилка",
+          "infrared_fault": "Помилка інфрачервоного датчика",
+          "infrared_shielding": "Помилка інфрачервоного датчика",
+          "laser": "Сенсор 3D уникнення перешкод несправний.",
+          "lds_bumper": "Помилка лазерного датчика бампера",
+          "lds_error": "Помилка лазерного датчика відстані",
+          "left_magnet": "Помилка лівого магнітного датчика",
+          "left_wheel_motor": "Робот застряг, його ліва колесо може бути заблоковане",
+          "left_wheel_speed": "Ліве колесо може бути заблоковане сторонніми предметами",
+          "low_battery_turn_off": "Низький заряд батареї. ",
+          "mop_install_failed": "Не вдалося встановити моп.",
+          "mop_pad": "Станцію для очищення серветок встановлено неправильно.",
+          "mop_pad_stop_rotate": "Моп перестав обертатись",
+          "mop_removed": "Моп-подушка відклеїлась під час прибирання.",
+          "move": "Помилка датчика руху",
+          "no_box": "Пилозбірник не встановлено",
+          "no_error": "Помилок немає",
+          "no_go_zone": "Виявлено зону No-Go або віртуальний стіну.",
+          "no_mop_in_station": "Швабри нема на станції.",
+          "no_tank_box": "Резервуар для води не встановлений",
+          "optical_flow": "Помилка оптичного датчика потоку",
+          "p3v3": "Внутрішня помилка",
+          "remove_mop": "Прибирання завершено. Будь ласка, вчасно вийміть і очистіть моп.",
+          "restricted": "Виявлено, що робот перебуває в обмеженій зоні.",
+          "return_to_charge_failed": "Не вдалося повернутися до зарядки.",
+          "right_magnet": "Помилка правого магнітного датчика",
+          "right_wheel_motor": "Робот застряг, його права колесо може бути заблоковане",
+          "right_wheel_speed": "Праве колесо може бути заблоковане сторонніми предметами",
+          "robot_in_hidden_room": "Прихована зона. ",
+          "route": "Маршрут очищення заблоковано.",
+          "rtc": "Помилка годинника реального часу",
+          "side_brush": "Щось намоталося на бічну щітку",
+          "station_disconnected": "Станція не підключена",
+          "strong_magnet": "Виявлено сильне магнітне поле",
+          "turn_suffocate": "Робот застряг і не може повернутися",
+          "ultrasonic": "Сенсор ультразвуку несправний.",
+          "unknown": "Невідомий код помилки",
+          "washboard_level": "Рівень води в резервуарі для чистої води занадто високий.",
+          "washboard_not_working": "Пральна дошка перестає працювати.",
+          "water_box_empty": "Резервуар для води порожній",
+          "water_pump": "Помилка насосу для води",
+          "water_tank": "Резервуар для чистої води не встановлено.",
+          "water_tank_dry": "Низький рівень води в резервуарі для чистої води, будь ласка, вчасно заповніть його водою.",
+          "wet_mop_pad": "Рівень води у станції для очищення серветок ненормальний. Будь ласка, своєчасно очищуйте станцію для очищення серветок.",
+          "xv7001": "Помилка гіроскопа"
+        }
+      },
+      "filter_left": {
+        "name": "Filter left"
+      },
+      "filter_time_left": {
+        "name": "Filter time left"
+      },
+      "firmware_version": {
+        "name": "Firmware version"
+      },
+      "first_cleaning_date": {
+        "name": "First cleaning date"
+      },
+      "hot_water_status": {
+        "name": "Hot water status",
+        "state": {
+          "disabled": "Інвалід",
+          "enabled": "Увімкнено",
+          "unknown": "Невідомий"
+        }
+      },
+      "low_water_warning": {
+        "name": "Low water warning",
+        "state": {
+          "low_water": "Ось-ось закінчиться вода. Будь ласка, наповніть резервуар чистою водою.",
+          "no_warning": "Без попереджень",
+          "no_water_for_clean": "Низький рівень води в резервуарі чистої води. Робот перейшов у режим підмітання.",
+          "no_water_left": "Резервуар для чистої води майже порожній. Перевірте та негайно наповніть резервуар чистою водою.",
+          "no_water_left_after_clean": "Швабра очищена. Виявлено, що резервуар для чистої води майже порожній. Будь ласка, наповніть резервуар для чистої води та спорожніть резервуар для використаної води.",
+          "no_water_left_dismiss": "Перевірте резервуар для чистої води.",
+          "tank_not_installed": "Ємність для чистої води не встановлена."
+        }
+      },
+      "main_brush_left": {
+        "name": "Main brush left"
+      },
+      "main_brush_time_left": {
+        "name": "Main brush time left"
+      },
+      "mapping_time": {
+        "name": "Mapping time"
+      },
+      "mop_pad": {
+        "name": "Mop pad",
+        "state": {
+          "installed": "Installed",
+          "mop_in_station": "In station",
+          "mop_installed": "Mop installed",
+          "not_installed": "Not installed",
+          "unknown": "Unknown"
+        }
+      },
+      "mop_pad_left": {
+        "name": "Mop pad left"
+      },
+      "mop_pad_time_left": {
+        "name": "Mop pad time left"
+      },
+      "onboard_dirty_water_tank_left": {
+        "name": "Onboard dirty water tank left"
+      },
+      "onboard_dirty_water_tank_time_left": {
+        "name": "Onboard dirty water tank time left"
+      },
+      "relocation_status": {
+        "name": "Relocation status",
+        "state": {
+          "failed": "Не вдалося",
+          "located": "Розташовано",
+          "locating": "Визначення місцезнаходження",
+          "success": "Успішно",
+          "unknown": "Невідомо"
+        }
+      },
+      "scale_inhibitor_left": {
+        "name": "Scale inhibitor left"
+      },
+      "scale_inhibitor_time_left": {
+        "name": "Scale inhibitor time left"
+      },
+      "self_wash_base_status": {
+        "name": "Self-wash base status",
+        "state": {
+          "adding_water": "Доливання води",
+          "clean_add_water": "Миття та доливання води",
+          "drying": "Сушіння",
+          "idle": "Бездіяльність",
+          "paused": "Призупинено",
+          "returning": "Повернення для миття",
+          "unknown": "Невідомо",
+          "washing": "Миття"
+        }
+      },
+      "sensor_dirty_left": {
+        "name": "Sensor dirty left"
+      },
+      "sensor_dirty_time_left": {
+        "name": "Sensor dirty time left"
+      },
+      "side_brush_left": {
+        "name": "Side brush left"
+      },
+      "side_brush_time_left": {
+        "name": "Side brush time left"
+      },
+      "silver_ion_left": {
+        "name": "Silver-ion left"
+      },
+      "silver_ion_time_left": {
+        "name": "Silver-ion time left"
+      },
+      "squeegee_left": {
+        "name": "Squeegee left"
+      },
+      "squeegee_time_left": {
+        "name": "Squeegee time left"
+      },
+      "state": {
+        "name": "State",
+        "state": {
+          "auto_emptying": "Автоматичне спорожнення",
+          "auto_water_draining": "Автоматичний злив води",
+          "building": "Побудова мапи",
+          "charging": "Заряджається",
+          "charging_completed": "Заряджання завершено",
+          "clean_add_water": "Очищення та доливання води",
+          "clean_summon": "Викликати на прибирання",
+          "draining": "Злив",
+          "drying": "Висихає",
+          "dust_bag_drying": "Dust bag drying",
+          "dust_bag_drying_paused": "Dust bag drying paused",
+          "emptying": "Emptying",
+          "error": "Помилка",
+          "extra_cleaning": "Extra cleaning",
+          "finding_pet": "Finding pet",
+          "finding_pet_paused": "Finding pet paused",
+          "heading_to_extra_cleaning": "Heading to extra cleaning",
+          "human_following": "Слідкування за людиною",
+          "idle": "Бездіяльність",
+          "initial_deep_cleaning": "Initial deep cleaning",
+          "initial_deep_cleaning_paused": "Initial deep cleaning paused",
+          "monitoring": "Моніторинг",
+          "monitoring_paused": "Моніторинг призупинено",
+          "mopping": "Миє",
+          "paused": "Призупинено",
+          "remote_control": "Дистанційне керування",
+          "returning": "Повертається до бази",
+          "returning_auto_empty": "Повернення для автоматичного спорожнення",
+          "returning_install_mop": "Повернення для встановлення швабри",
+          "returning_remove_mop": "Повернення для видалення швабри",
+          "returning_to_drain": "Повернення до зливу",
+          "returning_to_wash": "Повертається для полоскання швабри",
+          "sanitizing": "Sanitizing",
+          "sanitizing_with_dry": "Sanitizing with dry",
+          "second_cleaning": "Прибирання вдруге",
+          "shortcut": "Шорткат",
+          "smart_charging": "Розумне заряджання",
+          "spot_cleaning": "Точкове прибирання",
+          "station_cleaning": "Прибирання вокзалу",
+          "station_reset": "Скидання станції",
+          "sweeping": "Прибирає",
+          "sweeping_and_mopping": "Підмітає та миє",
+          "unknown": "Невідомо",
+          "upgrading": "Оновлюється",
+          "waiting_for_task": "Очікування завдання",
+          "washing": "Полоскає швабру",
+          "washing_paused": "Полоскання швабри призупинено",
+          "water_check": "Перевірка води"
+        }
+      },
+      "station_drainage_status": {
+        "name": "Station drainage status",
+        "state": {
+          "draining": "Осушення",
+          "idle": "Безтурботний",
+          "unknown": "Невідомий"
+        }
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "charging": "Заряджання",
+          "cleaning": "Прибирання",
+          "cruising_path": "Переміщення за шляхом",
+          "cruising_point": "Переміщення до точки",
+          "error": "Помилка",
+          "factory": "Заводський режим",
+          "factory_test": "Заводське тестування",
+          "fast_mapping": "Швидка побудова мапи",
+          "fct": "FCT",
+          "follow_wall_cleaning": "Прибирання вздовж стін",
+          "idle": "Бездіяльність",
+          "ota": "OTA",
+          "paused": "Призупинено",
+          "person_follow": "Слідкування за особою",
+          "power_off": "Вимкнено",
+          "remote_control": "Дистанційне керування",
+          "returning": "Повернення до бази",
+          "room_cleaning": "Прибирання кімнати",
+          "self_repair": "Самоперевірка",
+          "shortcut": "Шорткат",
+          "sleeping": "Спить",
+          "spot_cleaning": "Точкове прибирання",
+          "standby": "Очікування",
+          "summon_clean": "Викликати на очищення",
+          "unknown": "Невідомо",
+          "water_check": "Перевірка води",
+          "wifi_set": "WiFi підключено",
+          "zone_cleaning": "Прибирання зони"
+        }
+      },
+      "stream_status": {
+        "name": "Stream status",
+        "state": {
+          "audio": "Аудіо",
+          "idle": "Бездіяльність",
+          "recording": "Запис",
+          "unknown": "Невідомо",
+          "video": "Відео"
+        }
+      },
+      "tank_filter_left": {
+        "name": "Tank filter left"
+      },
+      "tank_filter_time_left": {
+        "name": "Tank filter time left"
+      },
+      "task_status": {
+        "name": "Task status",
+        "state": {
+          "area_cleaning_washing_paused": "Очищення області прибирання призупинено",
+          "auto_cleaning_washing_paused": "Автоматичне очищення прання призупинене",
+          "cleaning": "Прибирання",
+          "cleaning_paused": "Прибирання призупинено",
+          "completed": "Завершено",
+          "cruising_path": "Переміщення за шляхом",
+          "cruising_path_paused": "Переміщення за шляхом призупинено",
+          "cruising_point": "Переміщення до точки",
+          "cruising_point_paused": "Переміщення до точки призупинено",
+          "custom_cleaning_washing_paused": "Спеціальна миття прибирання зробив паузу",
+          "docking_paused": "Повернення до бази призупинено",
+          "fast_mapping": "Швидка побудова мапи",
+          "map_cleaning_paused": "Повне прибирання призупинено",
+          "mopping_paused": "Вологе прибирання призупинено",
+          "pet_finding": "Виявлення домашніх тварин",
+          "returning_to_install_mop": "Повернення для встановлення швабри",
+          "returning_to_remove_mop": "Повернення для видалення швабри",
+          "room_cleaning": "Прибирання кімнати",
+          "room_cleaning_paused": "Прибирання кімнати призупинено",
+          "room_docking_paused": "Повернення до бази при прибиранні кімнати призупинено",
+          "room_mopping_paused": "Вологе прибирання кімнати призупинено",
+          "spot_cleaning": "Точкове прибирання",
+          "spot_cleaning_paused": "Точкове прибирання призупинено",
+          "station_cleaning": "Прибирання станції",
+          "summon_clean_paused": "Виклик на очищення призупинено",
+          "unknown": "Невідомо",
+          "zone_cleaning": "Прибирання зони",
+          "zone_cleaning_paused": "Прибирання зони призупинено",
+          "zone_docking_paused": "Повернення до бази при прибиранні зони призупинено",
+          "zone_mopping_paused": "Вологе прибирання зони призупинено"
+        }
+      },
+      "task_type": {
+        "name": "Task type",
+        "state": {
+          "boosted_edge_cleaning": "Підвищене очищення краю",
+          "custom": "Індивідуальне прибирання",
+          "custom_paused": "Індивідуальне прибирання призупинено",
+          "hair_compressing": "Стиснення волосся",
+          "partial": "Часткове прибирання",
+          "partial_paused": "Часткове прибирання призупинено",
+          "scheduled": "Заплановане прибирання",
+          "scheduled_paused": "Заплановане прибирання призупинено",
+          "shortcut": "Шорткат прибирання",
+          "shortcut_paused": "Шорткат прибирання призупинено",
+          "smart": "Розумне прибирання",
+          "smart_paused": "Розумне прибирання призупинено",
+          "standard": "Стандартне прибирання",
+          "standard_paused": "Стандартне прибирання призупинено",
+          "summon": "Викликане прибирання",
+          "summon_paused": "Викликане прибирання призупинено",
+          "water_stain": "Очищення плям водою",
+          "water_stain_paused": "Очищення плям від води призупинено"
+        }
+      },
+      "total_cleaned_area": {
+        "name": "Total cleaned area"
+      },
+      "total_cleaning_time": {
+        "name": "Total cleaning time"
+      },
+      "water_tank": {
+        "name": "Water tank",
+        "state": {
+          "in_station": "На станції",
+          "installed": "Встановлено",
+          "mop_installed": "Швабру встановлено",
+          "not_installed": "Не встановлено",
+          "unknown": "Невідомо"
+        }
+      },
+      "wheel_dirty_left": {
+        "name": "Wheel dirty left"
+      },
+      "wheel_dirty_time_left": {
+        "name": "Wheel dirty time left"
+      }
+    },
+    "switch": {
+      "ai_fluid_detection": {
+        "name": "AI fluid detection"
+      },
+      "ai_furniture_detection": {
+        "name": "AI furniture detection"
+      },
+      "ai_human_detection": {
+        "name": "AI human detection"
+      },
+      "ai_obstacle_detection": {
+        "name": "AI obstacle detection"
+      },
+      "ai_obstacle_image_upload": {
+        "name": "AI obstacle image upload"
+      },
+      "ai_obstacle_picture": {
+        "name": "AI obstacle picture"
+      },
+      "ai_pet_avoidance": {
+        "name": "AI pet avoidance"
+      },
+      "ai_pet_detection": {
+        "name": "AI pet detection"
+      },
+      "auto_add_detergent": {
+        "name": "Auto-add detergent"
+      },
+      "auto_charging": {
+        "name": "Auto charging"
+      },
+      "auto_drying": {
+        "name": "Auto drying"
+      },
+      "auto_dust_collecting": {
+        "name": "Auto dust collecting"
+      },
+      "auto_lds_lifting": {
+        "name": "Auto lds lifting"
+      },
+      "auto_mount_mop": {
+        "name": "Auto mount mop"
+      },
+      "auto_water_refilling": {
+        "name": "Auto water refilling"
+      },
+      "camera_light_brightness_auto": {
+        "name": "Camera light brightness auto"
+      },
+      "carpet_avoidance": {
+        "name": "Carpet avoidance"
+      },
+      "carpet_boost": {
+        "name": "Carpet boost"
+      },
+      "carpet_recognition": {
+        "name": "Carpet recognition"
+      },
+      "child_lock": {
+        "name": "Child lock"
+      },
+      "clean_carpets_first": {
+        "name": "Clean carpets first"
+      },
+      "cleaning_sequence": {
+        "name": "Cleaning sequence"
+      },
+      "collision_avoidance": {
+        "name": "Collision avoidance"
+      },
+      "customized_cleaning": {
+        "name": "Customized cleaning"
+      },
+      "dnd": {
+        "name": "DnD"
+      },
+      "dnd_disable_auto_empty": {
+        "name": "DnD disable auto empty"
+      },
+      "dnd_disable_resume_cleaning": {
+        "name": "DnD disable resume cleaning"
+      },
+      "dnd_reduce_volume": {
+        "name": "DnD reduce volume"
+      },
+      "fill_light": {
+        "name": "Fill light"
+      },
+      "floor_direction_cleaning": {
+        "name": "Floor direction cleaning"
+      },
+      "fuzzy_obstacle_detection": {
+        "name": "Fuzzy obstacle detection"
+      },
+      "gap_cleaning_extension": {
+        "name": "Gap cleaning extension"
+      },
+      "hair_compression": {
+        "name": "Hair compression"
+      },
+      "hot_washing": {
+        "name": "Hot washing"
+      },
+      "human_follow": {
+        "name": "Human follow"
+      },
+      "intelligent_recognition": {
+        "name": "Intelligent recognition"
+      },
+      "intensive_carpet_cleaning": {
+        "name": "Intensive carpet cleaning"
+      },
+      "large_particles_boost": {
+        "name": "Large particles boost"
+      },
+      "map_saving": {
+        "name": "Map saving"
+      },
+      "max_suction_power": {
+        "name": "Max suction power"
+      },
+      "mop_extend": {
+        "name": "Mop extend"
+      },
+      "mop_washing_with_detergent": {
+        "name": "Mop washing with detergent"
+      },
+      "mopping_under_furnitures": {
+        "name": "Mopping under furnitures"
+      },
+      "multi_floor_map": {
+        "name": "Multi floor map"
+      },
+      "obstacle_avoidance": {
+        "name": "Obstacle avoidance"
+      },
+      "off_peak_charging": {
+        "name": "Off-peak charging"
+      },
+      "pet_focused_cleaning": {
+        "name": "Pet focused cleaning"
+      },
+      "pet_focused_detection": {
+        "name": "Pet focused detection"
+      },
+      "pet_picture": {
+        "name": "Pet picture"
+      },
+      "resume_cleaning": {
+        "name": "Resume cleaning"
+      },
+      "self_clean": {
+        "name": "Self-clean"
+      },
+      "self_clean_by_zone": {
+        "name": "Self-clean by zone"
+      },
+      "side_brush_carpet_rotate": {
+        "name": "Side brush carpet rotate"
+      },
+      "side_reach": {
+        "name": "Side reach"
+      },
+      "silent_drying": {
+        "name": "Silent drying"
+      },
+      "smart_drying": {
+        "name": "Smart drying"
+      },
+      "smart_mop_washing": {
+        "name": "Smart mop washing"
+      },
+      "stain_avoidance": {
+        "name": "Stain avoidance"
+      },
+      "streaming_voice_prompt": {
+        "name": "Streaming voice prompt"
+      },
+      "tight_mopping": {
+        "name": "Tight mopping"
+      },
+      "ultra_clean_mode": {
+        "name": "Ultra clean mode"
+      },
+      "uv_sterilization": {
+        "name": "UV sterilization"
+      },
+      "voice_assistant": {
+        "name": "Voice assistant"
+      },
+      "water_electrolysis": {
+        "name": "Water electrolysis"
+      }
+    },
+    "time": {
+      "dnd_end": {
+        "name": "DnD end"
+      },
+      "dnd_start": {
+        "name": "DnD start"
+      },
+      "off_peak_charging_end": {
+        "name": "Off-peak charging end"
+      },
+      "off_peak_charging_start": {
+        "name": "Off-peak charging start"
+      }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Authentication failed."
+    },
+    "device_not_available": {
+      "message": "Device is not available."
+    },
+    "entity_unavailable": {
+      "message": "Entity is not available."
+    },
+    "fan_speed_cruising": {
+      "message": "Cannot change fan speed while cruising."
+    },
+    "fan_speed_customized_cleaning": {
+      "message": "Cannot change fan speed when customized cleaning is enabled."
+    },
+    "fan_speed_not_recognized": {
+      "message": "Fan speed not recognized. Valid options: {options}."
+    },
+    "invalid_fan_speed": {
+      "message": "Invalid fan speed."
+    },
+    "invalid_option": {
+      "message": "Invalid option for {name}: {option}. Valid options: {options}."
+    },
+    "invalid_value": {
+      "message": "Invalid value."
+    },
+    "map_data_unavailable": {
+      "message": "Map data is not available."
+    },
+    "not_implemented": {
+      "message": "This operation is not implemented."
+    }
+  },
+  "issues": {
+    "consumable_depleted": {
+      "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
+      "title": "Consumable depleted on {device_name}"
+    }
+  },
+  "options": {
+    "error": {
+      "cloud_credentials_incomplete": "Неповні облікові дані хмари, будь ласка, заповніть ім'я користувача, пароль та країну"
+    },
+    "step": {
+      "init": {
+        "data": {
+          "color_scheme": "Колірна схема мапи",
+          "configuration_type": "Тип конфігурації",
+          "hidden_map_objects": "Приховані об’єкти карти",
+          "icon_set": "Набір піктограм для мапи",
+          "low_resolution": "Карта низької роздільної здатності",
+          "notify": "Сповіщення",
+          "prefer_cloud": "Перевага хмарного з'єднання",
+          "square": "Квадратна карта"
+        },
+        "data_description": {
+          "color_scheme": "Color theme used for the vacuum map.",
+          "configuration_type": "Connection method for the vacuum device.",
+          "hidden_map_objects": "Map elements to hide from the display.",
+          "icon_set": "Icon style used on the vacuum map.",
+          "low_resolution": "Use lower resolution for faster map rendering.",
+          "notify": "Select which notifications to receive from the device.",
+          "prefer_cloud": "Use cloud connection instead of local when available.",
+          "square": "Display the map as a square instead of its original aspect ratio."
+        }
+      }
+    }
+  },
+  "services": {
+    "select_select_first": {
+      "description": "Виберіть перший параметр вибраної сутності.",
+      "name": "Виберіть Перший"
+    },
+    "select_select_last": {
+      "description": "Виберіть останню опцію вибраної сутності.",
+      "name": "Виберіть Останній"
+    },
+    "select_select_next": {
+      "description": "Виберіть наступні параметри вибраної сутності.",
+      "fields": {
+        "cycle": {
+          "description": "Якщо параметр має циклічно переходити від першого до останнього.",
+          "name": "Цикл"
+        }
+      },
+      "name": "Виберіть Далі"
+    },
+    "select_select_previous": {
+      "description": "Виберіть попередні параметри вибраної сутності.",
+      "fields": {
+        "cycle": {
+          "description": "Якщо параметр має циклічно переходити від першого до останнього.",
+          "name": "Цикл"
+        }
+      },
+      "name": "Виберіть Назад"
+    },
+    "vacuum_backup_map": {
+      "description": "Резервне копіювання карти в хмару.",
+      "fields": {
+        "map_id": {
+          "description": "ID карти, яку потрібно відновити.",
+          "name": "ID карти"
+        }
+      },
+      "name": "Резервна карта"
+    },
+    "vacuum_clean_segment": {
+      "description": "Почніть прибирання у вибраних кімнатах.",
+      "fields": {
+        "repeats": {
+          "description": "Кількість проходів прибирання для кожної вибраної кімнати (якщо це не перевизначено спеціальним параметром прибирання).",
+          "name": "Повтори"
+        },
+        "segments": {
+          "description": "Список приміщень, що підлягають прибиранню. ",
+          "name": "Сегменти"
+        },
+        "suction_level": {
+          "description": "Швидкість вентилятора для кожної вибраної кімнати (якщо вона не перевизначена індивідуальним параметром прибирання).",
+          "name": "Рівень всмоктування"
+        },
+        "water_volume": {
+          "description": "Рівень води для кожної вибраної кімнати (якщо він не перекривається індивідуальним параметром очищення).",
+          "name": "Об'єм води"
+        }
+      },
+      "name": "Чистий сегмент"
+    },
+    "vacuum_clean_spot": {
+      "description": "Почніть операцію з очищення у вибраних точках на карті.",
+      "fields": {
+        "points": {
+          "description": "Список координат для очищення.",
+          "name": "Очки"
+        },
+        "repeats": {
+          "description": "Кількість проходів очищення для кожної вибраної зони.",
+          "name": "Повтори"
+        },
+        "suction_level": {
+          "description": "Швидкість вентилятора для кожної вибраної зони.",
+          "name": "Рівень всмоктування"
+        },
+        "water_volume": {
+          "description": "Рівень води для кожної вибраної зони.",
+          "name": "Об'єм води"
+        }
+      },
+      "name": "Чисте місце"
+    },
+    "vacuum_clean_zone": {
+      "description": "Почніть операцію очищення у вибраній зоні.",
+      "fields": {
+        "repeats": {
+          "description": "Кількість проходів очищення для кожної вибраної зони.",
+          "name": "Повтори"
+        },
+        "suction_level": {
+          "description": "Швидкість вентилятора для кожної вибраної зони.",
+          "name": "Рівень всмоктування"
+        },
+        "water_volume": {
+          "description": "Рівень води для кожної вибраної зони.",
+          "name": "Об'єм води"
+        },
+        "zone": {
+          "description": "Координати.",
+          "name": "зона"
+        }
+      },
+      "name": "Чиста зона"
+    },
+    "vacuum_delete_map": {
+      "description": "Видалити карту.",
+      "fields": {
+        "map_id": {
+          "description": "ID карти, яку потрібно видалити.",
+          "name": "ID карти"
+        }
+      },
+      "name": "Видалити карту"
+    },
+    "vacuum_discard_temporary_map": {
+      "description": "Відмовтеся від тимчасової карти.",
+      "name": "Видалити тимчасову карту"
+    },
+    "vacuum_follow_path": {
+      "description": "Дотримуйтеся списку координат на карті та повертайтеся на базу. ",
+      "fields": {
+        "points": {
+          "description": "Список координат шляху.",
+          "name": "Очки"
+        }
+      },
+      "name": "Дотримуйтесь шляху"
+    },
+    "vacuum_goto": {
+      "description": "Перейдіть до координати карти і зупиніться.",
+      "fields": {
+        "x": {
+          "description": "X Координата точки.",
+          "name": "X"
+        },
+        "y": {
+          "description": "Y Координата точки.",
+          "name": "Ю"
+        }
+      },
+      "name": "Йти до"
+    },
+    "vacuum_install_voice_pack": {
+      "description": "Встановіть офіційний або спеціальний голосовий пакет.",
+      "fields": {
+        "lang_id": {
+          "description": "Ідентифікатор мови цього пакета.",
+          "name": "ID мови"
+        },
+        "md5": {
+          "description": "Контрольна сума MD5 мовного пакета.",
+          "name": "MD5"
+        },
+        "size": {
+          "description": "Розмір мовного пакета в байтах.",
+          "name": "Розмір"
+        },
+        "url": {
+          "description": "URL-адреса цього пакета має бути доступна для вакуумного бота.",
+          "name": "URL"
+        }
+      },
+      "name": "Встановіть Voice Pack"
+    },
+    "vacuum_merge_segments": {
+      "description": "Об'єднати кімнати.",
+      "fields": {
+        "map_id": {
+          "description": "ID карти.",
+          "name": "ID карти"
+        },
+        "segments": {
+          "description": "Ідентифікатори кімнат.",
+          "name": "Сегменти"
+        }
+      },
+      "name": "Об’єднати сегменти"
+    },
+    "vacuum_remote_control_move_step": {
+      "description": "Дистанційне керування переміщення бота на один крок.",
+      "fields": {
+        "rotation": {
+          "description": "Переведіть у двійкові градуси від -128 до 128.",
+          "name": "Обертання"
+        },
+        "velocity": {
+          "description": "Швидкість пересування від 100 (вперед) до -300 (назад).",
+          "name": "швидкість"
+        }
+      },
+      "name": "Крок переміщення пульта дистанційного керування"
+    },
+    "vacuum_rename_map": {
+      "description": "Перейменувати карту.",
+      "fields": {
+        "map_id": {
+          "description": "ID карти.",
+          "name": "ID карти"
+        },
+        "map_name": {
+          "description": "Нова назва карти.",
+          "name": "Назва карти"
+        }
+      },
+      "name": "Перейменувати карту"
+    },
+    "vacuum_rename_segment": {
+      "description": "Перейменувати сегмент.",
+      "fields": {
+        "segment_id": {
+          "description": "ID сегмента",
+          "name": "Ідентифікатор сегмента"
+        },
+        "segment_name": {
+          "description": "Нова назва сегмента",
+          "name": "Назва сегмента"
+        }
+      },
+      "name": "Перейменувати сегмент"
+    },
+    "vacuum_rename_shortcut": {
+      "description": "Перейменувати ярлик. ",
+      "fields": {
+        "shortcut_id": {
+          "description": "ID ярлика.",
+          "name": "Ідентифікатор ярлика"
+        },
+        "shortcut_name": {
+          "description": "Нова назва ярлика.",
+          "name": "Назва ярлика"
+        }
+      },
+      "name": "Перейменувати ярлик"
+    },
+    "vacuum_replace_temporary_map": {
+      "description": "Замініть тимчасову карту іншою збереженою.",
+      "fields": {
+        "map_id": {
+          "description": "ID карти, на яку потрібно замінити.",
+          "name": "ID карти"
+        }
+      },
+      "name": "Замінити тимчасову карту"
+    },
+    "vacuum_request_map": {
+      "description": "Запит картографічних даних",
+      "name": "Карта запиту"
+    },
+    "vacuum_reset_consumable": {
+      "description": "Скинути витратний матеріал.",
+      "fields": {
+        "consumable": {
+          "description": "Тип витратного матеріалу.",
+          "name": "Витратний матеріал"
+        }
+      },
+      "name": "Скидання витратних матеріалів"
+    },
+    "vacuum_restore_map": {
+      "description": "Відновити карту.",
+      "fields": {
+        "map_id": {
+          "description": "ID карти, яку потрібно відновити.",
+          "name": "ID карти"
+        },
+        "recovery_map_index": {
+          "description": "Індекс збереженої карти відновлення",
+          "name": "Індекс карти відновлення"
+        }
+      },
+      "name": "Відновити карту"
+    },
+    "vacuum_restore_map_from_file": {
+      "description": "Відновити карту з файлу.",
+      "fields": {
+        "file_url": {
+          "description": "URL-адреса збереженого файлу tbz2.gz або tar.gz",
+          "name": "URL-адреса файлу"
+        },
+        "map_id": {
+          "description": "ID карти, яку потрібно відновити.",
+          "name": "ID карти"
+        }
+      },
+      "name": "Відновити карту з файлу"
+    },
+    "vacuum_save_temporary_map": {
+      "description": "Збережіть тимчасову карту.",
+      "name": "Зберегти тимчасову карту"
+    },
+    "vacuum_select_map": {
+      "description": "Виберіть поточну карту. ",
+      "fields": {
+        "map_id": {
+          "description": "ID карти, яку потрібно вибрати.",
+          "name": "ID карти"
+        }
+      },
+      "name": "Виберіть Карта"
+    },
+    "vacuum_set_carpet_area": {
+      "description": "Визначте килими та ігноровані килими. ",
+      "fields": {
+        "carpets": {
+          "description": "Килимові зони.",
+          "name": "Килими"
+        },
+        "ignored_carpets": {
+          "description": "Ігноровані ділянки килима для видалення автоматично виявлених килимів.",
+          "name": "Ігноровані килими"
+        }
+      },
+      "name": "Встановити килимову зону"
+    },
+    "vacuum_set_cleaning_sequence": {
+      "description": "Встановити послідовність прибирання приміщення. ",
+      "fields": {
+        "cleaning_sequence": {
+          "description": "Список ідентифікаторів сегментів послідовності очищення.",
+          "name": "Послідовність очищення"
+        }
+      },
+      "name": "Встановіть послідовність очищення"
+    },
+    "vacuum_set_custom_carpet_cleaning": {
+      "description": "Встановити індивідуальні налаштування очищення килимів. (Тільки на підтримуваних пристроях)",
+      "fields": {
+        "carpet_cleaning": {
+          "description": "Індивідуальні налаштування очищення для кожного килима.",
+          "name": "Чищення килима"
+        },
+        "carpet_settings": {
+          "description": "Індивідуальні налаштування для кожного килима з масивом увімкнених параметрів.",
+          "name": "Налаштування килима"
+        },
+        "id": {
+          "description": "ID килимів.",
+          "name": "ID килима"
+        },
+        "type": {
+          "description": "Тип об'єкта з цим ID. (0 = Автоматично виявлений килим, 1 = Ручне створення килима, 2 = Килим у кімнаті (якщо підтримується))",
+          "name": "Тип об'єкта"
+        }
+      },
+      "name": "Встановити індивідуальне чищення килима"
+    },
+    "vacuum_set_custom_cleaning": {
+      "description": "Встановіть власні параметри очищення. ",
+      "fields": {
+        "cleaning_mode": {
+          "description": "Прибирання для кожної кімнати (підтримується лише на пилососах із функцією підйому мочалки).",
+          "name": "Режим очищення"
+        },
+        "repeats": {
+          "description": "Час прибирання для кожної кімнати.",
+          "name": "Повтори"
+        },
+        "segment_id": {
+          "description": "Ідентифікатори кімнат.",
+          "name": "Ідентифікатор сегмента"
+        },
+        "suction_level": {
+          "description": "Рівень всмоктування для кожної кімнати.",
+          "name": "Рівень всмоктування"
+        },
+        "water_volume": {
+          "description": "Обсяг води для кожної кімнати.",
+          "name": "Об'єм води"
+        },
+        "wetness_level": {
+          "description": "Wetness level for each room. (On supported devices)",
+          "name": "Wetness Level"
+        }
+      },
+      "name": "Встановити спеціальне очищення"
+    },
+    "vacuum_set_obstacle_ignore": {
+      "description": "Встановити статус ігнорування перешкоди. ",
+      "fields": {
+        "obstacle_ignored": {
+          "description": "Перешкода ігнорується чи ні.",
+          "name": "Перешкода проігнорована"
+        },
+        "x": {
+          "description": "X Координата перешкоди.",
+          "name": "X"
+        },
+        "y": {
+          "description": "Y Координата перешкоди.",
+          "name": "Ю"
+        }
+      },
+      "name": "Встановити ігнорування перешкод"
+    },
+    "vacuum_set_predefined_points": {
+      "description": "Визначте попередньо визначені координати на поточній карті. ",
+      "fields": {
+        "points": {
+          "description": "Список координат для збереження.",
+          "name": "Очки"
+        }
+      },
+      "name": "Встановіть попередньо визначені точки"
+    },
+    "vacuum_set_restricted_zone": {
+      "description": "Визначте віртуальні стіни, зони обмеження та/або зони без швабри.",
+      "fields": {
+        "no_mops": {
+          "description": "Без зон для швабри.",
+          "name": "Без швабр"
+        },
+        "walls": {
+          "description": "Віртуальні стіни.",
+          "name": "Стіни"
+        },
+        "zones": {
+          "description": "Зони заборонені.",
+          "name": "Зони"
+        }
+      },
+      "name": "Встановити заборонену зону"
+    },
+    "vacuum_set_router_position": {
+      "description": "Встановити положення маршрутизатора на поточній карті. ",
+      "fields": {
+        "x": {
+          "description": "X Координата маршрутизатора.",
+          "name": "X"
+        },
+        "y": {
+          "description": "Y Координата маршрутизатора.",
+          "name": "Ю"
+        }
+      },
+      "name": "Встановіть положення маршрутизатора"
+    },
+    "vacuum_set_virtual_threshold": {
+      "description": "Визначте шляхи.",
+      "fields": {
+        "virtual_thresholds": {
+          "description": "Координати лінії шляху.",
+          "name": "Шляхи"
+        }
+      },
+      "name": "Встановити шлях"
+    },
+    "vacuum_split_segments": {
+      "description": "Розділені кімнати.",
+      "fields": {
+        "line": {
+          "description": "Координати розбитої лінії.",
+          "name": "лінія"
+        },
+        "map_id": {
+          "description": "ID карти.",
+          "name": "ID карти"
+        },
+        "segment": {
+          "description": "ID кімнати.",
+          "name": "Відрізок"
+        }
+      },
+      "name": "Розбиті сегменти"
+    },
+    "vacuum_start_shortcut": {
+      "description": "Запустити завдання ярлика. (Тільки на підтримуваних пристроях)",
+      "fields": {
+        "shortcut_id": {
+          "description": "ID ярлика.",
+          "name": "ID ярлика"
+        }
+      },
+      "name": "Запустити ярлик"
+    }
+  }
+}

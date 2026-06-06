@@ -1,0 +1,30 @@
+{
+  "domain": "dreame_vacuum",
+  "name": "Dreame Vacuum",
+  "codeowners": [
+    "@foXaCe"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "camera",
+    "http"
+  ],
+  "documentation": "https://github.com/foXaCe/dreame-vacuum#features",
+  "integration_type": "hub",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/foXaCe/dreame-vacuum/issues",
+  "loggers": [
+    "custom_components.dreame_vacuum"
+  ],
+  "quality_scale": "gold",
+  "requirements": [
+    "pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "requests>=2.28.0",
+    "pycryptodome>=3.18.0",
+    "python-miio>=0.5.12",
+    "mini-racer>=0.12.0",
+    "paho-mqtt>=2.0.0"
+  ],
+  "version": "6.3.1"
+}

@@ -1,0 +1,21 @@
+---
+name: Hassfest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate manifest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Hassfest validation
+        uses: home-assistant/actions/hassfest@868e6cb4607727d764341a158d98872cd63fa658  # master 2026-01-30
