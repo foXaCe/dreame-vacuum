@@ -113,7 +113,8 @@
           "notify": "Notification",
           "hidden_map_objects": "Hidden map objects",
           "low_resolution": "Low resolution map",
-          "square": "Square map"
+          "square": "Square map",
+          "vector_rooms": "Smooth map edges"
         },
         "data_description": {
           "name": "Display name for this device in Home Assistant.",
@@ -122,7 +123,8 @@
           "notify": "Select which notifications to receive from the device.",
           "hidden_map_objects": "Map elements to hide from the display.",
           "low_resolution": "Use lower resolution for faster map rendering.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-alias diagonal room and wall edges for a cleaner, more premium map."
         }
       },
       "reauth_confirm": {
@@ -151,6 +153,7 @@
           "hidden_map_objects": "Hidden map objects",
           "low_resolution": "Low resolution map",
           "square": "Square map",
+          "vector_rooms": "Smooth map edges",
           "configuration_type": "Configuration type",
           "prefer_cloud": "Prefer cloud connection"
         },
@@ -161,6 +164,7 @@
           "hidden_map_objects": "Map elements to hide from the display.",
           "low_resolution": "Use lower resolution for faster map rendering.",
           "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-alias diagonal room and wall edges for a cleaner, more premium map.",
           "configuration_type": "Connection method for the vacuum device.",
           "prefer_cloud": "Use cloud connection instead of local when available."
         }
