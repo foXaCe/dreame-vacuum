@@ -10,17 +10,17 @@ from collections.abc import Callable
 import copy
 from enum import IntEnum
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.components.select import (
     ENTITY_ID_FORMAT,
     SelectEntity,
 )
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_platform, entity_registry
-from homeassistant.helpers.entity import EntityCategory, async_generate_entity_id
+from homeassistant.helpers.entity import async_generate_entity_id
 import voluptuous as vol
 
 PARALLEL_UPDATES = 1
@@ -78,7 +78,7 @@ from .dreame import (
     DreameVacuumWiderCornerCoverage,
 )
 from .dreame.const import ATTR_VALUE, STATE_NOT_SET
-from .dreame.vacuum_types import ATTR_MAP_ID, ATTR_MAP_INDEX
+from .dreame.vacuum_types import ATTR_MAP_ID, ATTR_MAP_INDEX, Segment
 from .entity import (
     DreameVacuumEntity,
     DreameVacuumSelectEntityDescription,
@@ -774,6 +774,7 @@ async def async_setup_entry(
         if description.exists_fn(description, coordinator.device)
     )
     platform = entity_platform.current_platform.get()
+    assert platform is not None
     platform.async_register_entity_service(
         SERVICE_SELECT_NEXT,
         {vol.Optional(INPUT_CYCLE, default=True): bool},
@@ -795,23 +796,21 @@ async def async_setup_entry(
 @callback
 def async_update_segment_selects(
     coordinator: DreameVacuumDataUpdateCoordinator,
-    current: dict[str, list[DreameVacuumSegmentSelectEntity]],
-    async_add_entities,
+    current: dict[int, list[DreameVacuumSegmentSelectEntity]],
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
-    new_ids = []
+    new_ids: set[int] = set()
     if coordinator.device and coordinator.device.status.map_list:
-        for k, v in coordinator.device.status.map_data_list.items():
-            for j, s in v.segments.items():
-                if j not in new_ids:
-                    new_ids.append(j)
+        for k, v in (coordinator.device.status.map_data_list or {}).items():
+            for j, s in (v.segments or {}).items():
+                new_ids.add(j)
 
-    new_ids = set(new_ids)
     current_ids = set(current)
 
     for segment_id in current_ids - new_ids:
         async_remove_segment_selects(segment_id, coordinator, current)
 
-    new_entities = []
+    new_entities: list[DreameVacuumSegmentSelectEntity] = []
     for segment_id in new_ids - current_ids:
         current[segment_id] = [
             DreameVacuumSegmentSelectEntity(coordinator, description, segment_id)
@@ -825,9 +824,9 @@ def async_update_segment_selects(
 
 
 def async_remove_segment_selects(
-    segment_id: str,
+    segment_id: int,
     coordinator: DreameVacuumDataUpdateCoordinator,
-    current: dict[str, DreameVacuumSegmentSelectEntity],
+    current: dict[int, list[DreameVacuumSegmentSelectEntity]],
 ) -> None:
     registry = entity_registry.async_get(coordinator.hass)
     entities = current[segment_id]
@@ -848,6 +847,13 @@ class DreameVacuumOptionNavigationMixin:
 
     __slots__ = ()
 
+    if TYPE_CHECKING:
+        # Provided by SelectEntity, which this mixin is combined with at runtime.
+        _attr_options: list[str] | None
+        _attr_current_option: str | None
+
+        async def async_select_option(self, option: str) -> None: ...
+
     async def async_select_index(self, idx: int) -> None:
         """Select new option by index."""
         if not self._attr_options:
@@ -859,8 +865,9 @@ class DreameVacuumOptionNavigationMixin:
         """Offset current index."""
         if not self._attr_options:
             return
+        current_option = self._attr_current_option
         try:
-            current_index = self._attr_options.index(self._attr_current_option)
+            current_index = self._attr_options.index(current_option) if current_option is not None else 0
         except ValueError:
             current_index = 0
         new_index = current_index + offset
@@ -891,7 +898,7 @@ class DreameVacuumOptionNavigationMixin:
         await self.async_offset_index(-1, cycle)
 
 
-class DreameVacuumSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEntity, SelectEntity):
+class DreameVacuumSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEntity, SelectEntity):  # type: ignore[misc]
     """Defines a Dreame Vacuum select."""
 
     __slots__ = ("_computed_options_fn", "_computed_set_fn")
@@ -911,30 +918,36 @@ class DreameVacuumSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEn
 
         # Override _computed_value_fn if we have a _name property
         if description.value_fn is None and (description.property_key is not None or self._computed_key is not None):
+            value_prop: str | None = None
             if description.property_key is not None:
-                prop = f"{description.property_key.name.lower()}_name"
-            else:
-                prop = f"{self._computed_key.lower()}_name" if self._computed_key else None
-            if prop and hasattr(coordinator.device.status, prop):
-                self._computed_value_fn = lambda value, device, p=prop: getattr(device.status, p)
+                value_prop = f"{description.property_key.name.lower()}_name"
+            elif self._computed_key:
+                value_prop = f"{self._computed_key.lower()}_name"
+            if value_prop is not None and hasattr(coordinator.device.status, value_prop):
+                attr_name = value_prop
+                self._computed_value_fn = lambda value, device: getattr(device.status, attr_name)
 
         # Override _computed_set_fn if we can find a setter method
         if description.set_fn is None and (description.property_key is not None or self._computed_key is not None):
+            set_prop: str | None = None
             if description.property_key is not None:
                 set_prop = f"set_{description.property_key.name.lower()}"
-            else:
-                set_prop = f"set_{self._computed_key.lower()}" if self._computed_key else None
-            if set_prop and hasattr(coordinator.device, set_prop):
-                self._computed_set_fn = lambda device, segment_id, value, p=set_prop: getattr(device, p)(value)
+            elif self._computed_key:
+                set_prop = f"set_{self._computed_key.lower()}"
+            if set_prop is not None and hasattr(coordinator.device, set_prop):
+                set_name = set_prop
+                self._computed_set_fn = lambda device, segment_id, value: getattr(device, set_name)(value)
 
         # Override _computed_options_fn if we have a _list property
         if description.options is None and (description.property_key is not None or self._computed_key is not None):
+            options_prop: str | None = None
             if description.property_key is not None:
                 options_prop = f"{description.property_key.name.lower()}_list"
-            else:
-                options_prop = f"{self._computed_key.lower()}_list" if self._computed_key else None
-            if options_prop and hasattr(coordinator.device.status, options_prop):
-                self._computed_options_fn = lambda device, segment, p=options_prop: list(getattr(device.status, p))
+            elif self._computed_key:
+                options_prop = f"{self._computed_key.lower()}_list"
+            if options_prop is not None and hasattr(coordinator.device.status, options_prop):
+                list_name = options_prop
+                self._computed_options_fn = lambda device, segment: list(getattr(device.status, list_name))
 
         self._generate_entity_id(ENTITY_ID_FORMAT)
         if self._computed_options_fn is not None:
@@ -957,7 +970,7 @@ class DreameVacuumSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEn
                 translation_key="entity_unavailable",
             )
 
-        if option not in self._attr_options:
+        if option not in (self._attr_options or []):
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="invalid_option",
@@ -968,7 +981,7 @@ class DreameVacuumSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEn
                 },
             )
 
-        value = option
+        value: str | int | None = option
         if self.entity_description.value_int_fn is not None:
             value = self.entity_description.value_int_fn(option, self.device)
 
@@ -1005,7 +1018,7 @@ class DreameVacuumSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEn
             )
 
 
-class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEntity, SelectEntity):
+class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEntity, SelectEntity):  # type: ignore[misc]
     """Defines a Dreame Vacuum Segment select."""
 
     __slots__ = ("_segment_options_fn", "_segment_set_fn", "segment", "segment_id", "segments")
@@ -1029,11 +1042,11 @@ class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameV
     ) -> None:
         """Initialize Dreame Vacuum Segment Select."""
         self.segment_id = segment_id
-        self.segment = None
+        self.segment: Segment | None = None
         self.segments = None
         self._segment_set_fn: Callable[[Any, int, int], None] | None = description.set_fn
         self._segment_options_fn: Callable[[Any, Any], list[str]] | None = description.options
-        if coordinator.device:
+        if coordinator.device and description.segment_list_fn is not None:
             self.segments = copy.deepcopy(description.segment_list_fn(coordinator.device))
             if segment_id in self.segments:
                 self.segment = self.segments[segment_id]
@@ -1042,25 +1055,25 @@ class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameV
 
         # Override _segment_set_fn if we can find a segment setter method
         if description.set_fn is None and (description.property_key is not None or self._computed_key is not None):
+            segment_set_prop: str | None = None
             if description.property_key is not None:
                 segment_set_prop = f"set_segment_{description.property_key.name.lower()}"
-            else:
-                segment_set_prop = f"set_segment_{self._computed_key.lower()}" if self._computed_key else None
-            if segment_set_prop and hasattr(coordinator.device, segment_set_prop):
-                self._segment_set_fn = lambda device, segment_id, value, p=segment_set_prop: getattr(device, p)(
-                    segment_id, value
-                )
+            elif self._computed_key:
+                segment_set_prop = f"set_segment_{self._computed_key.lower()}"
+            if segment_set_prop is not None and hasattr(coordinator.device, segment_set_prop):
+                set_name = segment_set_prop
+                self._segment_set_fn = lambda device, segment_id, value: getattr(device, set_name)(segment_id, value)
 
         # Override _segment_options_fn if we have a _list property
         if description.options is None and (description.property_key is not None or self._computed_key is not None):
+            segment_options_prop: str | None = None
             if description.property_key is not None:
                 segment_options_prop = f"{description.property_key.name.lower()}_list"
-            else:
-                segment_options_prop = f"{self._computed_key.lower()}_list" if self._computed_key else None
-            if segment_options_prop and hasattr(coordinator.device.status, segment_options_prop):
-                self._segment_options_fn = lambda device, segment, p=segment_options_prop: list(
-                    getattr(device.status, p)
-                )
+            elif self._computed_key:
+                segment_options_prop = f"{self._computed_key.lower()}_list"
+            if segment_options_prop is not None and hasattr(coordinator.device.status, segment_options_prop):
+                list_name = segment_options_prop
+                self._segment_options_fn = lambda device, segment: list(getattr(device.status, list_name))
 
         # Override options for room name select to use translated room type names
         if description.name == "" and description.options is not None:
@@ -1106,8 +1119,9 @@ class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameV
             self._attr_icon = "mdi:home-off-outline"
 
     @property
-    def _device_segments(self):
-        return self.entity_description.segment_list_fn(self.device)
+    def _device_segments(self) -> Any:
+        segment_list_fn = self.entity_description.segment_list_fn
+        return segment_list_fn(self.device) if segment_list_fn is not None else None
 
     @property
     def enabled(self) -> bool:
@@ -1150,7 +1164,7 @@ class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameV
                 translation_key="entity_unavailable",
             )
 
-        value = option
+        value: str | int | None = option
         if self.entity_description.value_int_fn is not None:
             value = self.entity_description.value_int_fn(value, self)
 
@@ -1208,4 +1222,7 @@ class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameV
             if self.entity_description.name == "":
                 # Room name select - return translated name
                 return self.segment.get_translated_name(self.coordinator.hass.config.language)
-            return self.entity_description.value_fn(self.device, self.segment)
+            value_fn = self.entity_description.value_fn
+            if value_fn is not None:
+                return cast("str | None", value_fn(self.device, self.segment))
+        return None

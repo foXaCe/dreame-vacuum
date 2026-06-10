@@ -13,6 +13,7 @@ from functools import cmp_to_key
 import logging
 import math
 import traceback
+from typing import Any
 
 import numpy as np
 from py_mini_racer import MiniRacer
@@ -33,9 +34,9 @@ _LOGGER = logging.getLogger(__name__)
 
 class DreameVacuumMapOptimizer:
     def __init__(self) -> None:
-        self._js_optimizer = None
+        self._js_optimizer: MiniRacer | None = None
 
-    def _clean_wall(self, data, width, height):
+    def _clean_wall(self, data: Any, width: Any, height: Any) -> Any:
         for j in range(1, height - 1):
             for i in range(1, width - 1):
                 index = j * width + i
@@ -65,7 +66,7 @@ class DreameVacuumMapOptimizer:
             if data[i] == 2:
                 data[i] = 0
 
-    def _obstacle_data(self, data, width, height):
+    def _obstacle_data(self, data: Any, width: Any, height: Any) -> Any:
         for it in range(2):
             for j in range(height):
                 for i in range(width):
@@ -79,7 +80,7 @@ class DreameVacuumMapOptimizer:
                         if (l == 0 and r == 2) or (l == 2 and r == 0) or (t == 0 and b == 2) or (t == 2 and b == 0):
                             data[index] = 0
 
-    def _find_first_empty_point(self, data, width, height):
+    def _find_first_empty_point(self, data: Any, width: Any, height: Any) -> Any:
         for i in range(width):
             if data[i] == 0:
                 return [i, 0]
@@ -94,7 +95,7 @@ class DreameVacuumMapOptimizer:
             if data[j * width + (width - 1)] == 0:
                 return [(width - 1), j]
 
-    def _find_zero_point(self, data, width, height, point):
+    def _find_zero_point(self, data: Any, width: Any, height: Any, point: Any) -> Any:
         finds = []
         x = point[0]
         y = point[1]
@@ -107,7 +108,7 @@ class DreameVacuumMapOptimizer:
                         finds.append([_i, _j])
         return finds
 
-    def _fill_map_data(self, data, width, height, fill):
+    def _fill_map_data(self, data: Any, width: Any, height: Any, fill: Any) -> Any:
         self._fill_map_data_2(data, width, height)
 
         size = len(data)
@@ -175,7 +176,7 @@ class DreameVacuumMapOptimizer:
                         if startX >= 0:
                             isEmpty = True
 
-    def _denoise(self, data, width, height):
+    def _denoise(self, data: Any, width: Any, height: Any) -> Any:
         tmpMapInfo = data.copy()
         ssize = 20
         for i in range(width):
@@ -281,7 +282,7 @@ class DreameVacuumMapOptimizer:
 
                 startX = -1
 
-    def _update_border_value(self, data, width, height, stroke):
+    def _update_border_value(self, data: Any, width: Any, height: Any, stroke: Any) -> Any:
         for j in range(height):
             for i in range(width):
                 index = j * width + i
@@ -301,7 +302,7 @@ class DreameVacuumMapOptimizer:
                         if hasFind:
                             data[index] = stroke
 
-    def _fill_cross_line(self, data, width, height, stroke):
+    def _fill_cross_line(self, data: Any, width: Any, height: Any, stroke: Any) -> Any:
         size = len(data)
         for i in range(width):
             startY = -1
@@ -411,18 +412,18 @@ class DreameVacuumMapOptimizer:
 
         self._update_border_value(data, width, height, stroke)
 
-    def _check_intersect(self, arr1, arr2) -> list[int] | None:
+    def _check_intersect(self, arr1: Any, arr2: Any) -> list[int] | None:
         if arr1[0] >= arr2[1] or arr2[0] >= arr1[1]:
             return None
 
-        def sort_data(a, b):
+        def sort_data(a: Any, b: Any) -> Any:
             return a - b
 
         tmp = arr1 + arr2
         tmp.sort(key=cmp_to_key(sort_data))
         return [tmp[1], tmp[2]]
 
-    def _find_original_points(self, original_data, data, width, xs, ys) -> float:
+    def _find_original_points(self, original_data: Any, data: Any, width: Any, xs: Any, ys: Any) -> float:
         if xs[0] > xs[1]:
             tmp = xs[0]
             xs[0] = xs[1]
@@ -448,9 +449,9 @@ class DreameVacuumMapOptimizer:
                     nIndex = j * width + i
                     if nIndex < size:
                         data[nIndex] = 1
-        return weight
+        return float(weight)
 
-    def _add_line(self, line, covertlines, allLines):
+    def _add_line(self, line: Any, covertlines: Any, allLines: Any) -> Any:
         aLine = ALine()
         if line.ishorizontal:
             aLine.p0.y = line.y
@@ -475,7 +476,7 @@ class DreameVacuumMapOptimizer:
         covertlines.append(aLine)
         allLines.append(line)
 
-    def _find_bounds(self, data, width, horizontalLines, verticalLines) -> list[Paths]:
+    def _find_bounds(self, data: Any, width: Any, horizontalLines: Any, verticalLines: Any) -> list[Paths]:
         paths = []
         size = len(data)
         horizontalLines = collections.deque(horizontalLines)
@@ -483,11 +484,13 @@ class DreameVacuumMapOptimizer:
         while horizontalLines:
             startLine = horizontalLines.popleft()
             startLine.findEnd = True
-            covertlines: list = []
-            allLines: list = []
+            covertlines: list[ALine] = []
+            allLines: list[CLine] = []
             self._add_line(startLine, covertlines, allLines)
             while True:
-                lastLine = allLines[len(allLines) - 1]
+                # ``x``/``y`` are ``int`` or ``[int, int]`` depending on the line
+                # orientation — typed ``Any`` locally, mypy cannot track that invariant.
+                lastLine: Any = allLines[len(allLines) - 1]
                 if lastLine.ishorizontal:
                     hasFind = False
 
@@ -602,7 +605,7 @@ class DreameVacuumMapOptimizer:
 
         return paths
 
-    def _fill_map_data_2(self, data, width, height):
+    def _fill_map_data_2(self, data: Any, width: Any, height: Any) -> Any:
         while True:
             first_point = self._find_first_empty_point(data, width, height)
             if first_point is None:
@@ -619,7 +622,7 @@ class DreameVacuumMapOptimizer:
             elif data[i] == 255:
                 data[i] = 0
 
-    def _link_adjacent_areas(self, original_data, data, width, height, stroke):
+    def _link_adjacent_areas(self, original_data: Any, data: Any, width: Any, height: Any, stroke: Any) -> Any:
         horizontalLines = []
         verticalLines = []
         DIR_LEFT = 1
@@ -759,11 +762,13 @@ class DreameVacuumMapOptimizer:
             lines = paths.popleft().alines
 
             for l in range(len(lines)):
-                line = lines[l]
+                # ``x``/``y`` are ``int`` or ``[int, int]`` depending on the line
+                # orientation — typed ``Any`` locally, mypy cannot track that invariant.
+                line: Any = lines[l]
                 for i in range(len(paths)):
                     nLines = paths[i].alines
                     for j in range(len(nLines)):
-                        nLine = nLines[j]
+                        nLine: Any = nLines[j]
                         if not line.ishorizontal and not nLine.ishorizontal:
                             if line.direction != nLine.direction:
                                 if (line.x > nLine.x and line.direction == DIR_LEFT) or (
@@ -798,7 +803,7 @@ class DreameVacuumMapOptimizer:
             self._update_border_value(data, width, height, stroke)
             self._fill_cross_line(data, width, height, stroke)
 
-    def _fill_angle(self, data, width, stroke, angle):
+    def _fill_angle(self, data: Any, width: Any, stroke: Any, angle: Any) -> Any:
         bottom = 5
         right = 6
         top = 7
@@ -924,7 +929,7 @@ class DreameVacuumMapOptimizer:
             nextAngle.verticalDir = top if l2.findEnd else bottom
         return nextAngle
 
-    def _find_outline(self, data, width, height, stroke, first):
+    def _find_outline(self, data: Any, width: Any, height: Any, stroke: Any, first: Any) -> Any:
         horizontalLines = []
         verticalLines = []
         size = len(data)
@@ -1018,8 +1023,8 @@ class DreameVacuumMapOptimizer:
 
         paths = self._find_bounds(data, width, horizontalLines, verticalLines)
 
-        covertlines = None
-        allLines = None
+        covertlines: Any = None
+        allLines: Any = None
         totalLen = 0
         tmp = []
         for i in range(len(paths)):
@@ -1087,7 +1092,7 @@ class DreameVacuumMapOptimizer:
 
         return True
 
-    def _find_obstacle_border(self, data, width, height, stroke):
+    def _find_obstacle_border(self, data: Any, width: Any, height: Any, stroke: Any) -> Any:
         size = len(data)
         for j in range(height):
             for i in range(width):
@@ -1109,7 +1114,7 @@ class DreameVacuumMapOptimizer:
                     if hasFind:
                         data[index] = 2
 
-    def _clean_small_obstacle(self, data, width, height, stroke):
+    def _clean_small_obstacle(self, data: Any, width: Any, height: Any, stroke: Any) -> Any:
         for i in range(width):
             startY = -1
             for j in range(height):
@@ -1135,7 +1140,9 @@ class DreameVacuumMapOptimizer:
                         data[j * width + k] = 1
                 startX = -1
 
-    def _calculate_charger_position(self, data, width, height, stroke, charger_position):
+    def _calculate_charger_position(
+        self, data: Any, width: Any, height: Any, stroke: Any, charger_position: Any
+    ) -> Any:
         vLines = []
         hLines = []
         for i in range(width):
@@ -1208,66 +1215,66 @@ class DreameVacuumMapOptimizer:
         cY = math.floor(charger_position.y)
         if abs(charger_position.a - 180) <= 30:
             charger_position.a = 180
-            lastX = None
+            nearest_x: int | None = None
             for i in range(len(vLines)):
                 line = vLines[i]
                 lx = line[0][0]
                 minY = line[0][1] if line[0][1] < line[1][1] else line[1][1]
                 maxY = line[0][1] if line[0][1] > line[1][1] else line[1][1]
                 if lx >= cX and cY >= minY and cY <= maxY:
-                    if lastX is None or lx < lastX:
-                        lastX = lx
-            if lastX is not None:
-                if lastX - cX <= 11:
+                    if nearest_x is None or lx < nearest_x:
+                        nearest_x = lx
+            if nearest_x is not None:
+                if nearest_x - cX <= 11:
                     charger_position.a = 180
-                    charger_position.x = lastX + 0.5
+                    charger_position.x = nearest_x + 0.5
         elif abs(charger_position.a - 360) <= 30 or abs(charger_position.a) <= 3:
             charger_position.a = 360
-            lastX = None
+            nearest_x = None
             for i in range(len(vLines)):
                 line = vLines[i]
                 lx = line[0][0]
                 minY = line[0][1] if line[0][1] < line[1][1] else line[1][1]
                 maxY = line[0][1] if line[0][1] > line[1][1] else line[1][1]
                 if lx <= cX and cY >= minY and cY <= maxY:
-                    if lastX is None or lx > lastX:
-                        lastX = lx
-            if lastX is not None:
-                if cX - lastX <= 11:
+                    if nearest_x is None or lx > nearest_x:
+                        nearest_x = lx
+            if nearest_x is not None:
+                if cX - nearest_x <= 11:
                     charger_position.a = 360
-                    charger_position.x = lastX + 0.5
+                    charger_position.x = nearest_x + 0.5
         elif abs(charger_position.a - 270) <= 30:
-            lastY = None
+            nearest_y: int | None = None
             for i in range(len(hLines)):
                 line = hLines[i]
                 ly = line[0][1]
                 minX = line[0][0] if line[0][0] < line[1][0] else line[1][0]
                 maxX = line[0][0] if line[0][0] > line[1][0] else line[1][0]
                 if ly >= cY and cX >= minX and cX <= maxX:
-                    if lastY is None or ly < lastY:
-                        lastY = ly
-            if lastY is not None:
-                if lastY - cY <= 11:
+                    if nearest_y is None or ly < nearest_y:
+                        nearest_y = ly
+            if nearest_y is not None:
+                if nearest_y - cY <= 11:
                     charger_position.a = 270
-                    charger_position.y = lastY + 0.5
+                    charger_position.y = nearest_y + 0.5
         elif abs(charger_position.a - 90) <= 30:
-            lastY = None
+            nearest_y = None
             for i in range(len(hLines)):
                 line = hLines[i]
                 ly = line[0][1]
                 minX = line[0][0] if line[0][0] < line[1][0] else line[1][0]
                 maxX = line[0][0] if line[0][0] > line[1][0] else line[1][0]
                 if ly <= cY and cX >= minX and cX <= maxX:
-                    if lastY is None or ly > lastY:
-                        lastY = ly
-            if lastY is not None:
-                if cY - lastY <= 11:
+                    if nearest_y is None or ly > nearest_y:
+                        nearest_y = ly
+            if nearest_y is not None:
+                if cY - nearest_y <= 11:
                     charger_position.a = 90
-                    charger_position.y = lastY + 0.5
+                    charger_position.y = nearest_y + 0.5
 
         return charger_position
 
-    def _merge_saved_map_data(self, map_data, saved_map_data, original_data=None):
+    def _merge_saved_map_data(self, map_data: Any, saved_map_data: Any, original_data: Any = None) -> Any:
         if saved_map_data:
             maxX = map_data.dimensions.left + (map_data.dimensions.width * map_data.dimensions.grid_size)
             maxY = map_data.dimensions.top + (map_data.dimensions.height * map_data.dimensions.grid_size)
@@ -1365,7 +1372,7 @@ class DreameVacuumMapOptimizer:
             map_data.optimized_pixel_type = pixel_type
             map_data.optimized_dimensions = MapImageDimensions(top, left, height, width, map_data.dimensions.grid_size)
 
-    def optimize(self, map_data, saved_map_data=None, js_optimizer=True):
+    def optimize(self, map_data: Any, saved_map_data: Any = None, js_optimizer: bool = True) -> Any:
         if map_data.saved_map:
             return map_data
 

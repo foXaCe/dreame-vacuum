@@ -14,9 +14,9 @@ from homeassistant.components.time import (
     ENTITY_ID_FORMAT,
     TimeEntity,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN, DreameVacuumConfigEntry
 
@@ -152,6 +152,6 @@ class DreameVacuumTimeEntity(DreameVacuumEntity, TimeEntity):
             )
 
     @property
-    def native_value(self):
+    def native_value(self) -> time | None:
         """Return the current Dreame Vacuum time value."""
         return self._attr_native_value

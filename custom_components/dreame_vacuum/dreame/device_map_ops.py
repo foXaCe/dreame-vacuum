@@ -6,8 +6,9 @@ import copy
 import json
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
+from ._device_base import DreameVacuumDeviceState
 from .exceptions import (
     InvalidActionException,
     InvalidValueException,
@@ -33,7 +34,7 @@ from .vacuum_types import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class DreameVacuumDeviceMapMixin:
+class DreameVacuumDeviceMapMixin(DreameVacuumDeviceState):
     """Mixin providing map operations for DreameVacuumDevice."""
 
     def _map_property_changed(self, previous_property: Any = None) -> None:
@@ -103,7 +104,7 @@ class DreameVacuumDeviceMapMixin:
         self._last_map_change_time = time.time()
         self._property_changed()
 
-    def _map_changed(self, saved_map) -> None:
+    def _map_changed(self, saved_map: Any) -> None:
         """Call external listener when a map changed"""
         map_data = self.status.current_map
         if self._map_select_time:
@@ -112,9 +113,10 @@ class DreameVacuumDeviceMapMixin:
             self._last_map_change_time = time.time()
         if map_data and self.status.started:
             if self.status.go_to_zone is None and not self.status._capability.cruising and self.status.zone_cleaning:
-                if map_data.active_areas and len(map_data.active_areas) == 1:
+                if map_data.active_areas and len(map_data.active_areas) == 1 and map_data.dimensions:
                     area = map_data.active_areas[0]
-                    size = map_data.dimensions.grid_size * 2
+                    dimensions = map_data.dimensions
+                    size = dimensions.grid_size * 2
                     if area.check_size(size):
                         new_cleaning_mode = None
                         if not (self.capability.self_wash_base or self.capability.mop_pad_lifting):
@@ -130,8 +132,8 @@ class DreameVacuumDeviceMapMixin:
                                 new_cleaning_mode = DreameVacuumCleaningMode.SWEEPING_AND_MOPPING.value
 
                         self.status.go_to_zone = GoToZoneSettings(
-                            x=area.x0 + map_data.dimensions.grid_size,
-                            y=area.y0 + map_data.dimensions.grid_size,
+                            x=int(area.x0 + dimensions.grid_size),
+                            y=int(area.y0 + dimensions.grid_size),
                             stop=bool(not self._map_manager.ready),
                             size=size,
                             cleaning_mode=new_cleaning_mode,
@@ -146,8 +148,8 @@ class DreameVacuumDeviceMapMixin:
                 position = map_data.robot_position
                 if position:
                     size = self.status.go_to_zone.size
-                    x = self.status.go_to_zone.x
-                    y = self.status.go_to_zone.y
+                    x = self.status.go_to_zone.x or 0
+                    y = self.status.go_to_zone.y or 0
                     if (
                         position.x >= x - size
                         and position.x <= x + size
@@ -175,7 +177,7 @@ class DreameVacuumDeviceMapMixin:
                 )
                 map_data.need_optimization = False
 
-            render_map_data = copy.deepcopy(map_data)
+            render_map_data: Any = copy.deepcopy(map_data)
             if (
                 not self.capability.lidar_navigation
                 and self.status.docked
@@ -220,7 +222,7 @@ class DreameVacuumDeviceMapMixin:
                 render_map_data.dimensions.top = render_map_data.dimensions.top - render_map_data.dimensions.grid_size
 
             if render_map_data.wifi_map:
-                return render_map_data
+                return cast("MapData | None", render_map_data)
 
             if render_map_data.furniture_version == 1 and self.capability.new_furnitures:
                 render_map_data.furniture_version = 3 if self.capability.mijia else 2
@@ -337,7 +339,7 @@ class DreameVacuumDeviceMapMixin:
                         for k, v in render_map_data.segments.items():
                             render_map_data.segments[k].custom_mopping_route = None
 
-                return render_map_data
+                return cast("MapData | None", render_map_data)
 
             if not render_map_data.saved_map and not render_map_data.recovery_map:
                 # if self.status.started and (self.status.sweeping or self.status.cruising):
@@ -348,8 +350,8 @@ class DreameVacuumDeviceMapMixin:
                     if self.status.go_to_zone:
                         render_map_data.active_cruise_points = {
                             1: Coordinate(
-                                self.status.go_to_zone.x,
-                                self.status.go_to_zone.y,
+                                self.status.go_to_zone.x or 0,
+                                self.status.go_to_zone.y or 0,
                                 False,
                                 0,
                             )
@@ -424,9 +426,9 @@ class DreameVacuumDeviceMapMixin:
                 and self.status.customized_cleaning
                 and not self.status.cleangenius_cleaning
             ):
-                from . import map as _map_mod
+                from .map_decoder import DreameVacuumMapDecoder
 
-                _map_mod.DreameVacuumMapDecoder.set_segment_cleanset(render_map_data, {}, self.capability)
+                DreameVacuumMapDecoder.set_segment_cleanset(render_map_data, {}, self.capability)
                 render_map_data.cleanset = True
 
             if render_map_data.segments:
@@ -484,18 +486,19 @@ class DreameVacuumDeviceMapMixin:
             elif render_map_data.charger_position and render_map_data.docked and not self.status.fast_mapping:
                 if not render_map_data.robot_position:
                     render_map_data.robot_position = copy.deepcopy(render_map_data.charger_position)
-            return render_map_data
+            return cast("MapData | None", render_map_data)
         return map_data
 
     def get_map(self, map_index: int) -> MapData | None:
         """Get stored map data by index from map manager."""
         if self._map_manager:
             if self.status.multi_map:
-                return self._map_manager.get_map(map_index)
+                return cast("MapData | None", self._map_manager.get_map(map_index))
             if map_index == 1:
-                return self._map_manager.selected_map
+                return cast("MapData | None", self._map_manager.selected_map)
             if map_index == 0:
                 return self.status.current_map
+        return None
 
     def update_map(self) -> None:
         """Trigger a map update.
@@ -517,7 +520,7 @@ class DreameVacuumDeviceMapMixin:
         """
 
         if self._map_manager:
-            return self._map_manager.request_new_map()
+            return cast("dict[str, Any] | None", self._map_manager.request_new_map())
         return self.call_action(
             DreameVacuumAction.REQUEST_MAP,
             [
@@ -528,28 +531,28 @@ class DreameVacuumDeviceMapMixin:
             ],
         )
 
-    def update_map_data_async(self, parameters: dict[str, Any]):
+    def update_map_data_async(self, parameters: dict[str, Any]) -> dict[str, Any] | None:
         """Send update map action to the device."""
         if self._map_manager:
             self._map_manager.schedule_update(10)
             self._property_changed(False)
             self._last_map_request = time.time()
 
-        parameters = [
+        payload = [
             {
                 "piid": PIID(DreameVacuumProperty.MAP_EXTEND_DATA, self.property_mapping),
                 "value": str(json.dumps(parameters, separators=(",", ":"))),
             }
         ]
 
-        def callback(result):
+        def callback(result: Any) -> None:
             if result and result.get("code") == 0:
-                _LOGGER.debug("Send action UPDATE_MAP_DATA async %s", parameters)
+                _LOGGER.debug("Send action UPDATE_MAP_DATA async %s", payload)
                 self._last_change = time.time()
             else:
                 _LOGGER.error(
                     "Send action failed UPDATE_MAP_DATA async (%s): %s",
-                    parameters,
+                    payload,
                     result,
                 )
 
@@ -566,7 +569,8 @@ class DreameVacuumDeviceMapMixin:
                     self._last_map_list_request = 0
 
         mapping = self.action_mapping[DreameVacuumAction.UPDATE_MAP_DATA]
-        self._protocol.action_async(callback, mapping["siid"], mapping["aiid"], parameters)
+        self._protocol.action_async(callback, mapping["siid"], mapping["aiid"], payload)
+        return None
 
     def update_map_data(self, parameters: dict[str, Any]) -> dict[str, Any] | None:
         """Send update map action to the device."""
@@ -625,14 +629,15 @@ class DreameVacuumDeviceMapMixin:
                 rotation = 0
 
             if self._map_manager:
-                if map_id is None:
+                if map_id is None and self.status.selected_map is not None:
                     map_id = self.status.selected_map.map_id
                 self._map_manager.editor.set_rotation(map_id, rotation)
 
             if map_id is not None:
                 return self.update_map_data_async({"smra": {map_id: {"ra": rotation}}})
+        return None
 
-    def set_restricted_zone(self, walls=None, zones=None, no_mops=None) -> dict[str, Any] | None:
+    def set_restricted_zone(self, walls: Any = None, zones: Any = None, no_mops: Any = None) -> dict[str, Any] | None:
         """Set restricted zones on current saved map."""
         if walls is None or walls == "":
             walls = []
@@ -651,7 +656,7 @@ class DreameVacuumDeviceMapMixin:
 
         return self.update_map_data_async({"vw": payload})
 
-    def set_carpet_area(self, carpets=None, ignored_carpets=None) -> dict[str, Any] | None:
+    def set_carpet_area(self, carpets: Any = None, ignored_carpets: Any = None) -> dict[str, Any] | None:
         """Set carpet areas on current saved map."""
         if carpets is None or carpets == "":
             carpets = []
@@ -677,7 +682,7 @@ class DreameVacuumDeviceMapMixin:
                 raise InvalidActionException("Carpets are not supported on this device")
         return self.update_map_data_async({"cpt": {"addcpt": carpets, "nocpt": ignored_carpets}})
 
-    def set_virtual_threshold(self, virtual_thresholds=None) -> dict[str, Any] | None:
+    def set_virtual_threshold(self, virtual_thresholds: Any = None) -> dict[str, Any] | None:
         """Set virtual thresholds on current saved map."""
         if virtual_thresholds is None or virtual_thresholds == "":
             virtual_thresholds = []
@@ -701,7 +706,7 @@ class DreameVacuumDeviceMapMixin:
                 raise InvalidActionException("Virtual thresholds are not supported on this device")
         return self.update_map_data_async({"vws": {"vwsl": virtual_thresholds}})
 
-    def set_predefined_points(self, points=None) -> dict[str, Any] | None:
+    def set_predefined_points(self, points: Any = None) -> dict[str, Any] | None:
         """Set predefined points on current saved map."""
         if points is None or points == "":
             points = []
@@ -768,7 +773,7 @@ class DreameVacuumDeviceMapMixin:
                     self._map_manager.editor.delete_map()
                 else:
                     self._map_manager.editor.delete_map(map_id)
-        parameters = {"cm": {}}
+        parameters: dict[str, Any] = {"cm": {}}
         if map_id:
             parameters["mapid"] = map_id
         return self.update_map_data(parameters)
@@ -779,6 +784,7 @@ class DreameVacuumDeviceMapMixin:
             if self._map_manager:
                 self._map_manager.editor.save_temporary_map()
             return self.update_map_data({"cw": 5})
+        return None
 
     def discard_temporary_map(self) -> dict[str, Any] | None:
         """Discard new map when device have reached maximum number of maps it can store."""
@@ -786,6 +792,7 @@ class DreameVacuumDeviceMapMixin:
             if self._map_manager:
                 self._map_manager.editor.discard_temporary_map()
             return self.update_map_data({"cw": 0})
+        return None
 
     def replace_temporary_map(self, map_id: int | None = None) -> dict[str, Any] | None:
         """Replace new map with an old one when device have reached maximum number of maps it can store."""
@@ -799,8 +806,9 @@ class DreameVacuumDeviceMapMixin:
             if map_id:
                 parameters["mapid"] = map_id
             return self.update_map_data(parameters)
+        return None
 
-    def restore_map_from_file(self, map_url: int, map_id: int | None = None) -> dict[str, Any] | None:
+    def restore_map_from_file(self, map_url: Any, map_id: Any = None) -> dict[str, Any] | None:
         from urllib.parse import urlparse
 
         parsed = urlparse(str(map_url))
@@ -846,9 +854,9 @@ class DreameVacuumDeviceMapMixin:
             raise InvalidActionException("Map recovery failed with error code %s", response[0]["code"])
         self._map_manager.schedule_update(5)
         self.schedule_update(1)
-        return response
+        return cast("dict[str, Any] | None", response)
 
-    def restore_map(self, recovery_map_index: int, map_id: int | None = None) -> dict[str, Any] | None:
+    def restore_map(self, recovery_map_index: Any, map_id: Any = None) -> dict[str, Any] | None:
         """Replace a map with previously saved version by device."""
         map_recovery_status = self.status.map_recovery_status
         if map_recovery_status is None:
@@ -869,13 +877,15 @@ class DreameVacuumDeviceMapMixin:
         if (map_id is None or map_id == "") and self.status.selected_map:
             map_id = self.status.selected_map.map_id
 
-        if not map_id or map_id not in self.status.map_data_list:
+        map_data_list = self.status.map_data_list
+        if not map_id or not map_data_list or map_id not in map_data_list:
             raise InvalidActionException("Map not found")
 
-        if len(self.status.map_data_list[map_id].recovery_map_list) <= int(recovery_map_index) - 1:
+        recovery_list = map_data_list[map_id].recovery_map_list
+        if recovery_list is None or len(recovery_list) <= int(recovery_map_index) - 1:
             raise InvalidActionException("Invalid recovery map index")
 
-        recovery_map_info = self.status.map_data_list[map_id].recovery_map_list[int(recovery_map_index) - 1]
+        recovery_map_info = recovery_list[int(recovery_map_index) - 1]
         object_name = recovery_map_info.object_name
         if object_name and object_name != "":
             file, map_url, object_name = self.recovery_map_file(map_id, recovery_map_index)
@@ -885,13 +895,13 @@ class DreameVacuumDeviceMapMixin:
             if file is None:
                 raise InvalidActionException("Failed to download recovery map file: %s", map_url)
 
-            response = self.restore_map_from_file(map_url, map_id)
+            response: Any = self.restore_map_from_file(map_url, map_id)
             if response and response[0]["code"] == 0:
                 self._map_manager.editor.restore_map(recovery_map_info)
-            return response
+            return cast("dict[str, Any] | None", response)
         raise InvalidActionException("Invalid recovery map object name")
 
-    def backup_map(self, map_id: int | None = None) -> dict[str, Any] | None:
+    def backup_map(self, map_id: Any = None) -> dict[str, Any] | None:
         """Save a map map to cloud for later use of restoring."""
         if not self.capability.backup_map:
             raise InvalidActionException("Map backup is not supported on this device")
@@ -926,7 +936,7 @@ class DreameVacuumDeviceMapMixin:
             )
         return response
 
-    def merge_segments(self, map_id: int, segments: list[int]) -> dict[str, Any] | None:
+    def merge_segments(self, map_id: Any, segments: Any) -> dict[str, Any] | None:
         """Merge segments on a map"""
         if self.status.has_temporary_map:
             raise InvalidActionException("Cannot edit segments when temporary map is present")
@@ -950,8 +960,9 @@ class DreameVacuumDeviceMapMixin:
             if map_id:
                 data["mapid"] = map_id
             return self.update_map_data(data)
+        return None
 
-    def split_segments(self, map_id: int, segment: int, line: list[int]) -> dict[str, Any] | None:
+    def split_segments(self, map_id: Any, segment: Any, line: Any) -> dict[str, Any] | None:
         """Split segments on a map"""
         if self.status.has_temporary_map:
             raise InvalidActionException("Cannot edit segments when temporary map is present")
@@ -976,8 +987,9 @@ class DreameVacuumDeviceMapMixin:
             if map_id:
                 data["mapid"] = map_id
             return self.update_map_data(data)
+        return None
 
-    def set_cleaning_sequence(self, cleaning_sequence: list[int]) -> dict[str, Any] | None:
+    def set_cleaning_sequence(self, cleaning_sequence: Any) -> dict[str, Any] | None:
         """Set cleaning sequence on current map.
         Device will use this order even you specify order in segment cleaning."""
 
@@ -1003,33 +1015,36 @@ class DreameVacuumDeviceMapMixin:
             if map_data and map_data.segments and not map_data.temporary_map:
                 if not cleaning_sequence:
                     current = self._map_manager.cleaning_sequence
-                    if current and len(current):
-                        self.status._previous_cleaning_sequence[map_data.map_id] = current
-                    elif map_data.map_id in self.status._previous_cleaning_sequence:
-                        del self.status._previous_cleaning_sequence[map_data.map_id]
+                    mid = map_data.map_id
+                    if mid is not None:
+                        if current and len(current):
+                            self.status._previous_cleaning_sequence[mid] = current
+                        elif mid in self.status._previous_cleaning_sequence:
+                            del self.status._previous_cleaning_sequence[mid]
 
                 cleaning_sequence = self._map_manager.editor.set_cleaning_sequence(cleaning_sequence)
 
         return self.update_map_data_async({"cleanOrder": cleaning_sequence})
 
-    def set_cleanset(self, cleanset: dict[str, list[int]]) -> dict[str, Any] | None:
+    def set_cleanset(self, cleanset: Any) -> dict[str, Any] | None:
         """Set customized cleaning settings on current map. Device will use these settings even you pass another setting for custom segment cleaning."""
         if self.status.has_temporary_map:
             raise InvalidActionException("Cannot edit customized cleaning settings when temporary map is present")
 
         if cleanset is not None:
             return self.update_map_data_async({"customeClean": cleanset})
+        return None
 
     def set_custom_cleaning(
         self,
-        segment_id: list[int],
-        suction_level: list[int],
-        water_volume: list[int],
-        cleaning_times: list[int],
-        cleaning_mode: list[int] | None = None,
-        custom_mopping_route: list[int] | None = None,
-        cleaning_route: list[int] | None = None,
-        wetness_level: list[int] | None = None,
+        segment_id: Any,
+        suction_level: Any,
+        water_volume: Any,
+        cleaning_times: Any,
+        cleaning_mode: Any = None,
+        custom_mopping_route: Any = None,
+        cleaning_route: Any = None,
+        wetness_level: Any = None,
     ) -> dict[str, Any] | None:
         """Set customized cleaning settings on current map.
         Device will use these settings even you pass another setting for custom segment cleaning.
@@ -1183,10 +1198,10 @@ class DreameVacuumDeviceMapMixin:
                             raise InvalidActionException("Invalid Segment ID: %s", id)
 
                         if segments[id].custom_mopping_route is not None:
-                            from . import map as _map_mod
+                            from .map_decoder import DreameVacuumMapDecoder
 
-                            map_decoder = _map_mod.DreameVacuumMapDecoder
-                            mopping_values = map_decoder.split_mopping_settings(segments[id].mopping_settings)
+                            map_decoder = DreameVacuumMapDecoder
+                            mopping_values = map_decoder.split_mopping_settings(segments[id].mopping_settings or 0)
                             if mopping_values:
                                 if self.capability.wetness_level:
                                     mopping_values[1] = 0
@@ -1208,10 +1223,10 @@ class DreameVacuumDeviceMapMixin:
 
     def set_custom_carpet_cleaning(
         self,
-        id: int | list[int],
-        type: int | list[int],
-        carpet_cleaning: int | list[int] | None = None,
-        carpet_settings: list[int] | list[list[int]] | None = None,
+        id: Any,
+        type: Any,
+        carpet_cleaning: Any = None,
+        carpet_settings: Any = None,
     ) -> dict[str, Any] | None:
         """Set customized carpet cleaning settings on current map."""
         if not self.capability.carpet_recognition:
@@ -1325,8 +1340,9 @@ class DreameVacuumDeviceMapMixin:
                         raise InvalidActionException("Cannot find selected carpet(s)")
 
             return self.update_map_data_async({"carpetcleanset": carpet_cleanset})
+        return None
 
-    def set_hidden_segments(self, hidden_segments: list[int]):
+    def set_hidden_segments(self, hidden_segments: Any) -> dict[str, Any] | None:
         if self.status.has_temporary_map:
             raise InvalidActionException("Cannot edit segments when temporary map is present")
 
@@ -1362,6 +1378,7 @@ class DreameVacuumDeviceMapMixin:
                 if self.capability.auto_rename_segment:
                     data["autonsr"] = True
                 return self.update_map_data_async(data)
+        return None
 
     def set_segment_order(self, segment_id: int, order: int) -> dict[str, Any] | None:
         """Update cleaning order of a segment on current map"""
@@ -1372,11 +1389,13 @@ class DreameVacuumDeviceMapMixin:
             cleaning_order = self._map_manager.editor.set_segment_order(segment_id, order)
 
             return self.update_map_data_async({"cleanOrder": cleaning_order})
+        return None
 
     def set_segment_suction_level(self, segment_id: int, suction_level: int) -> dict[str, Any] | None:
         """Update suction level of a segment on current map"""
         if self._map_manager and not self.status.has_temporary_map:
             return self.set_cleanset(self._map_manager.editor.set_segment_suction_level(segment_id, suction_level))
+        return None
 
     def set_segment_water_volume(self, segment_id: int, water_volume: int) -> dict[str, Any] | None:
         """Update water volume of a segment on current map"""
@@ -1400,6 +1419,7 @@ class DreameVacuumDeviceMapMixin:
                 return self.set_cleanset(self._map_manager.editor.set_segment_wetness_level(segment_id, water_volume))
 
             return self.set_cleanset(self._map_manager.editor.set_segment_water_volume(segment_id, water_volume))
+        return None
 
     def set_segment_mop_pad_humidity(self, segment_id: int, mop_pad_humidity: int) -> dict[str, Any] | None:
         """Update mop pad humidity of a segment on current map"""
@@ -1425,16 +1445,19 @@ class DreameVacuumDeviceMapMixin:
                 )
 
             return self.set_cleanset(self._map_manager.editor.set_segment_water_volume(segment_id, mop_pad_humidity))
+        return None
 
     def set_segment_wetness_level(self, segment_id: int, wetness_level: int) -> dict[str, Any] | None:
         """Update wetness level of a segment on current map"""
         if self.capability.wetness_level and self._map_manager and not self.status.has_temporary_map:
             return self.set_cleanset(self._map_manager.editor.set_segment_wetness_level(segment_id, int(wetness_level)))
+        return None
 
     def set_segment_cleaning_mode(self, segment_id: int, cleaning_mode: int) -> dict[str, Any] | None:
         """Update mop pad humidity of a segment on current map"""
         if self._map_manager and not self.status.has_temporary_map:
             return self.set_cleanset(self._map_manager.editor.set_segment_cleaning_mode(segment_id, cleaning_mode))
+        return None
 
     def set_segment_custom_mopping_route(self, segment_id: int, custom_mopping_route: int) -> dict[str, Any] | None:
         """Update custom mopping route of a segment on current map"""
@@ -1447,6 +1470,7 @@ class DreameVacuumDeviceMapMixin:
             return self.set_cleanset(
                 self._map_manager.editor.set_segment_custom_mopping_route(segment_id, custom_mopping_route)
             )
+        return None
 
     def set_segment_cleaning_route(self, segment_id: int, cleaning_route: int) -> dict[str, Any] | None:
         """Update cleaning route of a segment on current map"""
@@ -1457,6 +1481,7 @@ class DreameVacuumDeviceMapMixin:
             and not self.status.has_temporary_map
         ):
             return self.set_cleanset(self._map_manager.editor.set_segment_cleaning_route(segment_id, cleaning_route))
+        return None
 
     def set_segment_cleaning_times(self, segment_id: int, cleaning_times: int) -> dict[str, Any] | None:
         """Update cleaning times of a segment on current map."""
@@ -1465,6 +1490,7 @@ class DreameVacuumDeviceMapMixin:
 
         if self._map_manager and not self.status.has_temporary_map:
             return self.set_cleanset(self._map_manager.editor.set_segment_cleaning_times(segment_id, cleaning_times))
+        return None
 
     def set_segment_floor_material(
         self, segment_id: int, floor_material: int, direction: int | None = None
@@ -1484,19 +1510,19 @@ class DreameVacuumDeviceMapMixin:
                 if floor_material != 1:
                     direction = None
                 elif direction is None:
-                    segment = self.status.segments[segment_id]
+                    segment = self.status.segments.get(segment_id) if self.status.segments else None
+                    current_map = self.status.current_map
                     direction = (
                         segment.floor_material_rotated_direction
-                        if segment.floor_material_rotated_direction is not None
-                        else (
-                            0 if self.status.current_map.rotation == 0 or self.status.current_map.rotation == 90 else 90
-                        )
+                        if segment is not None and segment.floor_material_rotated_direction is not None
+                        else (0 if current_map and (current_map.rotation == 0 or current_map.rotation == 90) else 90)
                     )
 
             data = {"nsm": self._map_manager.editor.set_segment_floor_material(segment_id, floor_material, direction)}
             if self.status.selected_map:
                 data["map_id"] = self.status.selected_map.map_id
             return self.update_map_data_async(data)
+        return None
 
     def set_segment_floor_material_direction(
         self, segment_id: int, floor_material_direction: int
@@ -1507,6 +1533,7 @@ class DreameVacuumDeviceMapMixin:
             if self.status.selected_map:
                 data["map_id"] = self.status.selected_map.map_id
             return self.update_map_data_async(data)
+        return None
 
     def set_segment_visibility(self, segment_id: int, visibility: int) -> dict[str, Any] | None:
         """Update visibility a segment on current map"""
@@ -1515,3 +1542,4 @@ class DreameVacuumDeviceMapMixin:
             # if self.status.selected_map:
             #    data["map_id"] = self.status.selected_map.map_id
             return self.update_map_data_async(data)
+        return None

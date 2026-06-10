@@ -17,7 +17,7 @@ import math
 import textwrap
 import time
 import traceback
-from typing import Any
+from typing import Any, cast
 import zlib
 
 import numpy as np
@@ -74,34 +74,38 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         color_scheme: str | None = None,
         icon_set: str | None = None,
         hidden_map_objects: list[str] | None = None,
-        robot_type: int = 0,
+        robot_type: Any = 0,
         low_resolution: bool = False,
         square: bool = False,
         cache: bool = True,
         language: str | None = None,
+        vector_rooms: bool = False,
     ) -> None:
-        self.color_scheme: MapRendererColorScheme = MAP_COLOR_SCHEME_LIST.get(color_scheme, MapRendererColorScheme())
-        self.icon_set: int = MAP_ICON_SET_LIST.get(icon_set, 0)
+        self.color_scheme: MapRendererColorScheme = MAP_COLOR_SCHEME_LIST.get(
+            color_scheme or "", MapRendererColorScheme()
+        )
+        self.icon_set: int = MAP_ICON_SET_LIST.get(icon_set or "", 0)
         self.config: MapRendererConfig = MapRendererConfig()
         if hidden_map_objects is not None:
             for attr in self.config.__dict__.keys():
                 if attr in hidden_map_objects:
                     setattr(self.config, attr, False)
 
-        self._map_data: MapData = None
+        self._map_data: MapData | None = None
         self.render_complete: bool = True
         self._layers: dict[MapRendererLayer, Any] = {}
-        self._robot_status: int = None
-        self._station_status: int = None
-        self._robot_type: int = robot_type
+        self._robot_status: int | None = None
+        self._station_status: int | None = None
+        self._robot_type: Any = robot_type
         self._low_resolution: bool = low_resolution
         self._low_memory: bool = low_resolution
         self._square: bool = square
+        self._vector_rooms: bool = vector_rooms
         self._cache: bool = cache
-        self._language: str = language
+        self._language: str | None = language
         self._has_mask: bool = False
-        self._calibration_points: dict[str, int] = None
-        self._default_calibration_points: dict[str, int] = [
+        self._calibration_points: Any = None
+        self._default_calibration_points: Any = [
             {
                 MAP_PARAMETER_VACUUM: {
                     MAP_DATA_JSON_PARAMETER_X: 0,
@@ -134,7 +138,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             },
         ]
 
-        self._image = None
+        self._image: Any = None
         self._charger_icon = None
         self._robot_icon = None
         self._robot_charging_icon = None
@@ -154,21 +158,21 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         self._furniture_background = None
         self._wifi_icon = None
         self._font_file = None
-        self._light_font_file = None
-        self._default_map_image = None
-        self._obstacle_bottom_left_icon = None
-        self._obstacle_top_left_icon = None
-        self._obstacle_bottom_right_icon = None
-        self._obstacle_top_right_icon = None
+        self._light_font_file: Any = None
+        self._default_map_image: Any = None
+        self._obstacle_bottom_left_icon: Any = None
+        self._obstacle_top_left_icon: Any = None
+        self._obstacle_bottom_right_icon: Any = None
+        self._obstacle_top_right_icon: Any = None
         self._map_problem_icon = None
 
-        self._segment_icons = {}
+        self._segment_icons: dict[Any, Any] = {}
         self._obstacle_icons = {}
         self._obstacle_hidden_icons = {}
         self._furniture_icons = {}
         self._furniture_images = {}
-        self._badge_positions = {}
-        self._name_offsets = {}
+        self._badge_positions: dict[Any, Any] = {}
+        self._name_offsets: dict[Any, Any] = {}
 
         if self._low_memory:
             self.config.obstacle = False
@@ -226,7 +230,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
     # _to_buffer, _set_icon_color: see _StaticHelpersMixin
 
     @staticmethod
-    def _calculate_bounds(dimensions, segments) -> list[int]:
+    def _calculate_bounds(dimensions: Any, segments: Any) -> list[int] | None:
         if segments:
             min_x = dimensions.width - 1
             min_y = dimensions.height - 1
@@ -242,30 +246,31 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 max_y = max(max(y_coords), max_y)
 
             return [min_x, min_y, max_x, min_y]
+        return None
 
     @staticmethod
     def _calculate_padding(
-        dimensions,
-        active_areas,
-        no_mopping_areas,
-        no_go_areas,
-        walls,
-        virtual_thresholds,
-        passable_thresholds,
-        impassable_thresholds,
-        ramps,
-        furnitures,
-        furniture_version,
-        curtains,
-        segments,
-        padding,
-        min_width,
-        min_height,
-        scale,
-        icon_set,
-    ) -> list[int]:
-        min_x = 0
-        min_y = 0
+        dimensions: Any,
+        active_areas: Any,
+        no_mopping_areas: Any,
+        no_go_areas: Any,
+        walls: Any,
+        virtual_thresholds: Any,
+        passable_thresholds: Any,
+        impassable_thresholds: Any,
+        ramps: Any,
+        furnitures: Any,
+        furniture_version: Any,
+        curtains: Any,
+        segments: Any,
+        padding: Any,
+        min_width: Any,
+        min_height: Any,
+        scale: Any,
+        icon_set: Any,
+    ) -> Any:
+        min_x: float = 0
+        min_y: float = 0
         max_x = dimensions.width
         max_y = dimensions.height
 
@@ -422,7 +427,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
     # _round_coord: see _StaticHelpersMixin
 
     @staticmethod
-    def _get_carpet_coords(carpet, dimensions):
+    def _get_carpet_coords(carpet: Any, dimensions: Any) -> Any:
         grid_size = dimensions.grid_size
         if carpet.ellipse:
             x0 = DreameVacuumMapRenderer._round_coord(carpet.x0 - grid_size / 2, grid_size) + grid_size / 2
@@ -456,7 +461,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         )
 
     @staticmethod
-    def _optimize_carpet_pixels(carpet_pixels, dimensions, pixel_type):
+    def _optimize_carpet_pixels(carpet_pixels: Any, dimensions: Any, pixel_type: Any) -> Any:
         carpet_data = {}
         for pixel in carpet_pixels:
             x = pixel[0]
@@ -469,7 +474,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         return carpet_data
 
     @staticmethod
-    def _check_carpet(x, y, carpet, dimensions, pixel_type=None):
+    def _check_carpet(x: Any, y: Any, carpet: Any, dimensions: Any, pixel_type: Any = None) -> Any:
         if pixel_type is not None and (
             pixel_type >= 255
             or pixel_type <= 0
@@ -530,12 +535,17 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
     def get_data_string(
         self,
-        map_data: MapData,
-        resources: MapRendererResources = None,
+        map_data: MapData | None,
+        resources: MapRendererResources | str | None = None,
         robot_status: int = 0,
         station_status: int = 0,
     ) -> str:
-        if not map_data or map_data.empty_map or (map_data.dimensions.width * map_data.dimensions.height) < 2:
+        if (
+            not map_data
+            or map_data.dimensions is None
+            or map_data.empty_map
+            or (map_data.dimensions.width * map_data.dimensions.height) < 2
+        ):
             map_data_json = MapRendererData(
                 size=[
                     0,
@@ -551,7 +561,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 resources=resources,
             )
         else:
-            pixels = {}
+            pixels: dict[int, Any] = {}
             min_x = map_data.dimensions.width - 1
             min_y = map_data.dimensions.height - 1
             max_x = 0
@@ -633,7 +643,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 pixels[layer] = compressed_pixels[3:]
 
             path_types = {"S": 1, "W": 2, "M": 3}
-            paths = None
+            paths: Any = None
             if map_data.path:
                 paths = []
                 coords = [
@@ -779,7 +789,9 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                     else []
                 ),
                 active_points=(
-                    [[point.x0, point.y0] for point in map_data.active_points] if map_data.active_points else []
+                    [[point.x0, point.y0] for point in cast("list[Any]", map_data.active_points)]
+                    if map_data.active_points
+                    else []
                 ),
                 active_cruise_points=(
                     [
@@ -858,7 +870,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                     else []
                 ),
                 predefined_points=(
-                    [[point.x0, point.y0] for point in map_data.predefined_points]
+                    [[point.x0, point.y0] for point in cast("list[Any]", map_data.predefined_points)]
                     if map_data.predefined_points is not None
                     else None
                 ),
@@ -1017,23 +1029,22 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 resources=resources,
             )
 
-        map_data_json = json.dumps(
+        return json.dumps(
             map_data_json,
             default=lambda o: dict((key, value) for key, value in o.__dict__.items() if value is not None),
             allow_nan=False,
             sort_keys=True,
             separators=(",", ":"),
         )
-        return map_data_json
 
     def render_obstacle_image(
         self,
-        image_bytes,
+        image_bytes: Any,
         obstacle: Obstacle,
         ai_image_crop: bool,
         render_box: bool = True,
         crop_image: bool = False,
-    ):
+    ) -> Any:
         if image_bytes:
             if (
                 not obstacle
@@ -1168,6 +1179,31 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             image.convert("RGB").save(buffer, format="JPEG")
             return buffer.getvalue()
 
+    def _smooth_upscale(self, pixels: np.ndarray, scale: int) -> np.ndarray:
+        """Upscale the base raster with anti-aliasing instead of nearest-neighbour.
+
+        The default ``np.repeat`` upscale turns every grid cell into a hard
+        ``scale x scale`` block, so diagonal room and wall boundaries come out
+        visibly stair-stepped ("cheap" looking). When the ``vector_rooms`` option
+        is enabled we instead resample the base-resolution colour grid with a
+        bicubic filter, which smooths those diagonals into clean edges while
+        keeping flat interiors flat. Robot, path, icons and text are drawn later
+        at full resolution, so only the floor/room/wall layer is softened.
+        """
+        try:
+            height, width = pixels.shape[0], pixels.shape[1]
+            base = Image.fromarray(pixels)
+            smoothed = base.resize((width * scale, height * scale), Image.Resampling.BICUBIC)
+            base.close()
+            # np.array (not asarray) so the result is a writable, contiguous copy:
+            # render_floor_material / render_carpets mutate this array in place.
+            result = np.array(smoothed, dtype=np.uint8)
+            smoothed.close()
+            return result
+        except Exception as ex:  # pragma: no cover - defensive, never break the raster path
+            _LOGGER.debug("Smooth upscale skipped, falling back to nearest: %s", ex)
+            return pixels.repeat(scale, axis=0).repeat(scale, axis=1)
+
     def render_map(
         self,
         map_data: MapData,
@@ -1175,7 +1211,12 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         station_status: int = 0,
         info_text: bool = False,
     ) -> bytes:
-        if map_data is None or map_data.empty_map or (map_data.dimensions.width * map_data.dimensions.height) < 2:
+        if (
+            map_data is None
+            or map_data.dimensions is None
+            or map_data.empty_map
+            or (map_data.dimensions.width * map_data.dimensions.height) < 2
+        ):
             return self.default_map_image
 
         self.render_complete = False
@@ -1220,7 +1261,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                     and not is_washing  # Ne pas utiliser le cache pendant le washing
                 ):
                     self.render_complete = True
-                    return self._to_buffer(self._image)
+                    return cast(bytes, self._to_buffer(self._image))
 
             scale = (
                 2
@@ -1242,7 +1283,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 (not map_data.saved_map or map_data.history_map or map_data.recovery_map) and self.config.carpet
             )
             if (map_data.saved_map_status == 2 or map_data.saved_map) and not map_data.wifi_map:
-                render_material = self.config.material and map_data.floor_material
+                render_material = bool(self.config.material and map_data.floor_material)
                 render_carpet = render_carpet and bool(
                     map_data.carpets or map_data.detected_carpets or map_data.ignored_carpets or map_data.carpet_pixels
                 )
@@ -1261,9 +1302,13 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                         map_data.dimensions, map_data.segments
                     )
 
-                    if self._map_data and (
-                        self._map_data.dimensions.bounds != map_data.dimensions.bounds
-                        or self._map_data.saved_map_id != map_data.saved_map_id
+                    if (
+                        self._map_data
+                        and self._map_data.dimensions
+                        and (
+                            self._map_data.dimensions.bounds != map_data.dimensions.bounds
+                            or self._map_data.saved_map_id != map_data.saved_map_id
+                        )
                     ):
                         self._map_data = None
                 else:
@@ -1307,13 +1352,18 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                     self.icon_set,
                 )
 
-                if self._cache and self._map_data and self._map_data.dimensions.padding != map_data.dimensions.padding:
+                if (
+                    self._cache
+                    and self._map_data
+                    and self._map_data.dimensions
+                    and self._map_data.dimensions.padding != map_data.dimensions.padding
+                ):
                     self._map_data = None
             else:
                 map_data.dimensions.padding = self._map_data.dimensions.padding
 
             map_data.dimensions.scale = scale
-            segment_mask = None
+            segment_mask: Any = None
 
             if not self._low_memory and self.config.path and map_data.path and self._robot_type != RobotType.VSLAM:
                 if not self._cache or self._map_data is None or self._map_data.path != map_data.path:
@@ -1329,7 +1379,12 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             if self._cache and not self._has_mask and cached_layers.get(MapRendererLayer.PATH_MASK):
                 self._del_layer(cached_layers, MapRendererLayer.PATH_MASK)
 
-            if self._cache and self._map_data and self._map_data.dimensions.scale != scale:
+            if (
+                self._cache
+                and self._map_data
+                and self._map_data.dimensions
+                and self._map_data.dimensions.scale != scale
+            ):
                 self._map_data = None
 
             if not self._cache or (self._map_data is None or self._map_data.rotation != map_data.rotation):
@@ -1492,7 +1547,10 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
                 if render_material or render_carpet:
                     floor_scale = 2
-                    pixels = pixels.repeat(floor_scale, axis=0).repeat(floor_scale, axis=1)
+                    if self._vector_rooms:
+                        pixels = self._smooth_upscale(pixels, floor_scale)
+                    else:
+                        pixels = pixels.repeat(floor_scale, axis=0).repeat(floor_scale, axis=1)
                     if render_material:
                         floor_material = self.render_floor_material(
                             pixels,
@@ -1528,7 +1586,12 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
                     if scale != floor_scale:
                         repeat_factor = int(scale / floor_scale)
-                        pixels = pixels.repeat(repeat_factor, axis=0).repeat(repeat_factor, axis=1)
+                        if self._vector_rooms:
+                            pixels = self._smooth_upscale(pixels, repeat_factor)
+                        else:
+                            pixels = pixels.repeat(repeat_factor, axis=0).repeat(repeat_factor, axis=1)
+                elif self._vector_rooms:
+                    pixels = self._smooth_upscale(pixels, scale)
                 else:
                     pixels = pixels.repeat(scale, axis=0).repeat(scale, axis=1)
 
@@ -1575,7 +1638,11 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                         (map_data.dimensions.height - (max_y + 1)) * scale,
                     ]
 
-                if self._map_data and self._map_data.dimensions.crop != map_data.dimensions.crop:
+                if (
+                    self._map_data
+                    and self._map_data.dimensions
+                    and self._map_data.dimensions.crop != map_data.dimensions.crop
+                ):
                     self._map_data = None
 
                 image = Image.fromarray(pixels)
@@ -1624,7 +1691,8 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                         fill=(255, 255, 255, 0),
                     )
             else:
-                map_data.dimensions.crop = self._map_data.dimensions.crop
+                if self._map_data.dimensions:
+                    map_data.dimensions.crop = self._map_data.dimensions.crop
 
             self._calibration_points = self._calculate_calibration_points(map_data)
 
@@ -1686,17 +1754,17 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
             if map_data.rotation == 90:
                 old_image = image
-                image = image.transpose(Image.ROTATE_90)
+                image = image.transpose(Image.Transpose.ROTATE_90)
                 if old_image is not base_image:
                     self._close_image(old_image)
             elif map_data.rotation == 180:
                 old_image = image
-                image = image.transpose(Image.ROTATE_180)
+                image = image.transpose(Image.Transpose.ROTATE_180)
                 if old_image is not base_image:
                     self._close_image(old_image)
             elif map_data.rotation == 270:
                 old_image = image
-                image = image.transpose(Image.ROTATE_270)
+                image = image.transpose(Image.Transpose.ROTATE_270)
                 if old_image is not base_image:
                     self._close_image(old_image)
 
@@ -1724,7 +1792,11 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                             header_text = f"{header_text} | Second Cleaning"
                         elif map_data.cleanup_method is not None:
                             header_text = f"{header_text} | {map_data.cleanup_method.name.replace('_', ' ').title()}"
-                elif map_data.recovery_map and map_data.recovery_map_type is not RecoveryMapType.UNKNOWN:
+                elif (
+                    map_data.recovery_map
+                    and map_data.recovery_map_type
+                    and map_data.recovery_map_type is not RecoveryMapType.UNKNOWN
+                ):
                     header_text = f"{header_text} | {map_data.recovery_map_type.name.replace('_', ' ').title()}"
 
                 image_width = image.size[0]
@@ -1765,9 +1837,9 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                     if len(header_text):
                         lines.append(header_text)
 
-                max_width = 0
+                max_width = 0.0
                 header_height = int(text_size * 5) if map_data.history_map else text_size
-                total_height = header_height
+                total_height: float = header_height
 
                 line_sizes = []
                 for line in lines:
@@ -1907,10 +1979,10 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                             style = (value_color, value_font) if k == 0 else (text_color, name_font)
                             text_draw.text(pos[k], header_lines[i][k], fill=style[0], font=style[1])
 
-                x = (image_width - max_width) / 2
-                line_y = header_height
+                header_x = (image_width - max_width) / 2
+                line_y: float = header_height
                 for i in range(len(lines)):
-                    line_x = x + (max_width - line_sizes[i][0]) / 2
+                    line_x = header_x + (max_width - line_sizes[i][0]) / 2
                     text_draw.text((line_x, line_y), lines[i], fill=text_color, font=text_font)
                     line_y = line_y + line_sizes[i][1]
 
@@ -1926,9 +1998,9 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             _LOGGER.error("Map render Failed: %s", traceback.format_exc())
 
         self.render_complete = True
-        return self._to_buffer(self._image if self._cache else image)
+        return cast(bytes, self._to_buffer(self._image if self._cache else image))
 
-    def _calculate_render_sizes(self, map_data, map_image, scale):
+    def _calculate_render_sizes(self, map_data: Any, map_image: Any, scale: Any) -> Any:
         """Calculate icon sizes for rendering based on map dimensions."""
         layer_size = (int(map_image.size[0] * scale), int(map_image.size[1] * scale))
         line_width = 3 if map_data.dimensions.scale > 2 else 1
@@ -1970,8 +2042,16 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         return layer_size, line_width, border_width, robot_icon_size, icon_size, segment_icon_size
 
     def _render_charger_layer(
-        self, cached_layers, map_data, station_status, changes, layers, layer_size, robot_icon_size, scale
-    ):
+        self,
+        cached_layers: Any,
+        map_data: Any,
+        station_status: Any,
+        changes: Any,
+        layers: Any,
+        layer_size: Any,
+        robot_icon_size: Any,
+        scale: Any,
+    ) -> None:
         """Render the charger position layer."""
         layer = MapRendererLayer.CHARGER
         if map_data.charger_position and self.config.charger:
@@ -2013,8 +2093,17 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             self._del_layer(cached_layers, layer)
 
     def _render_robot_layer(
-        self, cached_layers, map_data, robot_status, station_status, changes, layers, layer_size, robot_icon_size, scale
-    ):
+        self,
+        cached_layers: Any,
+        map_data: Any,
+        robot_status: Any,
+        station_status: Any,
+        changes: Any,
+        layers: Any,
+        layer_size: Any,
+        robot_icon_size: Any,
+        scale: Any,
+    ) -> None:
         """Render the robot position layer."""
         layer = MapRendererLayer.ROBOT
         if not map_data.saved_map and map_data.robot_position and self.config.robot:
@@ -2094,7 +2183,9 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             changes.append(layer)
             self._del_layer(cached_layers, layer)
 
-    def _compose_object_layers(self, cached_layers, changes, layers, layer_size, map_image):
+    def _compose_object_layers(
+        self, cached_layers: Any, changes: Any, layers: Any, layer_size: Any, map_image: Any
+    ) -> Any:
         """Compose all rendered layers into the final OBJECTS layer."""
         if changes or not self._cache:
             old_objects = cached_layers.get(MapRendererLayer.OBJECTS)
@@ -2125,7 +2216,9 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             cached_layers[MapRendererLayer.OBJECTS],
         )
 
-    def render_objects(self, cached_layers, map_data, robot_status, station_status, map_image, scale):
+    def render_objects(
+        self, cached_layers: Any, map_data: Any, robot_status: Any, station_status: Any, map_image: Any, scale: Any
+    ) -> Any:
         layer_size, line_width, border_width, robot_icon_size, icon_size, segment_icon_size = (
             self._calculate_render_sizes(map_data, map_image, scale)
         )
@@ -2144,7 +2237,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 not self._cache
                 or self._map_data is None
                 or self._map_data.no_mopping_areas != map_data.no_mopping_areas
-                or (not robot_status or self._robot_status < 100) != (not robot_status or robot_status < 100)
+                or (not robot_status or (self._robot_status or 0) < 100) != (not robot_status or robot_status < 100)
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
@@ -2702,7 +2795,9 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
     # render_areas, render_points, render_walls, render_thresholds,
     # render_curtains, render_ramps: see _ShapesMixin
 
-    def render_path(self, path, color, mop_color, layer_size, mask, dimensions, width, scale):
+    def render_path(
+        self, path: Any, color: Any, mop_color: Any, layer_size: Any, mask: Any, dimensions: Any, width: Any, scale: Any
+    ) -> Any:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         sweep = []
@@ -2790,7 +2885,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
         return new_layer
 
-    def _resolve_badge_overlaps(self, segments, dimensions, size, rotation):
+    def _resolve_badge_overlaps(self, segments: Any, dimensions: Any, size: Any, rotation: Any) -> Any:
         offset = size * 2.7
         default_offsets = {
             0: (0, -offset),
@@ -2830,7 +2925,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 break
         return flipped
 
-    def _resolve_name_overlaps(self, segments, dimensions, size, rotation):
+    def _resolve_name_overlaps(self, segments: Any, dimensions: Any, size: Any, rotation: Any) -> Any:
         """Detect overlapping room name badges and compute offsets to push them apart."""
         centers = {}
         for seg_id, seg in segments.items():
@@ -2839,7 +2934,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             p = Point(seg.x, seg.y).to_img(dimensions, False)
             centers[seg_id] = [p.x, p.y]
 
-        offsets = {}
+        offsets: dict[Any, Any] = {}
         threshold = size * 3.5
 
         for _ in range(3):
@@ -2877,19 +2972,19 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
     def render_segment(
         self,
-        segment,
-        cleanset,
-        sequence,
-        layer_size,
-        dimensions,
-        size,
-        rotation,
-        scale,
-        active,
-        neglected,
-        flip_badge=False,
-        name_offset=(0, 0),
-    ):
+        segment: Any,
+        cleanset: Any,
+        sequence: Any,
+        layer_size: Any,
+        dimensions: Any,
+        size: Any,
+        rotation: Any,
+        scale: Any,
+        active: Any,
+        neglected: Any,
+        flip_badge: bool = False,
+        name_offset: Any = (0, 0),
+    ) -> Any:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         if segment.x is not None and segment.y is not None:
@@ -2938,7 +3033,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 )
 
             if active and segment.order and self.config.order and sequence:
-                order_font = ImageFont.truetype(BytesIO(self._font_file), int(size * 2.1))
+                order_font = ImageFont.truetype(BytesIO(cast(bytes, self._font_file)), int(size * 2.1))
 
             p = Point(segment.x, segment.y).to_img(dimensions, False)
             x = p.x + name_offset[0]
@@ -2969,7 +3064,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                     y1 = y + size
 
                     if text_font:
-                        left, top, tw, th = draw.textbbox((0, 0), text, text_font)
+                        left, top, tw, th = draw.textbbox((0, 0), text or "", text_font)
                         ws = tw / 4
 
                         if segment.index or icon is None:
@@ -2994,7 +3089,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                         stroke_width = dimensions.scale
                         if neglected:
                             stroke_color = self.color_scheme.neglected_segment
-                            text_color = (
+                            text_color: Any = (
                                 stroke_color[0],
                                 stroke_color[1],
                                 stroke_color[2],
@@ -3067,7 +3162,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                             )
 
                         bold_stroke = max(1, int(dimensions.scale * 0.7))
-                        icon_text = Image.new("RGBA", (tw, th), (255, 255, 255, 0))
+                        icon_text = Image.new("RGBA", (int(tw), int(th)), (255, 255, 255, 0))
                         draw_text = ImageDraw.Draw(icon_text, "RGBA")
 
                         draw_text.text(
@@ -3409,7 +3504,9 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 )
         return new_layer
 
-    def render_floor_material(self, image, floor_material, pixel_type, color, dimensions, scale):
+    def render_floor_material(
+        self, image: Any, floor_material: Any, pixel_type: Any, color: Any, dimensions: Any, scale: Any
+    ) -> Any:
         tile_w = 12
         floor_w = 4
         floor_h = 16
@@ -3433,7 +3530,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                         y_start = 1
                         x_start = 0
                         x_multiplier = floor_h / 2
-                        y_multiplier = floor_w
+                        y_multiplier: float = floor_w
                     elif floor_type == 2:
                         w = math.floor(dimensions.width / floor_w)
                         h = math.floor(2 * dimensions.height / floor_h)
@@ -3499,18 +3596,18 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
     def render_carpets(
         self,
-        image,
-        pixel_type,
-        carpets,
-        ignored_carpets,
-        detected_carpets,
-        carpet_pixels,
-        segments,
-        color,
-        detected_color,
-        dimensions,
-        scale,
-    ):
+        image: Any,
+        pixel_type: Any,
+        carpets: Any,
+        ignored_carpets: Any,
+        detected_carpets: Any,
+        carpet_pixels: Any,
+        segments: Any,
+        color: Any,
+        detected_color: Any,
+        dimensions: Any,
+        scale: Any,
+    ) -> Any:
         carpet_data = {}
         left = dimensions.left
         top = dimensions.top
@@ -3592,7 +3689,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
         return image
 
-    def get_resources(self, capability, as_json=False, icon_set=None) -> MapRendererResources | str:
+    def get_resources(self, capability: Any, as_json: bool = False, icon_set: Any = None) -> MapRendererResources | str:
         if icon_set is None or not str(icon_set).isdecimal():
             icon_set = self.icon_set
         else:
@@ -3775,7 +3872,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 }
 
         if as_json:
-            resources = json.dumps(
+            return json.dumps(
                 resources,
                 default=lambda o: dict((key, value) for key, value in o.__dict__.items() if value is not None),
                 allow_nan=False,
@@ -3787,7 +3884,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
     @property
     def calibration_points(self) -> dict[str, int]:
-        return self._calibration_points
+        return cast("dict[str, int]", self._calibration_points)
 
     @property
     def default_map_image(self) -> bytes:
@@ -3802,14 +3899,16 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 ),
                 border=(50, 75, 50, 75),
             )
-        return self._to_buffer(self._default_map_image)
+        return cast(bytes, self._to_buffer(self._default_map_image))
 
     @property
     def disconnected_map_image(self) -> bytes:
         if self._image:
-            return self._to_buffer(self._image.filter(ImageFilter.GaussianBlur(7 if self._low_resolution else 13)))
+            return cast(
+                bytes, self._to_buffer(self._image.filter(ImageFilter.GaussianBlur(7 if self._low_resolution else 13)))
+            )
         return self.default_map_image
 
     @property
     def default_calibration_points(self) -> dict[str, int]:
-        return self._default_calibration_points
+        return cast("dict[str, int]", self._default_calibration_points)

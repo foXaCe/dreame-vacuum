@@ -74,19 +74,20 @@ class DreameVacuumMapDataJsonRenderer:
     MAX = round((HALF_INT16 + HALF_INT16_UPPER_HALF) / 10)
 
     def __init__(self) -> None:
-        self._map_data: MapData = None
-        self._map_data_json: dict[str, Any] = None
+        self._map_data: MapData | None = None
+        self._map_data_json: dict[str, Any] | None = None
         self._left: int = 0
         self._top: int = 0
         self._grid_size: int = 0
         self.render_complete: bool = True
-        self._layers: dict[MapRendererLayer, dict[str, Any]] = {}
+        # Values are dicts for point layers but plain lists for path layers.
+        self._layers: dict[MapRendererLayer, Any] = {}
 
-        self._default_map_data: str = base64.b64decode(DEFAULT_MAP_DATA)
+        self._default_map_data: bytes = base64.b64decode(DEFAULT_MAP_DATA)
         self._default_map_image = Image.open(BytesIO(base64.b64decode(DEFAULT_MAP_DATA_IMAGE))).convert("RGBA")
 
     @staticmethod
-    def _coordinate_tuple_sort(a: list[int], b: list[int]) -> bool:
+    def _coordinate_tuple_sort(a: list[float], b: list[float]) -> int:
         xA = a[0]
         yA = a[1]
         xB = b[0]
@@ -99,18 +100,18 @@ class DreameVacuumMapDataJsonRenderer:
         return 0
 
     @staticmethod
-    def _convert_coordinates(x: int, y: int) -> list[int]:
+    def _convert_coordinates(x: float, y: float) -> list[int]:
         return [
             round((x + DreameVacuumMapDataJsonRenderer.HALF_INT16) / 10),
             DreameVacuumMapDataJsonRenderer.MAX - round((y + DreameVacuumMapDataJsonRenderer.HALF_INT16) / 10),
         ]
 
     @staticmethod
-    def _convert_angle(angle: int) -> int:
-        return (((180 - angle) if (angle < 180) else (360 - angle + 180)) + 270) % 360
+    def _convert_angle(angle: Any) -> int:
+        return int((((180 - angle) if (angle < 180) else (360 - angle + 180)) + 270) % 360)
 
     @staticmethod
-    def _to_buffer(image, extra_data: str) -> bytes:
+    def _to_buffer(image: Any, extra_data: str | bytes) -> bytes:
         buffer = io.BytesIO()
         info = PngImagePlugin.PngInfo()
         info.add_text(MAP_DATA_JSON_CLASS, extra_data, zip=True)
@@ -141,11 +142,12 @@ class DreameVacuumMapDataJsonRenderer:
             or self._map_data.saved_map_status != map_data.saved_map_status
         ):
             self._map_data = None
-            self._left = round((map_data.dimensions.left + DreameVacuumMapDataJsonRenderer.HALF_INT16) / 10)
-            self._top = round((map_data.dimensions.top + DreameVacuumMapDataJsonRenderer.HALF_INT16) / 10)
-            self._grid_size = round(map_data.dimensions.grid_size / 10)
+            if map_data.dimensions:
+                self._left = round((map_data.dimensions.left + DreameVacuumMapDataJsonRenderer.HALF_INT16) / 10)
+                self._top = round((map_data.dimensions.top + DreameVacuumMapDataJsonRenderer.HALF_INT16) / 10)
+                self._grid_size = round(map_data.dimensions.grid_size / 10)
 
-        map_data_json = {
+        map_data_json: dict[str, Any] = {
             MAP_DATA_JSON_PARAMETER_CLASS: MAP_DATA_JSON_CLASS,
             MAP_DATA_JSON_PARAMETER_SIZE: {
                 MAP_DATA_JSON_PARAMETER_X: DreameVacuumMapDataJsonRenderer.MAX,
@@ -290,7 +292,7 @@ class DreameVacuumMapDataJsonRenderer:
                 or not self._layers.get(MapRendererLayer.ACTIVE_POINT)
             ):
                 self._layers[MapRendererLayer.ACTIVE_POINT] = []
-                size = 15 * map_data.dimensions.grid_size
+                size = 15 * (map_data.dimensions.grid_size if map_data.dimensions else 0)
                 for point in map_data.active_points:
                     area = Area(
                         point.x - size,
@@ -380,7 +382,7 @@ class DreameVacuumMapDataJsonRenderer:
 
         floor_pixels = []
         wall_pixels = []
-        segments = {}
+        segments: dict[Any, Any] = {}
 
         if (
             self._map_data is None
@@ -389,11 +391,12 @@ class DreameVacuumMapDataJsonRenderer:
             or self._map_data.segments != map_data.segments
             or self._map_data.data != map_data.data
             or not self._layers.get(MapRendererLayer.IMAGE)
-        ):
+        ) and map_data.dimensions:
+            pixel_type: Any = map_data.pixel_type
             self._layers[MapRendererLayer.IMAGE] = []
             for y in range(map_data.dimensions.height):
                 for x in range(map_data.dimensions.width):
-                    segment_id = int(map_data.pixel_type[x, y])
+                    segment_id = int(pixel_type[x, y])
                     coords = [
                         (x + (self._left / self._grid_size)),
                         (y + (self._top / self._grid_size)),

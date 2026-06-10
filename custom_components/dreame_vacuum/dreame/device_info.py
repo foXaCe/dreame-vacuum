@@ -6,22 +6,22 @@ Contains DreameVacuumDeviceInfo data class for network, firmware
 and hardware information.
 """
 
-from typing import Any
+from typing import Any, cast
 
 
 class DreameVacuumDeviceInfo:
     """Container of device information."""
 
-    def __init__(self, data):
+    def __init__(self, data: dict[str, Any]) -> None:
         self.data = data
         self.version = 0
         firmware_version = self.firmware_version
         if firmware_version is not None:
-            firmware_version = firmware_version.split("_")
-            if len(firmware_version) == 2:
-                self.version = int(firmware_version[1])
+            parts = firmware_version.split("_")
+            if len(parts) == 2:
+                self.version = int(parts[1])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s v%s (%s) @ %s" % (
             self.model,
             self.version,
@@ -33,7 +33,7 @@ class DreameVacuumDeviceInfo:
     def network_interface(self) -> dict[str, Any] | None:
         """Information about network configuration."""
         if "netif" in self.data:
-            return self.data["netif"]
+            return cast("dict[str, Any]", self.data["netif"])
         return None
 
     @property
@@ -53,37 +53,37 @@ class DreameVacuumDeviceInfo:
     def model(self) -> str | None:
         """Model string if available."""
         if "model" in self.data:
-            return self.data["model"]
+            return cast("str | None", self.data["model"])
         return None
 
     @property
     def firmware_version(self) -> str | None:
         """Firmware version if available."""
         if "fw_ver" in self.data and self.data["fw_ver"] is not None:
-            return self.data["fw_ver"]
+            return cast(str, self.data["fw_ver"])
         if "ver" in self.data and self.data["ver"] is not None:
-            return self.data["ver"]
+            return cast(str, self.data["ver"])
         return None
 
     @property
     def hardware_version(self) -> str | None:
         """Hardware version if available."""
         if "hw_ver" in self.data:
-            return self.data["hw_ver"]
+            return cast("str | None", self.data["hw_ver"])
         return "Linux"
 
     @property
     def mac_address(self) -> str | None:
         """MAC address if available."""
         if "mac" in self.data:
-            return self.data["mac"]
+            return cast("str | None", self.data["mac"])
         return None
 
     @property
     def ip_address(self) -> str | None:
         """IP address if available."""
         if self.network_interface:
-            return self.network_interface.get("localIp")
+            return cast("str | None", self.network_interface.get("localIp"))
         return None
 
     @property

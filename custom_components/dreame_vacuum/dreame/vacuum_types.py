@@ -6,7 +6,10 @@ from enum import IntEnum, StrEnum
 import json
 import math
 import time
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
+
+if TYPE_CHECKING:
+    from .device import DreameVacuumDevice
 
 SEGMENT_TYPE_CODE_TO_NAME: Final = {
     0: "Room",
@@ -2049,17 +2052,25 @@ ACTION_AVAILABILITY: Final = {
 }
 
 
-def PIID(property: DreameVacuumProperty, mapping=DreameVacuumPropertyMapping) -> int | None:
+def PIID(
+    property: DreameVacuumProperty,
+    mapping: dict[DreameVacuumProperty, dict[str, int]] = DreameVacuumPropertyMapping,
+) -> int | None:
     if property in mapping:
         return mapping[property][piid]
+    return None
 
 
-def DIID(property: DreameVacuumProperty, mapping=DreameVacuumPropertyMapping) -> str | None:
+def DIID(
+    property: DreameVacuumProperty,
+    mapping: dict[DreameVacuumProperty, dict[str, int]] = DreameVacuumPropertyMapping,
+) -> str | None:
     if property in mapping:
         return f"{mapping[property][siid]}.{mapping[property][piid]}"
+    return None
 
 
-def DID(siid, piid) -> DreameVacuumProperty | None:
+def DID(siid: int, piid: int) -> DreameVacuumProperty | None:
     for prop in list(DreameVacuumProperty):
         mapping = DreameVacuumPropertyMapping.get(prop)
         if mapping is not None and siid == mapping["siid"] and piid == mapping["piid"]:
@@ -2287,7 +2298,7 @@ class DeviceCapability(IntEnum):
 
 
 class DreameVacuumDeviceCapability:
-    def __init__(self, device) -> None:
+    def __init__(self, device: DreameVacuumDevice) -> None:
         self.key = None
         self.list = None
         self.lidar_navigation = True
@@ -2406,8 +2417,11 @@ class DreameVacuumDeviceCapability:
         self._capability = None
         self._device = device
 
-    def load(self, device_info):
-        model = self._device.info.model[(self._device.info.model.rfind(".") + 1) :]
+    def load(self, device_info: list[Any]) -> None:
+        info = self._device.info
+        if info is None or info.model is None:
+            raise Exception("Unsupported Device!")
+        model = info.model[(info.model.rfind(".") + 1) :]
         if model not in device_info[3]:
             raise Exception("Unsupported Device!")
         device = device_info[0][device_info[3][model]]
@@ -2568,12 +2582,13 @@ class DreameVacuumDeviceCapability:
             or self._device.status.fill_light is not None
         )
 
+    @property
     def mop_extend(self) -> bool:
-        return self.mop_pad_swing and self._device.mop_extend_frequency.value >= 0
+        return bool(self.mop_pad_swing and self._device.status.mop_extend_frequency.value >= 0)
 
 
 class Point:
-    def __init__(self, x: float, y: float, a=None) -> None:
+    def __init__(self, x: float, y: float, a: float | None = None) -> None:
         self.x = x
         self.y = y
         self.a = a
@@ -2586,7 +2601,9 @@ class Point:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __eq__(self: Point, other: Point) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Point):
+            return NotImplemented
         return other is not None and self.x == other.x and self.y == other.y and self.a == other.a
 
     def as_dict(self) -> dict[str, Any]:
@@ -2594,13 +2611,13 @@ class Point:
             return {ATTR_X: self.x, ATTR_Y: self.y}
         return {ATTR_X: self.x, ATTR_Y: self.y, ATTR_A: self.a}
 
-    def to_img(self, image_dimensions, offset=True) -> Point:
+    def to_img(self, image_dimensions: MapImageDimensions, offset: bool = True) -> Point:
         return image_dimensions.to_img(self, offset)
 
-    def to_coord(self, image_dimensions, offset=True) -> Point:
+    def to_coord(self, image_dimensions: MapImageDimensions, offset: bool = True) -> Point:
         return image_dimensions.to_coord(self, offset)
 
-    def rotated(self, image_dimensions, degree) -> Point:
+    def rotated(self, image_dimensions: MapImageDimensions, degree: int | None) -> Point:
         w = int(
             (image_dimensions.width * image_dimensions.scale)
             + image_dimensions.padding[0]
@@ -2617,6 +2634,7 @@ class Point:
         )
         x = self.x
         y = self.y
+        degree = degree or 0
         while degree > 0:
             tmp = y
             y = w - x
@@ -2627,10 +2645,10 @@ class Point:
             degree = degree - 90
         return Point(x, y)
 
-    def __mul__(self, other) -> Point:
+    def __mul__(self, other: float) -> Point:
         return Point(self.x * other, self.y * other, self.a)
 
-    def __truediv__(self, other) -> Point:
+    def __truediv__(self, other: float) -> Point:
         return Point(self.x / other, self.y / other, self.a)
 
 
@@ -2652,7 +2670,7 @@ class Obstacle(Point):
         x: float,
         y: float,
         type: int,
-        possibility: int,
+        possibility: int | None,
         object_id: str | None = None,
         file_name: str | None = None,
         key: int | None = None,
@@ -2690,14 +2708,14 @@ class Obstacle(Point):
             self.object_name = file_name.split("/")[-1]
             if "-" in self.object_name:
                 self.object_name = self.object_name.split("-")[0]
-        if id:
-            self.object_name = f"{id}-{self.object_name}"
+        if self.id:
+            self.object_name = f"{self.id}-{self.object_name}"
 
-        self.segment = None
-        self.color_index = None
+        self.segment: str | None = None
+        self.color_index: int | None = None
 
-    def set_segment(self, map_data):
-        if map_data and map_data.segments and map_data.pixel_type is not None:
+    def set_segment(self, map_data: MapData) -> None:
+        if map_data and map_data.segments and map_data.pixel_type is not None and map_data.dimensions is not None:
             x = int((self.x - map_data.dimensions.left) / map_data.dimensions.grid_size)
             y = int((self.y - map_data.dimensions.top) / map_data.dimensions.grid_size)
             if x >= 0 and x < map_data.dimensions.width and y >= 0 and y < map_data.dimensions.height:
@@ -2726,7 +2744,9 @@ class Obstacle(Point):
             attributes[ATTR_ROOM] = self.segment
         return attributes
 
-    def __eq__(self: Obstacle, other: Obstacle) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Obstacle):
+            return NotImplemented
         return not (
             other is None
             or self.x != other.x
@@ -2755,7 +2775,9 @@ class Zone:
     def __str__(self) -> str:
         return f"[{self.x0}, {self.y0}, {self.x1}, {self.y1}]"
 
-    def __eq__(self: Zone, other: Zone) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Zone):
+            return NotImplemented
         return (
             other is not None
             and self.x0 == other.x0
@@ -2773,17 +2795,17 @@ class Zone:
     def as_area(self) -> Area:
         return Area(self.x0, self.y0, self.x0, self.y1, self.x1, self.y1, self.x1, self.y0)
 
-    def to_img(self, image_dimensions, offset=True) -> Zone:
+    def to_img(self, image_dimensions: MapImageDimensions, offset: bool = True) -> Zone:
         p0 = Point(self.x0, self.y0).to_img(image_dimensions, offset)
         p1 = Point(self.x1, self.y1).to_img(image_dimensions, offset)
         return Zone(p0.x, p0.y, p1.x, p1.y)
 
-    def to_coord(self, image_dimensions, offset=True) -> Zone:
+    def to_coord(self, image_dimensions: MapImageDimensions, offset: bool = True) -> Zone:
         p0 = Point(self.x0, self.y0).to_coord(image_dimensions, offset)
         p1 = Point(self.x1, self.y1).to_coord(image_dimensions, offset)
         return Zone(p0.x, p0.y, p1.x, p1.y)
 
-    def check_point(self, x, y, size) -> bool:
+    def check_point(self, x: float, y: float, size: float) -> bool:
         return self.as_area().check_point(x, y, size)
 
 
@@ -2811,12 +2833,12 @@ class Segment(Zone):
         order: int | None = None,
         outline_points: list[list[int]] | None = None,
     ) -> None:
-        super().__init__(x0, y0, x1, y1)
+        super().__init__(x0 or 0, y0 or 0, x1 or 0, y1 or 0)
         self.segment_id = segment_id
-        self.unique_id = None
+        self.unique_id: Any = None
         self.x = x
         self.y = y
-        self.name = name
+        self.name: str = name or ""
         self.custom_name = custom_name
         self.type = type
         self.index = index
@@ -2829,21 +2851,21 @@ class Segment(Zone):
         self.cleaning_mode = cleaning_mode
         self.mopping_settings = mopping_settings
         self._outline_points = outline_points
-        self.wetness_level = None
-        self.cleaning_route = None
-        self.custom_mopping_route = None
-        self.color_index = None
-        self.floor_material = None
-        self.floor_material_direction = None
-        self.floor_material_rotated_direction = None
-        self.visibility = None
+        self.wetness_level: int | None = None
+        self.cleaning_route: int | None = None
+        self.custom_mopping_route: int | None = None
+        self.color_index: int | None = None
+        self.floor_material: int | None = None
+        self.floor_material_direction: int | None = None
+        self.floor_material_rotated_direction: int | None = None
+        self.visibility: int | None = None
         self.cleanset_type = CleansetType.NONE
-        self.carpet_cleaning = None
-        self.carpet_settings = None
+        self.carpet_cleaning: int | None = None
+        self.carpet_settings: int | None = None
         self.set_name()
 
     @property
-    def mop_pad_humidity(self) -> int:
+    def mop_pad_humidity(self) -> int | None:
         return self.water_volume
 
     @property
@@ -2870,14 +2892,14 @@ class Segment(Zone):
         if self._outline_points is not None:
             return self._outline_points
         return [
-            [self.x0, self.y0],
-            [self.x0, self.y1],
-            [self.x1, self.y1],
-            [self.x1, self.y0],
+            [int(self.x0), int(self.y0)],
+            [int(self.x0), int(self.y1)],
+            [int(self.x1), int(self.y1)],
+            [int(self.x1), int(self.y0)],
         ]
 
     @property
-    def center(self) -> list[int]:
+    def center(self) -> list[int | None]:
         return [self.x, self.y]
 
     @property
@@ -2924,11 +2946,11 @@ class Segment(Zone):
         # Fallback to English name
         return self.name
 
-    def set_custom_carpet_settings(self, carpet_cleaning, carpet_settings=None):
+    def set_custom_carpet_settings(self, carpet_cleaning: int, carpet_settings: int | None = None) -> None:
         self.carpet_cleaning = carpet_cleaning
         self.carpet_settings = carpet_settings
 
-    def next_type_index(self, type, segments) -> int:
+    def next_type_index(self, type: int, segments: dict[int, Segment]) -> int:
         index = 0
         if type > 0:
             for segment_id in sorted(segments, key=lambda segment_id: segments[segment_id].index):
@@ -2940,7 +2962,7 @@ class Segment(Zone):
                     index = index + 1
         return index
 
-    def name_list(self, segments, language: str | None = None) -> dict[str, int]:
+    def name_list(self, segments: dict[int, Segment], language: str | None = None) -> dict[str, int]:
         result = {}
         translations = SEGMENT_TYPE_TRANSLATIONS.get(language, {}) if language else {}
         for k, v in SEGMENT_TYPE_CODE_TO_NAME.items():
@@ -3017,7 +3039,9 @@ class Segment(Zone):
 
         return attributes
 
-    def __eq__(self: Segment, other: Segment) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Segment):
+            return NotImplemented
         return not (
             other is None
             or self.x0 != other.x0
@@ -3061,7 +3085,9 @@ class Wall:
         self.x1 = x1
         self.y1 = y1
 
-    def __eq__(self: Wall, other: Wall) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Wall):
+            return NotImplemented
         return (
             other is not None
             and self.x0 == other.x0
@@ -3079,12 +3105,12 @@ class Wall:
     def as_dict(self) -> dict[str, Any]:
         return {ATTR_X0: self.x0, ATTR_Y0: self.y0, ATTR_X1: self.x1, ATTR_Y1: self.y1}
 
-    def to_img(self, image_dimensions, offset=True) -> Wall:
+    def to_img(self, image_dimensions: MapImageDimensions, offset: bool = True) -> Wall:
         p0 = Point(self.x0, self.y0).to_img(image_dimensions, offset)
         p1 = Point(self.x1, self.y1).to_img(image_dimensions, offset)
         return Wall(p0.x, p0.y, p1.x, p1.y)
 
-    def to_coord(self, image_dimensions, offset=True) -> Wall:
+    def to_coord(self, image_dimensions: MapImageDimensions, offset: bool = True) -> Wall:
         p0 = Point(self.x0, self.y0).to_coord(image_dimensions, offset)
         p1 = Point(self.x1, self.y1).to_coord(image_dimensions, offset)
         return Wall(p0.x, p0.y, p1.x, p1.y)
@@ -3116,7 +3142,9 @@ class Area:
         self.y3 = y3
         self.angle = angle
 
-    def __eq__(self: Area, other: Area) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Area):
+            return NotImplemented
         return (
             other is not None
             and self.x0 == other.x0
@@ -3152,7 +3180,7 @@ class Area:
     def as_list(self) -> list[float]:
         return [self.x0, self.y0, self.x1, self.y1, self.x2, self.y2, self.x3, self.y3]
 
-    def to_img(self, image_dimensions, offset=True) -> Area:
+    def to_img(self, image_dimensions: MapImageDimensions, offset: bool = True) -> Area:
         if self.angle:
             theta = -self.angle * math.pi / 180
             cosang = math.cos(theta)
@@ -3178,17 +3206,17 @@ class Area:
             p3 = Point(self.x3, self.y3).to_img(image_dimensions, offset)
         return Area(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
 
-    def to_coord(self, image_dimensions, offset=True) -> Area:
+    def to_coord(self, image_dimensions: MapImageDimensions, offset: bool = True) -> Area:
         p0 = Point(self.x0, self.y0).to_coord(image_dimensions, offset)
         p1 = Point(self.x1, self.y1).to_coord(image_dimensions, offset)
         p2 = Point(self.x2, self.y2).to_coord(image_dimensions, offset)
         p3 = Point(self.x3, self.y3).to_coord(image_dimensions, offset)
         return Area(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
 
-    def check_size(self, size) -> bool:
+    def check_size(self, size: float) -> bool:
         return self.x2 - self.x0 == size and self.y2 - self.y1 == size
 
-    def check_point(self, x, y, size) -> bool:
+    def check_point(self, x: float, y: float, size: float) -> bool:
         x_coords = [self.x0, self.x1, self.x2, self.x3]
         y_coords = [self.y0, self.y1, self.y2, self.y3]
 
@@ -3221,12 +3249,12 @@ class Furniture(Point):
         self.width = width
         self.height = height
         if x0 and y0 and width and height:
-            self.x1 = x0 + width
-            self.y1 = y0
-            self.x2 = x0 + width
-            self.y2 = y0 + height
-            self.x3 = x0
-            self.y3 = y0 + height
+            self.x1: float | None = x0 + width
+            self.y1: float | None = y0
+            self.x2: float | None = x0 + width
+            self.y2: float | None = y0 + height
+            self.x3: float | None = x0
+            self.y3: float | None = y0 + height
         else:
             self.x1 = None
             self.y1 = None
@@ -3266,7 +3294,9 @@ class Furniture(Point):
         attributes[ATTR_SCALE] = self.scale
         return attributes
 
-    def __eq__(self: Furniture, other: Furniture) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Furniture):
+            return NotImplemented
         return not (
             other is None
             or self.x != other.x
@@ -3296,7 +3326,9 @@ class Coordinate(Point):
             attributes[ATTR_COMPLETED] = self.completed
         return attributes
 
-    def __eq__(self: Coordinate, other: Coordinate) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Coordinate):
+            return NotImplemented
         return not (
             other is None
             or self.x != other.x
@@ -3309,7 +3341,7 @@ class Coordinate(Point):
 class Carpet(Area):
     def __init__(
         self,
-        id: int,
+        id: int | None,
         x0: float,
         y0: float,
         x1: float,
@@ -3318,7 +3350,7 @@ class Carpet(Area):
         y2: float,
         x3: float,
         y3: float,
-        ellipse: bool = False,
+        ellipse: bool | str | int | None = False,
         carpet_type: int | None = None,
         ignored_areas: list[int] | None = None,
         segments: list[int] | None = None,
@@ -3330,18 +3362,20 @@ class Carpet(Area):
         self.ignored_areas = ignored_areas
         self.ellipse = ellipse
         self.polygon = polygon
-        self.carpet_cleaning = None
-        self.carpet_settings = None
+        self.carpet_cleaning: int | None = None
+        self.carpet_settings: int | None = None
         self.carpet_type = carpet_type
         if ellipse is not None:
             ## Detected carpets returns string but added and ignored carpets are using int
             self.ellipse = ellipse == "1" or ellipse == 1
 
-    def set_custom_carpet_settings(self, carpet_cleaning, carpet_settings=None):
+    def set_custom_carpet_settings(self, carpet_cleaning: int, carpet_settings: int | None = None) -> None:
         self.carpet_cleaning = carpet_cleaning
         self.carpet_settings = carpet_settings
 
-    def __eq__(self: Carpet, other: Carpet) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Carpet):
+            return NotImplemented
         return not (
             other is None
             or self.x0 != other.x0
@@ -3385,7 +3419,9 @@ class Polygon(Area):
         self.ms = ms
         self.area = area
 
-    def __eq__(self: Polygon, other: Polygon) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Polygon):
+            return NotImplemented
         return not (
             other is None
             or self.x0 != other.x0
@@ -3408,14 +3444,14 @@ class MapImageDimensions:
         self.height = height
         self.width = width
         self.grid_size = grid_size
-        self.scale = 1
-        self.padding = [0, 0, 0, 0]
-        self.crop = [0, 0, 0, 0]
-        self.bounds = None
+        self.scale: Any = 1
+        self.padding: list[Any] = [0, 0, 0, 0]
+        self.crop: list[Any] = [0, 0, 0, 0]
+        self.bounds: Any = None
 
-    def to_img(self, point: Point, offset=True) -> Point:
-        left = self.left
-        top = self.top
+    def to_img(self, point: Point, offset: bool = True) -> Point:
+        left: float = self.left
+        top: float = self.top
         if not offset and (left % self.grid_size != 0 or top % self.grid_size != 0):
             left = left + (self.grid_size / 2)
             top = top + (self.grid_size / 2)
@@ -3427,9 +3463,9 @@ class MapImageDimensions:
             - self.crop[1],
         )
 
-    def to_coord(self, point: Point, offset=True) -> Point:
-        left = self.left
-        top = self.top
+    def to_coord(self, point: Point, offset: bool = True) -> Point:
+        left: float = self.left
+        top: float = self.top
         if not offset and (left % self.grid_size != 0 or top % self.grid_size != 0):
             left = left + (self.grid_size / 2)
             top = top + (self.grid_size / 2)
@@ -3439,7 +3475,9 @@ class MapImageDimensions:
             ((((self.height) * self.grid_size - 1) - (point.y - top)) / self.grid_size),
         )
 
-    def __eq__(self: MapImageDimensions, other: MapImageDimensions) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, MapImageDimensions):
+            return NotImplemented
         return (
             other is not None
             and self.top == other.top
@@ -3451,29 +3489,31 @@ class MapImageDimensions:
 
 
 class CleaningHistory:
-    def __init__(self, history_data, property_mapping) -> None:
-        self.date: datetime = None
-        self.status: DreameVacuumStatus = None
+    def __init__(
+        self, history_data: list[dict[str, Any]], property_mapping: dict[DreameVacuumProperty, dict[str, int]]
+    ) -> None:
+        self.date: datetime | None = None
+        self.status: DreameVacuumStatus | None = None
         self.cleaning_time: int = 0
         self.cleaned_area: int = 0
-        self.suction_level: DreameVacuumSuctionLevel = None
-        self.file_name: str = None
-        self.key = None
-        self.object_name = None
-        self.completed: bool = None
-        self.water_tank_or_mop: DreameVacuumWaterTank = None
-        self.map_index: int = None
-        self.map_name: str = None
-        self.cruise_type: int = None
-        self.cleanup_method: CleanupMethod = None
-        self.second_cleaning: int = None
-        self.second_mopping: int = None
-        self.mopping_mode: int = None
-        self.multiple_cleaning_time: str = None
-        self.pet_focused_cleaning: int = None
-        self.task_interrupt_reason: TaskInterruptReason = None
-        self.neglected_segments: dict[int, int] = None
-        self.clean_again: int = None
+        self.suction_level: DreameVacuumSuctionLevel | None = None
+        self.file_name: str | None = None
+        self.key: str | None = None
+        self.object_name: str | None = None
+        self.completed: bool | None = None
+        self.water_tank_or_mop: DreameVacuumWaterTank | None = None
+        self.map_index: int | None = None
+        self.map_name: str | None = None
+        self.cruise_type: int | None = None
+        self.cleanup_method: CleanupMethod | None = None
+        self.second_cleaning: int | None = None
+        self.second_mopping: int | None = None
+        self.mopping_mode: int | None = None
+        self.multiple_cleaning_time: str | None = None
+        self.pet_focused_cleaning: int | None = None
+        self.task_interrupt_reason: TaskInterruptReason | None = None
+        self.neglected_segments: dict[int, int] | None = None
+        self.clean_again: int | None = None
 
         for history_data_item in history_data:
             pid = history_data_item[piid]
@@ -3497,13 +3537,13 @@ class CleaningHistory:
                 self.date = datetime.fromtimestamp(value)
             elif pid == PIID(DreameVacuumProperty.CLEAN_LOG_FILE_NAME, property_mapping):
                 self.file_name = value
-                if len(self.file_name) > 1:
-                    if "," in self.file_name:
-                        values = self.file_name.split(",")
+                if len(value) > 1:
+                    if "," in value:
+                        values = value.split(",")
                         self.object_name = values[0]
                         self.key = values[1]
                     else:
-                        self.object_name = self.file_name
+                        self.object_name = value
             elif pid == PIID(DreameVacuumProperty.CLEAN_LOG_STATUS, property_mapping):
                 self.completed = bool(value)
             elif pid == PIID(DreameVacuumProperty.WATER_TANK, property_mapping):
@@ -3550,36 +3590,47 @@ class CleaningHistory:
 
 
 class RecoveryMapInfo:
-    date = None
+    date: datetime | None = None
 
-    def __init__(self, map_id, date, raw_map, map_object_name, object_name, map_type) -> None:
-        self.date = date
+    def __init__(
+        self,
+        map_id: int,
+        date: float | None,
+        raw_map: str,
+        map_object_name: str,
+        object_name: str,
+        map_type: int,
+    ) -> None:
+        self.date = datetime.fromtimestamp(date) if date else None
         self.raw_map: str = raw_map
         self.map_object_name: str = map_object_name
         self.object_name: str = object_name
-        self.map_data: MapData = None
+        self.map_data: MapData | None = None
         self.map_id: int = map_id
+        # Display name/index, filled in later by the map manager (_refresh_map_list).
+        self.map_name: str | None = None
+        self.map_index: int | None = None
 
         self.map_type = (
             RecoveryMapType(map_type) if map_type in RecoveryMapType._value2member_map_ else RecoveryMapType.UNKNOWN
         )
 
-        if self.date:
-            self.date = datetime.fromtimestamp(self.date)
-
-    def as_dict(self):
+    def as_dict(self) -> dict[str, Any] | None:
         if self.date:
             return {
                 "date": time.strftime("%Y-%m-%d %H:%M", time.localtime(self.date.timestamp())),
                 "map_type": self.map_type.name.replace("_", " ").title(),
                 "object_name": self.object_name,
             }
+        return None
 
-    def __eq__(self: RecoveryMapInfo, other: RecoveryMapInfo) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RecoveryMapInfo):
+            return NotImplemented
         return self.date != other.date or self.map_id != other.map_id or self.object_name != other.object_name
 
     @property
-    def __dict__(self: RecoveryMapInfo):
+    def __dict__(self: RecoveryMapInfo) -> dict[str, Any]:  # type: ignore[override]
         if self.date:
             return {
                 "date": self.date,
@@ -3653,7 +3704,7 @@ class MapDataPartial:
         self.frame_type: int | None = None  # Map header: frame_type
         self.timestamp_ms: int | None = None  # Data json: timestamp_ms
         self.raw: bytes | None = None  # Unzipped raw map
-        self.data_json: object | None = {}  # Data json
+        self.data_json: Any = {}  # Data json
 
 
 class MapData:
@@ -3672,7 +3723,7 @@ class MapData:
         self.dimensions: MapImageDimensions | None = None
         self.optimized_dimensions: MapImageDimensions | None = None
         self.combined_dimensions: MapImageDimensions | None = None
-        self.data: Any | None = None  # Raw image data for handling P frames
+        self.data: Any = None  # Raw image data for handling P frames
         # Data json
         self.timestamp_ms: int | None = None  # Data json: timestamp_ms
         self.rotation: int | None = None  # Data json: mra
@@ -3684,8 +3735,8 @@ class MapData:
         self.impassable_thresholds: list[Wall] | None = None  # Data json: vws.npthrsd
         self.ramps: list[Area] | None = None  # Data json: vws.ramp
         self.curtains: list[Wall] | None = None  # Data json: ct.line
-        self.path: Path | None = None  # Data json: tr
-        self.active_segments: int | None = None  # Data json: sa
+        self.path: list[Path] | None = None  # Data json: tr
+        self.active_segments: list[int] | None = None  # Data json: sa
         self.active_areas: list[Area] | None = None  # Data json: da2
         self.active_points: list[Point] | None = None  # Data json: sp
         # Data json: rism.map_header.map_id
@@ -3695,21 +3746,25 @@ class MapData:
         self.frame_map: bool | None = None  # Data json: fsm
         self.docked: bool | None = None  # Data json: oc
         self.clean_log: bool | None = None  # Data json: iscleanlog
-        self.cleanset: dict[str, list[int]] | None = None  # Data json: cleanset
-        self.sequence: dict[str, list[int]] | None = None  #
-        self.carpet_cleanset: dict[str, list[int]] | None = None  # Data json: carpetcleanset
+        # ``dict[str(segment_id), list[int]]`` of cleaning settings; ``True``/``None``
+        # sentinels are also stored by the renderer pipeline — hence ``Any``.
+        self.cleanset: Any = None  # Data json: cleanset
+        self.sequence: bool | None = None  # cleaning-order flag (set by decoder/renderer)
+        # ``list[list[int]]`` per-carpet settings at runtime (editor mutates rows in place).
+        self.carpet_cleanset: Any = None  # Data json: carpetcleanset
         self.line_to_robot: bool | None = None  # Data json: l2r
         self.temporary_map: int | None = None  # Data json: suw
         self.cleaned_area: int | None = None  # Data json: cs
         self.cleaning_time: int | None = None  # Data json: ct
         self.completed: bool | None = None  # Data json: cf
-        self.neglected_segments: list[int] | None = None  #
+        # ``dict[segment_id, reason]`` from the cleaning map, plain list from 'delsr'.
+        self.neglected_segments: Any = None  #
         self.second_cleaning: bool | None = None  #
         self.remaining_battery: int | None = None  # Data json: clean_finish_remain_electricity
         self.work_status: int | None = None  # Data json: wm
         self.recovery_map: bool | None = None  # Data json: us
         self.recovery_map_type: RecoveryMapType | None = None  # Generated from recovery map list json
-        self.obstacles: dict[int, Obstacle] | None = None  # Data json: ai_obstacle
+        self.obstacles: dict[str, Obstacle] | None = None  # Data json: ai_obstacle (str-keyed)
         self.furnitures: dict[int, Furniture] | None = None  # Data json: ai_furniture
         self.saved_furnitures: dict[int, Furniture] | None = None  # Data json: furniture_info
         self.carpets: list[Carpet] | None = None  # Data json: vw.addcpt
@@ -3731,11 +3786,13 @@ class MapData:
         self.custom_name: str | None = None  # Map list json: name
         self.object_name: str | None = None  # Map list json: mapobj
         self.map_index: int | None = None  # Generated from saved map list
+        # Legacy field only ever written by the decoder; kept for parity with the app.
+        self.index: int = 0
         self.map_name: str | None = None  # Generated map name for map list
         # Generated pixel map for rendering colors
-        self.pixel_type: Any | None = None
-        self.optimized_pixel_type: Any | None = None
-        self.combined_pixel_type: Any | None = None
+        self.pixel_type: Any = None
+        self.optimized_pixel_type: Any = None
+        self.combined_pixel_type: Any = None
         # Generated segments from pixel_type
         self.segments: dict[int, Segment] | None = None
         self.floor_material: dict[int, int] | None = None  # Generated from seg_inf.material
@@ -3748,13 +3805,14 @@ class MapData:
         self.has_cleaned_area: bool | None = None  #
         self.has_dirty_area: bool | None = None  #
         self.history_map: bool | None = None  #
-        self.furniture_version: bool | None = None  #
+        self.furniture_version: int | None = None  #
         self.recovery_map_list: list[RecoveryMapInfo] | None = None  # Generated from recovery map list
-        self.active_cruise_points: list[Coordinate] | None = None  # Data json: pointinfo.tpoint
+        self.active_cruise_points: dict[int, Coordinate] | None = None  # Data json: pointinfo.tpoint
         self.predefined_points: dict[int, Coordinate] | None = None  # Data json: pointinfo.spoint
-        self.task_cruise_points: list[Coordinate] | None = None  # Data json: tpointinfo
+        # ``dict[int, Coordinate]`` while active, ``True`` once consumed by the renderer.
+        self.task_cruise_points: Any = None  # Data json: tpointinfo
         # Generated from pixel_type and robot poisiton
-        self.hidden_segments: int | None = None  # Data json: delsr
+        self.hidden_segments: list[int] | None = None  # Data json: delsr
         self.robot_segment: int | None = None
         # For renderer to detect changes
         self.last_updated: float | None = None
@@ -3769,7 +3827,9 @@ class MapData:
         self.walls_info: Any | None = None
         self.walls_info_new: Any | None = None
 
-    def __eq__(self: MapData, other: MapData) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, MapData):
+            return NotImplemented
         if other is None:
             return False
 
@@ -3893,7 +3953,7 @@ class MapData:
         return True
 
     def as_dict(self) -> dict[str, Any]:
-        attributes_list = {}
+        attributes_list: dict[str, Any] = {}
         if self.charger_position is not None:
             attributes_list[ATTR_CHARGER] = (
                 self.optimized_charger_position
@@ -3974,7 +4034,9 @@ class MapData:
             attributes_list[ATTR_RECOVERY_MAP_LIST] = [v.as_dict() for v in reversed(self.recovery_map_list)]
         return attributes_list
 
-    def check_point(self, x, y, absolute=False) -> bool:
+    def check_point(self, x: float, y: float, absolute: bool = False) -> bool:
+        if self.dimensions is None or self.pixel_type is None:
+            return False
         if not absolute:
             x = int((x - self.dimensions.left) / self.dimensions.grid_size)
             y = int((y - self.dimensions.top) / self.dimensions.grid_size)
@@ -3988,16 +4050,16 @@ class MapData:
 class DirtyData:
     value: Any = None
     previous_value: Any = None
-    update_time: float = None
+    update_time: float | None = None
 
 
 @dataclass
 class Shortcut:
     id: int = -1
-    name: str = None
-    map_id: int = None
+    name: str | None = None
+    map_id: int | None = None
     running: bool = False
-    tasks: list[list[ShortcutTask]] = None
+    tasks: list[list[ShortcutTask]] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -4005,11 +4067,11 @@ class Shortcut:
 
 @dataclass
 class ShortcutTask:
-    segment_id: int = None
-    suction_level: int = None
-    water_volume: int = None
-    cleaning_times: int = None
-    cleaning_mode: int = None
+    segment_id: int | None = None
+    suction_level: int | None = None
+    water_volume: int | None = None
+    cleaning_times: int | None = None
+    cleaning_mode: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -4020,13 +4082,13 @@ class ScheduleTask:
     id: int = -1
     enabled: bool = False
     invalid: bool = False
-    time: str = None
-    repeats: str = None
+    time: str | None = None
+    repeats: str | None = None
     once: bool = False
-    map_id: str = None
-    suction_level: int = None
-    water_volume: int = None
-    options: str = None
+    map_id: str | None = None
+    suction_level: int | None = None
+    water_volume: int | None = None
+    options: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -4034,12 +4096,12 @@ class ScheduleTask:
 
 @dataclass
 class GoToZoneSettings:
-    x: int = None
-    y: int = None
+    x: int | None = None
+    y: int | None = None
     stop: bool = False
-    suction_level: int = None
-    water_level: int = None
-    cleaning_mode: int = None
+    suction_level: int | None = None
+    water_level: int | None = None
+    cleaning_mode: int | None = None
     size: int = 50
 
 
@@ -4079,40 +4141,40 @@ class MapRendererConfig:
 
 @dataclass
 class MapRendererColorScheme:
-    floor: tuple[int] = (221, 221, 221, 255)
-    outside: tuple[int] = (0, 0, 0, 0)
-    wall: tuple[int] = (159, 159, 159, 255)
-    passive_segment: tuple[int] = (200, 200, 200, 255)
-    hidden_segment: tuple[int] = (226, 226, 226, 255)
-    new_segment: tuple[int] = (153, 191, 255, 255)
-    cleaned_area: tuple[int] = (158, 240, 117, 255)
-    dirty_area: tuple[int] = (247, 135, 106, 255)
-    clean_area: tuple[int] = (156, 202, 250, 255)
-    second_clean_area: tuple[int] = (123, 148, 172, 255)
-    neglected_segment: tuple[int] = (255, 159, 10, 110)
-    no_go: tuple[int] = (177, 0, 0, 50)
-    no_go_outline: tuple[int] = (199, 0, 0, 200)
-    no_mop: tuple[int] = (170, 47, 255, 50)
-    no_mop_outline: tuple[int] = (153, 0, 210, 200)
-    virtual_wall: tuple[int] = (199, 0, 0, 200)
-    virtual_threshold: tuple[int] = (50, 215, 75, 255)
-    passable_threshold_outline: tuple[int] = (50, 215, 75, 255)
-    passable_threshold: tuple[int] = (50, 215, 75, 50)
-    impassable_threshold_outline: tuple[int] = (199, 0, 0, 255)
-    impassable_threshold: tuple[int] = (199, 0, 0, 50)
-    curtain: tuple[int] = (247, 123, 46, 255)
-    ramp: tuple[int] = (255, 255, 255, 50)
-    ramp_outline: tuple[int] = (10, 132, 255, 255)
-    low_lying_area: tuple[int] = (157, 211, 246, 40)
-    auto_low_lying_area_outline: tuple[int] = (121, 203, 255, 255)
-    manual_low_lying_area_outline: tuple[int] = (100, 181, 232, 255)
-    active_area: tuple[int] = (255, 255, 255, 80)
-    active_area_outline: tuple[int] = (34, 109, 242, 255)  # (103, 156, 244, 200)
-    active_point: tuple[int] = (255, 255, 255, 80)
-    active_point_outline: tuple[int] = (34, 109, 242, 255)  # (103, 156, 244, 200)
-    path: tuple[int] = (255, 255, 255, 255)
-    mop_path: tuple[int] = (255, 255, 255, 100)
-    segment: tuple[list[tuple[int]]] = (
+    floor: tuple[int, ...] = (221, 221, 221, 255)
+    outside: tuple[int, ...] = (0, 0, 0, 0)
+    wall: tuple[int, ...] = (159, 159, 159, 255)
+    passive_segment: tuple[int, ...] = (200, 200, 200, 255)
+    hidden_segment: tuple[int, ...] = (226, 226, 226, 255)
+    new_segment: tuple[int, ...] = (153, 191, 255, 255)
+    cleaned_area: tuple[int, ...] = (158, 240, 117, 255)
+    dirty_area: tuple[int, ...] = (247, 135, 106, 255)
+    clean_area: tuple[int, ...] = (156, 202, 250, 255)
+    second_clean_area: tuple[int, ...] = (123, 148, 172, 255)
+    neglected_segment: tuple[int, ...] = (255, 159, 10, 110)
+    no_go: tuple[int, ...] = (177, 0, 0, 50)
+    no_go_outline: tuple[int, ...] = (199, 0, 0, 200)
+    no_mop: tuple[int, ...] = (170, 47, 255, 50)
+    no_mop_outline: tuple[int, ...] = (153, 0, 210, 200)
+    virtual_wall: tuple[int, ...] = (199, 0, 0, 200)
+    virtual_threshold: tuple[int, ...] = (50, 215, 75, 255)
+    passable_threshold_outline: tuple[int, ...] = (50, 215, 75, 255)
+    passable_threshold: tuple[int, ...] = (50, 215, 75, 50)
+    impassable_threshold_outline: tuple[int, ...] = (199, 0, 0, 255)
+    impassable_threshold: tuple[int, ...] = (199, 0, 0, 50)
+    curtain: tuple[int, ...] = (247, 123, 46, 255)
+    ramp: tuple[int, ...] = (255, 255, 255, 50)
+    ramp_outline: tuple[int, ...] = (10, 132, 255, 255)
+    low_lying_area: tuple[int, ...] = (157, 211, 246, 40)
+    auto_low_lying_area_outline: tuple[int, ...] = (121, 203, 255, 255)
+    manual_low_lying_area_outline: tuple[int, ...] = (100, 181, 232, 255)
+    active_area: tuple[int, ...] = (255, 255, 255, 80)
+    active_area_outline: tuple[int, ...] = (34, 109, 242, 255)  # (103, 156, 244, 200)
+    active_point: tuple[int, ...] = (255, 255, 255, 80)
+    active_point_outline: tuple[int, ...] = (34, 109, 242, 255)  # (103, 156, 244, 200)
+    path: tuple[int, ...] = (255, 255, 255, 255)
+    mop_path: tuple[int, ...] = (255, 255, 255, 100)
+    segment: tuple[list[tuple[int, int, int, int]], ...] = (
         [(171, 199, 248, 255), (121, 170, 255, 255)],  # 0  Bleu
         [(249, 224, 125, 255), (255, 211, 38, 255)],  # 1  Jaune
         [(184, 227, 255, 255), (141, 210, 255, 255)],  # 2  Bleu clair
@@ -4130,17 +4192,17 @@ class MapRendererColorScheme:
         [(215, 235, 200, 255), (185, 215, 165, 255)],  # 14 Sauge
         [(230, 215, 230, 255), (205, 185, 205, 255)],  # 15 Lilas
     )
-    obstacle_bg: tuple[int] = (34, 109, 242, 255)
-    icon_background: tuple[int] = (0, 0, 0, 100)
-    settings_background: tuple[int] = (255, 255, 255, 175)
-    settings_icon_background: tuple[int] = (255, 255, 255, 205)
-    material_color: tuple[int] = (0, 0, 0, 20)
-    carpet_color_detected: tuple[int] = (0, 0, 0, 35)
-    carpet_color: tuple[int] = (0, 0, 0, 80)
-    text: tuple[int] = (0, 0, 0, 255)
-    order: tuple[int] = (0, 0, 0, 255)
-    text_stroke: tuple[int] = (255, 255, 255, 200)
-    badge_outline: tuple[int] = (0, 0, 0, 180)
+    obstacle_bg: tuple[int, ...] = (34, 109, 242, 255)
+    icon_background: tuple[int, ...] = (0, 0, 0, 100)
+    settings_background: tuple[int, ...] = (255, 255, 255, 175)
+    settings_icon_background: tuple[int, ...] = (255, 255, 255, 205)
+    material_color: tuple[int, ...] = (0, 0, 0, 20)
+    carpet_color_detected: tuple[int, ...] = (0, 0, 0, 35)
+    carpet_color: tuple[int, ...] = (0, 0, 0, 80)
+    text: tuple[int, ...] = (0, 0, 0, 255)
+    order: tuple[int, ...] = (0, 0, 0, 255)
+    text_stroke: tuple[int, ...] = (255, 255, 255, 200)
+    badge_outline: tuple[int, ...] = (0, 0, 0, 180)
     invert: bool = False
     dark: bool = False
 
@@ -4378,8 +4440,8 @@ class MapRendererLayer(IntEnum):
 
 @dataclass
 class Line:
-    x: int | list[int] = None
-    y: int | list[int] = None
+    x: int | list[int] | None = None
+    y: int | list[int] | None = None
     ishorizontal: bool = False
     direction: int = 0
 
@@ -4399,14 +4461,16 @@ class ALine:
 
 @dataclass
 class Paths:
-    clines: list[CLine] = field(default_factory=list)
-    alines: list[ALine] = field(default_factory=list)
+    # ``clines`` = *converted* lines (the ``ALine`` wrappers built by the optimizer),
+    # ``alines`` = *all* raw ``CLine`` segments — see ``DreameVacuumMapOptimizer._add_line``.
+    clines: list[ALine] = field(default_factory=list)
+    alines: list[CLine] = field(default_factory=list)
     length: int = 0
 
 
 @dataclass
 class Angle:
-    lines: list[ALine] = field(default_factory=list)
+    lines: list[CLine] = field(default_factory=list)
     horizontalDir: int = 0
     verticalDir: int = 0
 
@@ -4416,92 +4480,94 @@ class MapRendererResources:
     renderer: str = ""
     icon_set: int = 0
     robot_type: int = 0
-    robot: str = None
-    charger: str = None
-    charging: str = None
-    cleaning: str = None
-    warning: str = None
-    sleeping: str = None
-    cleaning_direction: str = None
-    selected_segment: str = None
-    cruise_point_background: str = None
-    segment: dict[int, dict[str, str]] = None
-    default_map_image: str = None
-    font: str = None
-    repeats: list[str] = None
-    suction_level: list[str] = None
-    water_volume: list[str] = None
-    mop_pad_humidity: list[str] = None
-    cleaning_mode: list[str] = None
-    cleaning_route: list[str] = None
-    custom_mopping_route: list[str] = None
-    washing: str = None
-    hot_washing: str = None
-    drying: str = None
-    hot_drying: str = None
-    emptying: str = None
-    cruise_path_point_background: str = None
-    obstacle_background: str = None
-    obstacle_hidden_background: str = None
-    obstacle: dict[int, dict[str, str]] = None
-    furniture: dict[int, dict[str, str]] = None
-    rotate: str = None
-    delete: str = None
-    resize: str = None
-    move: str = None
-    problem: str = None
-    clean: str = None
-    settings: str = None
-    wifi: str = None
+    robot: str | None = None
+    charger: str | None = None
+    charging: str | None = None
+    cleaning: str | None = None
+    warning: str | None = None
+    sleeping: str | None = None
+    cleaning_direction: str | None = None
+    selected_segment: str | None = None
+    cruise_point_background: str | None = None
+    segment: Any = None
+    default_map_image: str | None = None
+    font: str | None = None
+    repeats: list[str] | None = None
+    suction_level: list[str] | None = None
+    water_volume: list[str] | None = None
+    mop_pad_humidity: list[str] | None = None
+    cleaning_mode: list[str] | None = None
+    cleaning_route: list[str] | None = None
+    custom_mopping_route: list[str] | None = None
+    washing: str | None = None
+    hot_washing: str | None = None
+    drying: str | None = None
+    hot_drying: str | None = None
+    emptying: str | None = None
+    cruise_path_point_background: str | None = None
+    obstacle_background: str | None = None
+    obstacle_hidden_background: str | None = None
+    obstacle: Any = None
+    furniture: Any = None
+    rotate: str | None = None
+    delete: str | None = None
+    resize: str | None = None
+    move: str | None = None
+    problem: str | None = None
+    clean: str | None = None
+    settings: str | None = None
+    wifi: str | None = None
     version: int = 1
 
 
 @dataclass
 class MapRendererData:
-    data: dict[int, list[int]]
-    size: list[int] = None
-    map_id: int = 0
-    saved_map_id: int = None
-    map_index: int = None
-    saved_map_status: int = None
-    empty_map: bool = None
-    frame_id: int = 0
-    saved_map: bool = False
-    wifi_map: bool = False
-    history_map: bool = False
-    recovery_map: bool = False
-    segments: dict[int, list[int | str]] | None = None
-    active_segments: list[int] = field(default_factory=list)
-    active_areas: list[list[int]] = field(default_factory=list)
-    active_points: list[list[int]] = field(default_factory=list)
-    active_cruise_points: list[list[int]] = field(default_factory=list)
+    # JSON payload mirror for the Lovelace card — geometry rows mix int/float
+    # coordinates (and str names for segments), hence the ``Any`` rows.
+    data: Any
+    size: list[Any] | None = None
+    map_id: Any = 0
+    saved_map_id: int | None = None
+    map_index: int | None = None
+    saved_map_status: int | None = None
+    empty_map: bool | None = None
+    frame_id: Any = 0
+    saved_map: Any = False
+    wifi_map: Any = False
+    history_map: Any = False
+    recovery_map: Any = False
+    segments: Any = None
+    active_segments: Any = field(default_factory=list)
+    active_areas: list[list[Any]] = field(default_factory=list)
+    active_points: list[list[Any]] = field(default_factory=list)
+    active_cruise_points: list[list[Any]] = field(default_factory=list)
     task_cruise_points: bool = False
-    predefined_points: list[list[int]] | None = None
-    no_mop: list[list[int]] = field(default_factory=list)
-    no_go: list[list[int]] = field(default_factory=list)
-    carpets: list[list[int]] | None = None
-    ignored_carpets: list[list[int]] | None = None
-    detected_carpets: list[list[int]] | None = None
-    virtual_walls: list[list[int]] = field(default_factory=list)
-    virtual_thresholds: list[list[int]] | None = None
-    passable_thresholds: list[list[int]] | None = None
-    impassable_thresholds: list[list[int]] | None = None
-    ramps: list[list[int]] | None = None
-    curtains: list[list[int]] | None = None
-    low_lying_areas: list[list[int]] | None = None
-    obstacles: list[list[int | float]] = field(default_factory=list)
-    furnitures: list[list[int | float]] | None = None
-    path: list[list[int]] = field(default_factory=list)
-    floor_material: dict[int, list[int]] | None = None
-    hidden_segments: dict[int, list[int]] | None = None
-    neglected_segments: dict[int, list[int]] | None = None
-    robot_position: list[int] | None = None
-    charger_position: list[int] | None = None
-    router_position: list[int] | None = None
-    ai_outborders_user: list[list[int]] | None = None
-    ai_outborders: list[list[int]] | None = None
-    ai_outborders_new: list[list[int]] | None = None
-    ai_outborders_2d: list[list[int]] | None = None
+    predefined_points: list[list[Any]] | None = None
+    no_mop: list[list[Any]] = field(default_factory=list)
+    no_go: list[list[Any]] = field(default_factory=list)
+    carpets: list[list[Any]] | None = None
+    ignored_carpets: list[list[Any]] | None = None
+    detected_carpets: list[list[Any]] | None = None
+    virtual_walls: list[list[Any]] = field(default_factory=list)
+    virtual_thresholds: list[list[Any]] | None = None
+    passable_thresholds: list[list[Any]] | None = None
+    impassable_thresholds: list[list[Any]] | None = None
+    ramps: list[list[Any]] | None = None
+    curtains: list[list[Any]] | None = None
+    low_lying_areas: list[list[Any]] | None = None
+    obstacles: list[list[Any]] = field(default_factory=list)
+    furnitures: list[list[Any]] | None = None
+    path: list[list[Any]] = field(default_factory=list)
+    floor_material: dict[int, Any] | None = None
+    hidden_segments: Any = None
+    neglected_segments: Any = None
+    robot_position: list[Any] | None = None
+    charger_position: list[Any] | None = None
+    router_position: list[Any] | None = None
+    ai_outborders_user: list[list[Any]] | None = None
+    ai_outborders: list[list[Any]] | None = None
+    ai_outborders_new: list[list[Any]] | None = None
+    ai_outborders_2d: list[list[Any]] | None = None
     second_cleaning: int | None = None
     mop_wash_count: int | None = None
     dust_collection_count: int | None = None
@@ -4521,7 +4587,7 @@ class MapRendererData:
     remaining_battery: int | None = None
     cleanset: bool = False
     sequence: bool = False
-    docked: bool = True
-    work_status: int = 0
-    resources: MapRendererResources = None
+    docked: Any = True
+    work_status: Any = 0
+    resources: Any = None
     version: int = 1

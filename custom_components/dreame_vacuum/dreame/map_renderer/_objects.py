@@ -14,6 +14,7 @@ import base64
 from io import BytesIO
 import math
 import time
+from typing import Any, cast
 import zlib
 
 import numpy as np
@@ -57,22 +58,23 @@ from ..resources import (
     OBSTACLE_TYPE_TO_HIDDEN_ICON,
     OBSTACLE_TYPE_TO_ICON,
 )
-from ..vacuum_types import FurnitureType, ObstacleType, Point, RobotType
+from ..vacuum_types import FurnitureType, MapImageDimensions, ObstacleType, Point, RobotType
+from ._base import _MapRendererState
 
 
-class _ObjectsMixin:
+class _ObjectsMixin(_MapRendererState):
     """Renderers for vacuum, charger, router, neglected segments and low-lying areas."""
 
     def render_vacuum(
         self,
-        robot_position,
-        robot_status,
-        layer_size,
-        dimensions,
-        size,
-        map_rotation,
-        scale,
-    ):
+        robot_position: Point,
+        robot_status: int,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        size: float,
+        map_rotation: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         icon_size = int(size * scale)
         robot_icon_size = (
@@ -118,10 +120,11 @@ class _ObjectsMixin:
                 else:
                     self._robot_icon = enhancer.enhance(0.9)
 
+        robot_angle = robot_position.a or 0
         icon = self._robot_icon.resize(
             (robot_icon_size, robot_icon_size),
             resample=Image.Resampling.NEAREST,
-        ).rotate(robot_position.a, expand=1)
+        ).rotate(robot_angle, expand=1)
         point = robot_position.to_img(dimensions)
 
         if not self._low_memory:
@@ -155,11 +158,11 @@ class _ObjectsMixin:
                             )
                         )
 
-                    ico = self._robot_cleaning_direction_icon.rotate(robot_position.a, expand=1)
+                    ico = self._robot_cleaning_direction_icon.rotate(robot_angle, expand=1)
 
                     offset = int(icon_size * 0.3)
-                    x = point.x + offset * math.cos(-robot_position.a * math.pi / 180)
-                    y = point.y + offset * math.sin(-robot_position.a * math.pi / 180)
+                    x = point.x + offset * math.cos(-robot_angle * math.pi / 180)
+                    y = point.y + offset * math.sin(-robot_angle * math.pi / 180)
                     new_layer.paste(
                         ico,
                         (
@@ -262,7 +265,15 @@ class _ObjectsMixin:
                 )
         return new_layer
 
-    def render_obstacle(self, obstacle, layer_size, dimensions, size, rotation, scale):
+    def render_obstacle(
+        self,
+        obstacle: Any,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        size: float,
+        rotation: int,
+        scale: int,
+    ) -> Image.Image | None:
         if obstacle.ignore_status == 1:
             if (
                 obstacle.type.value not in self._obstacle_hidden_icons
@@ -303,6 +314,7 @@ class _ObjectsMixin:
             background_image = (
                 self._obstacle_hidden_background if obstacle.ignore_status == 2 else self._obstacle_background
             )
+            assert background_image is not None
             bg_size = int((min(background_image.size[1], background_image.size[0]) / scale / 4) * 1.25)
             offset = int(-(size * (0.15 if obstacle.ignore_status == 2 else 0.2)) * scale)
 
@@ -391,7 +403,18 @@ class _ObjectsMixin:
 
             return new_layer
 
-    def render_cruise_point(self, index, cruise_point, layer_size, dimensions, size, rotation, scale):
+        return None
+
+    def render_cruise_point(
+        self,
+        index: int,
+        cruise_point: Any,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        size: float,
+        rotation: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         if cruise_point.type == 1 and self._cruise_path_point_background is None:
@@ -413,6 +436,7 @@ class _ObjectsMixin:
         background_image = (
             self._cruise_point_background if cruise_point.type != 1 else self._cruise_path_point_background
         )
+        assert background_image is not None
         bg_size = int(min(background_image.size[1], background_image.size[0]) / scale / 4)
         offset = int(-bg_size * 1.25)
 
@@ -493,7 +517,16 @@ class _ObjectsMixin:
 
         return new_layer
 
-    def render_furniture(self, furniture, furniture_version, layer_size, dimensions, size, rotation, scale):
+    def render_furniture(
+        self,
+        furniture: Any,
+        furniture_version: int,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        size: float,
+        rotation: int,
+        scale: int,
+    ) -> Image.Image | None:
         draw_image = furniture.width and furniture.height
         furniture_type = (
             FurnitureType.COFFEE_TABLE.value
@@ -610,16 +643,18 @@ class _ObjectsMixin:
 
             return new_layer
 
+        return None
+
     def render_charger(
         self,
-        charger_position,
-        station_status,
-        layer_size,
-        dimensions,
-        size,
-        map_rotation,
-        scale,
-    ):
+        charger_position: Point,
+        station_status: int,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        size: float,
+        map_rotation: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         icon_size = int(size * scale)
         if self.icon_set == 3:
@@ -652,7 +687,7 @@ class _ObjectsMixin:
 
         charger_icon = self._charger_icon.resize((icon_size, icon_size), resample=Image.Resampling.NEAREST).rotate(
             (
-                charger_position.a
+                (charger_position.a or 0)
                 if self._robot_type == RobotType.VSLAM or self.icon_set == 0 or self.icon_set == 2 or self.icon_set == 3
                 else (-map_rotation)
             ),
@@ -726,6 +761,7 @@ class _ObjectsMixin:
 
                 # Apply both the map rotation and the animation.
                 base_icon = self._robot_hot_washing_icon if hot_washing else self._robot_washing_icon
+                assert base_icon is not None
                 icon = base_icon.rotate(-map_rotation - rotation_angle, expand=1)
             else:
                 if not hot_washing and self._robot_drying_icon is None:
@@ -750,7 +786,7 @@ class _ObjectsMixin:
                         .rotate(-map_rotation, expand=1)
                     )
                 offset = icon_size * 1.2
-                icon = self._robot_hot_drying_icon if hot_washing else self._robot_drying_icon
+                icon = cast("Image.Image", self._robot_hot_drying_icon if hot_washing else self._robot_drying_icon)
 
             icon_x = point.x * scale
             icon_y = point.y * scale
@@ -769,13 +805,13 @@ class _ObjectsMixin:
 
     def render_router(
         self,
-        router_position,
-        layer_size,
-        dimensions,
-        size,
-        rotation,
-        scale,
-    ):
+        router_position: Point,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        size: float,
+        rotation: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         icon_size = int(size * scale)
@@ -811,14 +847,14 @@ class _ObjectsMixin:
 
     def render_neglected_segments(
         self,
-        neglected_segments,
-        segments,
-        layer_size,
-        segment_mask,
-        dimensions,
-        rotation,
-        cleaning_map,
-    ):
+        neglected_segments: Any,
+        segments: Any,
+        layer_size: tuple[int, int],
+        segment_mask: Any,
+        dimensions: MapImageDimensions,
+        rotation: Any,
+        cleaning_map: Any,
+    ) -> Image.Image:
         mask_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         mask_layer.paste(segment_mask, (0, 0))
 
@@ -859,7 +895,14 @@ class _ObjectsMixin:
 
         return mask_layer
 
-    def render_low_lying_areas(self, areas, layer_size, dimensions, width, scale):
+    def render_low_lying_areas(
+        self,
+        areas: Any,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        width: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for area in areas:

@@ -8,11 +8,13 @@ changes.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import timedelta
 from functools import partial
 import math
 import time
 import traceback
+from typing import Any
 
 from homeassistant.components import persistent_notification
 from homeassistant.const import (
@@ -107,6 +109,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
     """Class to manage fetching Dreame Vacuum data from single endpoint."""
 
     config_entry: DreameVacuumConfigEntry
+    # Lazily created by the camera platform; shared between proxy camera entities.
+    _shared_proxy_renderer: Any = None
 
     def __init__(
         self,
@@ -124,10 +128,10 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         self._ready = False
         self._available = False
         self._has_warning = False
-        self._has_temporary_map = None
+        self._has_temporary_map: bool | None = None
         self._low_water = False
-        self._drainage_status = None
-        self._washing = None
+        self._drainage_status: bool | None = None
+        self._washing: bool | None = None
 
         LOGGER.info("Integration loading: %s", entry.data[CONF_NAME])
 
@@ -189,13 +193,14 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             ),
         )
 
-        self._unsub_dispatcher = async_dispatcher_connect(
+        self._unsub_dispatcher: Callable[[], None] | None = async_dispatcher_connect(
             hass,
             persistent_notification.SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED,
             self._notification_dismiss_listener,
         )
 
-    def _dust_collection_changed(self, previous_value=None) -> None:
+    def _dust_collection_changed(self, previous_value: Any = None) -> None:
+        assert self._device is not None
         if self._device.status.auto_emptying_not_performed:
             self._fire_event(EVENT_INFORMATION, {EVENT_INFORMATION: NOTIFICATION_ID_DUST_COLLECTION})
 
@@ -206,7 +211,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         else:
             self._remove_persistent_notification(NOTIFICATION_ID_DUST_COLLECTION)
 
-    def _cleaning_paused_changed(self, previous_value=None) -> None:
+    def _cleaning_paused_changed(self, previous_value: Any = None) -> None:
+        assert self._device is not None
         if self._device.status.cleaning_paused:
             notification = get_notification_message(self.hass.config.language, "resume_cleaning")
             if self._device.status.battery_level >= 80:
@@ -233,7 +239,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         else:
             self._remove_persistent_notification(NOTIFICATION_ID_CLEANING_PAUSED)
 
-    def _task_status_changed(self, previous_value=None) -> None:
+    def _task_status_changed(self, previous_value: Any = None) -> None:
+        assert self._device is not None
         if previous_value is not None:
             if self._device.status.cleanup_completed:
                 self._fire_event(EVENT_TASK_STATUS, self._device.status.job)
@@ -248,7 +255,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         else:
             self._check_consumables()
 
-    def _error_changed(self, previous_value=None) -> None:
+    def _error_changed(self, previous_value: Any = None) -> None:
+        assert self._device is not None
         has_warning = self._device.status.has_warning
         description = translate_description(self.hass.config.language, self._device.status.error_description)
         if has_warning:
@@ -282,7 +290,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
         self._has_warning = has_warning
 
-    def _has_temporary_map_changed(self, previous_value=None) -> None:
+    def _has_temporary_map_changed(self, previous_value: Any = None) -> None:
+        assert self._device is not None
         if self._device.status.has_temporary_map:
             message_key = "replace_multi_map" if self._device.status.multi_map else "replace_map"
             self._fire_event(EVENT_WARNING, {EVENT_WARNING: message_key})
@@ -296,7 +305,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
             self._remove_persistent_notification(NOTIFICATION_ID_REPLACE_TEMPORARY_MAP)
 
-    def _low_water_warning_changed(self, previous_value=None) -> None:
+    def _low_water_warning_changed(self, previous_value: Any = None) -> None:
+        assert self._device is not None
         low_water_warning = self._device.status.low_water_warning
         if low_water_warning.value > 0 and (not previous_value or low_water_warning.value > 1):
             low_water_warning_description = translate_description(
@@ -316,7 +326,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
         self._low_water = self._device.status.low_water
 
-    def _drainage_status_changed(self, previous_value=None) -> None:
+    def _drainage_status_changed(self, previous_value: Any = None) -> None:
+        assert self._device is not None
         if self._device.status.draining_complete:
             from .dreame.resources import DRAINAGE_STATUS_FAIL, DRAINAGE_STATUS_SUCCESS
 
@@ -333,12 +344,14 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
         self._drainage_status = self._device.status.draining_complete
 
-    def _self_wash_base_status_changed(self, previous_self_wash_base_status=None) -> None:
+    def _self_wash_base_status_changed(self, previous_self_wash_base_status: Any = None) -> None:
+        assert self._device is not None
         if self._washing is not None and self._device.status.washing != self._washing and self._device.status.started:
             self._check_consumables()
         self._washing = self._device.status.washing
 
-    def _check_consumable(self, consumable, notification_id, property):
+    def _check_consumable(self, consumable: Any, notification_id: str, property: Any) -> None:
+        assert self._device is not None
         description = self._device.status.consumable_life_warning_description(property)
         if description:
             from .dreame.resources import CONSUMABLE_IMAGE
@@ -386,7 +399,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             issue_id = f"consumable_depleted_{consumable}_{self._device.mac}"
             self.hass.loop.call_soon_threadsafe(partial(async_delete_issue, self.hass, DOMAIN, issue_id))
 
-    def _check_consumables(self):
+    def _check_consumables(self) -> None:
+        assert self._device is not None
         self._check_consumable(
             CONSUMABLE_MAIN_BRUSH,
             NOTIFICATION_ID_REPLACE_MAIN_BRUSH,
@@ -463,7 +477,8 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
                 DreameVacuumProperty.SCALE_INHIBITOR_LEFT,
             )
 
-    def _create_persistent_notification(self, content, notification_id) -> None:
+    def _create_persistent_notification(self, content: str, notification_id: str) -> None:
+        assert self._device is not None
         if not self.device.disconnected and self.device.device_connected and self._notify:
             if isinstance(self._notify, list):
                 if notification_id == NOTIFICATION_ID_CLEANUP_COMPLETED:
@@ -497,16 +512,17 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
                 f"{DOMAIN}_{self._device.mac}_{notification_id}",
             )
 
-    def _remove_persistent_notification(self, notification_id) -> None:
+    def _remove_persistent_notification(self, notification_id: str) -> None:
+        assert self._device is not None
         self.hass.loop.call_soon_threadsafe(
             persistent_notification.async_dismiss,
             self.hass,
             f"{DOMAIN}_{self._device.mac}_{notification_id}",
         )
 
-    def _notification_dismiss_listener(self, notification_type, data) -> None:
+    def _notification_dismiss_listener(self, notification_type: Any, data: Any) -> None:
         if notification_type == persistent_notification.UpdateType.REMOVED and self._device:
-            notifications = self.hass.data.get(persistent_notification.DOMAIN)
+            notifications = self.hass.data.get(persistent_notification.DOMAIN) or {}
             notify_is_list = isinstance(self._notify, list)
             if self._has_warning:
                 if f"{DOMAIN}_{self._device.mac}_{NOTIFICATION_ID_WARNING}" not in notifications:
@@ -533,9 +549,11 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         must never run directly inside the persistent-notification dispatcher
         callback, which executes on the event loop.
         """
+        assert self._device is not None
         await self.hass.async_add_executor_job(self._device.clear_warning)
 
-    def _fire_event(self, event_id, data) -> None:
+    def _fire_event(self, event_id: str, data: Any) -> None:
+        assert self._device is not None
         event_data = {ATTR_ENTITY_ID: generate_entity_id("vacuum.{}", self._device.name, hass=self.hass)}
         if data:
             event_data.update(data)
@@ -591,6 +609,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
     @property
     def device(self) -> DreameVacuumDevice:
+        assert self._device is not None
         return self._device
 
     def cleanup(self) -> None:
@@ -606,10 +625,10 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         if hasattr(self, "_shared_proxy_renderer"):
             self._shared_proxy_renderer = None
 
-    def set_update_error(self, ex=None) -> None:
+    def set_update_error(self, ex: Any = None) -> None:
         self.hass.loop.call_soon_threadsafe(self.async_set_update_error, ex)
 
-    def set_updated_data(self, data=None) -> None:
+    def set_updated_data(self, data: DreameVacuumDevice | None = None) -> None:
         self.hass.loop.call_soon_threadsafe(self.async_set_updated_data, data)
 
     @callback
@@ -629,27 +648,27 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             if (self._device.token and self._device.token != self._token) or (
                 self._device.host and self._device.host != self._host
             ):
-                data = self._entry.data.copy()
+                entry_data = self._entry.data.copy()
                 self._host = self._device.host
                 self._token = self._device.token
-                data[CONF_HOST] = self._host
-                data[CONF_TOKEN] = self._token
+                entry_data[CONF_HOST] = self._host
+                entry_data[CONF_TOKEN] = self._token
                 LOGGER.info("Update Host Config: %s", self._host)
-                self.hass.config_entries.async_update_entry(self._entry, data=data)
+                self.hass.config_entries.async_update_entry(self._entry, data=entry_data)
 
             cloud_auth_key = self._device.cloud_auth_key
             if cloud_auth_key and cloud_auth_key != self._auth_key:
                 self._auth_key = cloud_auth_key
-                data = self._entry.data.copy()
-                data[CONF_AUTH_KEY] = self._auth_key
+                entry_data = self._entry.data.copy()
+                entry_data[CONF_AUTH_KEY] = self._auth_key
                 # Once we hold a server-issued auth_key we no longer need the
                 # cleartext password in the config entry. Drop it so a leaked
                 # backup of .storage/core.config_entries does not expose the
                 # account credential; reauth via auth_key is already wired up.
-                if CONF_PASSWORD in data:
-                    data.pop(CONF_PASSWORD, None)
+                if CONF_PASSWORD in entry_data:
+                    entry_data.pop(CONF_PASSWORD, None)
                     LOGGER.info("Auth key captured; removing stored password from config entry")
-                self.hass.config_entries.async_update_entry(self._entry, data=data)
+                self.hass.config_entries.async_update_entry(self._entry, data=entry_data)
         elif self._device.auth_failed:
             ## Reload entry to trigger reauth and unload
             self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
@@ -662,7 +681,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         super().async_set_updated_data(self._device)
 
     @callback
-    def async_set_update_error(self, ex) -> None:
+    def async_set_update_error(self, ex: Any) -> None:
         if self._available:
             new_available = self._device is not None and self._device.available
             if self._available and not new_available:
