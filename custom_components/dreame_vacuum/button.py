@@ -14,10 +14,11 @@ from homeassistant.components.button import (
     ENTITY_ID_FORMAT,
     ButtonEntity,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry
-from homeassistant.helpers.entity import EntityCategory, async_generate_entity_id
+from homeassistant.helpers.entity import async_generate_entity_id
 
 from .const import DOMAIN, DreameVacuumConfigEntry
 
@@ -267,14 +268,14 @@ def async_update_buttons(
     coordinator: DreameVacuumDataUpdateCoordinator,
     current_shortcut: dict[int, list[DreameVacuumShortcutButtonEntity]],
     current_map: dict[int, list[DreameVacuumMapButtonEntity]],
-    async_add_entities,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     new_entities: list[DreameVacuumEntity] = []
     if coordinator.device is None:
         return
     if coordinator.device.capability.shortcuts:
         if coordinator.device.status.shortcuts:
-            new_ids = set(coordinator.device.status.shortcuts.keys())
+            new_ids: set[int] = set(coordinator.device.status.shortcuts.keys())
         else:
             new_ids = set()
 

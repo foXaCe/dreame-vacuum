@@ -104,7 +104,8 @@
           "low_resolution": "Carte basse résolution",
           "name": "Nom",
           "notify": "Notification",
-          "square": "Carte carrée"
+          "square": "Carte carrée",
+          "vector_rooms": "Lissage des contours"
         },
         "data_description": {
           "color_scheme": "Thème de couleurs utilisé pour la carte de l'aspirateur.",
@@ -113,7 +114,8 @@
           "low_resolution": "Utiliser une résolution réduite pour un rendu plus rapide de la carte.",
           "name": "Nom d'affichage de cet appareil dans Home Assistant.",
           "notify": "Sélectionnez les notifications à recevoir de l'appareil.",
-          "square": "Afficher la carte en format carré au lieu de son ratio d'origine."
+          "square": "Afficher la carte en format carré au lieu de son ratio d'origine.",
+          "vector_rooms": "Anti-aliasing des bords diagonaux des pièces et des murs pour une carte plus nette et premium."
         }
       },
       "reauth_confirm": {
@@ -1421,7 +1423,8 @@
           "low_resolution": "Carte basse résolution",
           "notify": "Notification",
           "prefer_cloud": "Privilégier la connexion cloud",
-          "square": "Carte carrée"
+          "square": "Carte carrée",
+          "vector_rooms": "Lissage des contours"
         },
         "data_description": {
           "color_scheme": "Thème de couleurs utilisé pour la carte de l'aspirateur.",
@@ -1431,7 +1434,8 @@
           "low_resolution": "Utiliser une résolution réduite pour un rendu plus rapide de la carte.",
           "notify": "Sélectionnez les notifications à recevoir de l'appareil.",
           "prefer_cloud": "Utiliser la connexion cloud au lieu de la connexion locale quand disponible.",
-          "square": "Afficher la carte en format carré au lieu de son ratio d'origine."
+          "square": "Afficher la carte en format carré au lieu de son ratio d'origine.",
+          "vector_rooms": "Anti-aliasing des bords diagonaux des pièces et des murs pour une carte plus nette et premium."
         }
       }
     }

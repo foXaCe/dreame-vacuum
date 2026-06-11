@@ -16,10 +16,11 @@ from homeassistant.components.number import (
     NumberEntity,
     NumberMode,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry
-from homeassistant.helpers.entity import EntityCategory, async_generate_entity_id
+from homeassistant.helpers.entity import async_generate_entity_id
 
 from .const import DOMAIN, UNIT_AREA, UNIT_HOURS, UNIT_MINUTES, UNIT_PERCENT, DreameVacuumConfigEntry
 
@@ -34,7 +35,7 @@ from .dreame import DreameVacuumCleaningMode, DreameVacuumProperty
 from .entity import DreameVacuumEntity, DreameVacuumNumberEntityDescription, default_exists_fn
 
 
-def WETNESS_LEVEL_TO_ICON(wetness, max_level):
+def WETNESS_LEVEL_TO_ICON(wetness: int, max_level: int) -> str:
     if wetness:
         if wetness > max_level:
             return "mdi:water-plus"
@@ -231,7 +232,7 @@ async def async_setup_entry(
 def async_update_segment_numbers(
     coordinator: DreameVacuumDataUpdateCoordinator,
     current: dict[int, list[DreameVacuumSegmentNumberEntity]],
-    async_add_entities,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     new_ids: list[int] = []
     if coordinator.device and coordinator.device.status.map_list:
@@ -448,8 +449,9 @@ class DreameVacuumSegmentNumberEntity(DreameVacuumEntity, NumberEntity):
         self.async_write_ha_state()
 
     @property
-    def _device_segments(self):
-        return self.entity_description.segment_list_fn(self.device)
+    def _device_segments(self) -> Any:
+        segment_list_fn = self.entity_description.segment_list_fn
+        return segment_list_fn(self.device) if segment_list_fn is not None else None
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the Dreame Vacuum number value."""

@@ -13,9 +13,9 @@ from homeassistant.components.switch import (
     ENTITY_ID_FORMAT,
     SwitchEntity,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN, DreameVacuumConfigEntry
 
@@ -583,7 +583,7 @@ class DreameVacuumSwitchEntity(DreameVacuumEntity, SwitchEntity):
         """Turn on the Dreame Vacuum sync receive switch."""
         await self.async_set_state(1)
 
-    async def async_set_state(self, state) -> None:
+    async def async_set_state(self, state: int) -> None:
         """Turn on or off the Dreame Vacuum sync receive switch."""
         if not self.available:
             raise HomeAssistantError(

@@ -41,6 +41,7 @@ from .const import (
     CONF_NOTIFY,
     CONF_PREFER_CLOUD,
     CONF_SQUARE,
+    CONF_VECTOR_ROOMS,
     CONF_VERSION,
     CONFIG_ENTRY_VERSION,
     DOMAIN,
@@ -96,6 +97,10 @@ class DreameVacuumOptionsFlowHandler(OptionsFlow):
                         default=self._config_entry.options.get(CONF_HIDDEN_MAP_OBJECTS, []),
                     ): cv.multi_select(MAP_OBJECTS),
                     vol.Required(CONF_SQUARE, default=self._config_entry.options.get(CONF_SQUARE, False)): bool,
+                    vol.Required(
+                        CONF_VECTOR_ROOMS,
+                        default=self._config_entry.options.get(CONF_VECTOR_ROOMS, True),
+                    ): bool,
                     vol.Required(
                         CONF_LOW_RESOLUTION,
                         default=self._config_entry.options.get(CONF_LOW_RESOLUTION, False),
@@ -348,7 +353,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_login(self, error=None):
+    async def async_step_login(self, error: str | None = None) -> ConfigFlowResult:
         if self.account_type == ACCOUNT_TYPE_MI:
             return await self.async_step_mi(error=error)
         if self.account_type == ACCOUNT_TYPE_DREAME:
@@ -410,7 +415,9 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_2fa(self, user_input: dict[str, Any] | None = None, errors: dict[str, Any] | None = None):
+    async def async_step_2fa(
+        self, user_input: dict[str, Any] | None = None, errors: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         if errors is None:
             errors = {}
         assert self.protocol is not None  # set during the login flow before reaching 2FA
@@ -437,7 +444,9 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_captcha(self, user_input: dict[str, Any] | None = None, errors: dict[str, Any] | None = None):
+    async def async_step_captcha(
+        self, user_input: dict[str, Any] | None = None, errors: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         if errors is None:
             errors = {}
         assert self.protocol is not None  # set during the login flow before reaching captcha
@@ -580,6 +589,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                 CONF_ICON_SET: user_input.get(CONF_ICON_SET),
                 CONF_HIDDEN_MAP_OBJECTS: user_input.get(CONF_HIDDEN_MAP_OBJECTS),
                 CONF_SQUARE: user_input.get(CONF_SQUARE),
+                CONF_VECTOR_ROOMS: user_input.get(CONF_VECTOR_ROOMS, True),
                 CONF_LOW_RESOLUTION: user_input.get(CONF_LOW_RESOLUTION),
                 CONF_PREFER_CLOUD: self.prefer_cloud,
             }
@@ -635,6 +645,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_ICON_SET, default=default_icon_set): vol.In(list(MAP_ICON_SET_LIST.keys())),
                     vol.Required(CONF_HIDDEN_MAP_OBJECTS, default=hidden_map_objects): cv.multi_select(MAP_OBJECTS),
                     vol.Required(CONF_SQUARE, default=False): bool,
+                    vol.Required(CONF_VECTOR_ROOMS, default=True): bool,
                     vol.Required(CONF_LOW_RESOLUTION, default=False): bool,
                 }
             )
@@ -670,7 +681,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                 )
             self.device_id = device_info["did"]
 
-    def load_devices(self):
+    def load_devices(self) -> None:
         if self.models is None:
             self.models = {}
             device_info = json.loads(zlib.decompress(base64.b64decode(DEVICE_INFO), zlib.MAX_WBITS | 32))
@@ -683,7 +694,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                     self.models[f"{account_type}.vacuum.{k}"] = info[1]
 
     @property
-    def login_schema(self):
+    def login_schema(self) -> vol.Schema:
         if self.reauth:
             return vol.Schema(
                 {

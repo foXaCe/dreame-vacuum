@@ -10,7 +10,7 @@ import copy
 import logging
 from threading import Timer
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -43,11 +43,11 @@ class DreameMapVacuumMapEditor:
     This class handles user edits on stored map data like updating customized cleaning settings or setting active segments on segment cleaning.
     Original app has a similar class to handle the same issue (Works optimistically)"""
 
-    def __init__(self, map_manager) -> None:
+    def __init__(self, map_manager: Any) -> None:
         self.map_manager: DreameMapVacuumMapManager = map_manager
         self._refresh_timer: Timer | None = None
 
-    def _set_updated_frame_id(self, frame_id) -> None:
+    def _set_updated_frame_id(self, frame_id: Any) -> None:
         self.map_manager._updated_frame_id = frame_id
 
     def _refresh_map(self, map_id: int | None = None) -> None:
@@ -150,7 +150,7 @@ class DreameMapVacuumMapEditor:
 
     def reset_map(self) -> None:
         map_data = self._map_data
-        if map_data is not None:
+        if map_data is not None and map_data.dimensions is not None:
             map_data.dimensions.width = 0
             map_data.dimensions.height = 0
             map_data.segments = {}
@@ -165,7 +165,7 @@ class DreameMapVacuumMapEditor:
             map_data.obstacles = None
             map_data.empty_map = True
             map_data.saved_map_status = 0
-            self._set_updated_frame_id(map_data.frame_id + 1)
+            self._set_updated_frame_id((map_data.frame_id or 0) + 1)
             self.refresh_map()
 
     def set_rotation(self, map_id: int, rotation: int) -> None:
@@ -196,7 +196,7 @@ class DreameMapVacuumMapEditor:
     def set_current_map(self, map_id: int) -> None:
         if map_id and map_id in self._saved_map_data:
             saved_map_data = copy.deepcopy(self._saved_map_data[map_id])
-            saved_map_data.docked = self._map_data.docked
+            saved_map_data.docked = self._map_data.docked if self._map_data else None
             saved_map_data.timestamp_ms = self._current_timestamp_ms
             saved_map_data.frame_id = None
             saved_map_data.map_name = None
@@ -210,11 +210,9 @@ class DreameMapVacuumMapEditor:
             DreameVacuumMapDecoder.set_segment_cleanset(
                 saved_map_data,
                 saved_map_data.cleanset,
-                self.map_manager._capability,
+                self._capability,
             )
-            DreameVacuumMapDecoder.set_carpet_cleanset(
-                saved_map_data, saved_map_data.carpet_cleanset, self.map_manager._capability
-            )
+            DreameVacuumMapDecoder.set_carpet_cleanset(saved_map_data, saved_map_data.carpet_cleanset, self._capability)
             self.map_manager._map_data = saved_map_data
             self.map_manager._current_frame_id = None
             self.map_manager._current_map_id = map_id
@@ -222,7 +220,7 @@ class DreameMapVacuumMapEditor:
             self.refresh_map()
             self.refresh_map(map_id)
 
-    def set_carpets(self, carpets, ignored_carpets) -> None:
+    def set_carpets(self, carpets: Any, ignored_carpets: Any) -> None:
         map_data = self._map_data
         if not map_data or not self._selected_map_id or (map_data.carpets is None and map_data.ignored_carpets is None):
             return
@@ -276,7 +274,7 @@ class DreameMapVacuumMapEditor:
         self.refresh_map()
         return
 
-    def set_virtual_thresholds(self, virtual_thresholds) -> None:
+    def set_virtual_thresholds(self, virtual_thresholds: Any) -> None:
         map_data = self._map_data
         if (
             not map_data
@@ -308,7 +306,7 @@ class DreameMapVacuumMapEditor:
         self.refresh_map()
         return
 
-    def set_predefined_points(self, predefined_points) -> None:
+    def set_predefined_points(self, predefined_points: Any) -> None:
         map_data = self._map_data
         if not map_data or not self._selected_map_id or map_data.predefined_points is None:
             return
@@ -331,7 +329,7 @@ class DreameMapVacuumMapEditor:
         self.refresh_map()
         return
 
-    def set_obstacle_ignore(self, x, y, obstacle_ignored):
+    def set_obstacle_ignore(self, x: Any, y: Any, obstacle_ignored: Any) -> None:
         map_data = self._map_data
         if not map_data or not map_data.obstacles:
             return
@@ -349,15 +347,16 @@ class DreameMapVacuumMapEditor:
         self.refresh_map()
         return
 
-    def set_router_position(self, x, y):
+    def set_router_position(self, x: Any, y: Any) -> None:
         map_data = self._map_data
         if not map_data or not self._selected_map_id or map_data.router_position is None:
             return
 
         router_position = Point(int(x), int(y))
-        self._saved_map_data[self._selected_map_id].router_position = router_position
-        if self._saved_map_data[self._selected_map_id].wifi_map_data:
-            self._saved_map_data[self._selected_map_id].wifi_map_data.router_position = router_position
+        saved_entry = self._saved_map_data[self._selected_map_id]
+        saved_entry.router_position = router_position
+        if saved_entry.wifi_map_data:
+            saved_entry.wifi_map_data.router_position = router_position
         map_data.router_position = router_position
         if map_data.wifi_map_data:
             map_data.wifi_map_data.router_position = router_position
@@ -407,32 +406,36 @@ class DreameMapVacuumMapEditor:
         saved_map_data = self._saved_map_data
         if saved_map_data and map_id in saved_map_data and len(segments) == 2:
             map_data = saved_map_data[map_id]
-            if map_data.segments and segments[0] in map_data.segments and segments[1] in map_data.segments:
+            dims = map_data.dimensions
+            if dims and map_data.segments and segments[0] in map_data.segments and segments[1] in map_data.segments:
                 if segments[1] not in map_data.segments[segments[0]].neighbors:
                     _LOGGER.error("Segments are not neighbors with each other: %s", segments)
                     return
 
-                data = np.zeros((map_data.dimensions.width * map_data.dimensions.height), np.uint8)
-                for y in range(map_data.dimensions.height):
-                    for x in range(map_data.dimensions.width):
-                        index = y * map_data.dimensions.width + x
-                        if (map_data.data[index] & 0x3F) == segments[1]:
+                raw_data: Any = map_data.data
+                pixel_type: Any = map_data.pixel_type
+                data = np.zeros((dims.width * dims.height), np.uint8)
+                for y in range(dims.height):
+                    for x in range(dims.width):
+                        index = y * dims.width + x
+                        if (raw_data[index] & 0x3F) == segments[1]:
                             data[index] = segments[0]
                         else:
-                            data[index] = map_data.data[index]
+                            data[index] = raw_data[index]
 
-                        if int(map_data.pixel_type[x, y]) == segments[1]:
-                            map_data.pixel_type[x, y] = segments[0]
+                        if int(pixel_type[x, y]) == segments[1]:
+                            pixel_type[x, y] = segments[0]
 
                 map_data.data = bytes(data)
-                del self.map_manager._saved_map_data[map_id].segments[segments[1]]
+                manager_segments: Any = self.map_manager._saved_map_data[map_id].segments
+                del manager_segments[segments[1]]
                 new_segments = DreameVacuumMapDecoder.get_segments(map_data, self.map_manager._vslam_map)
                 map_data.segments[segments[0]].x = new_segments[segments[0]].x
                 map_data.segments[segments[0]].y = new_segments[segments[0]].y
                 if map_data.hidden_segments and segments[1] in map_data.hidden_segments:
                     map_data.hidden_segments.remove(segments[1])
 
-                DreameVacuumMapDecoder.set_floor_material(map_data, self.map_manager._capability)
+                DreameVacuumMapDecoder.set_floor_material(map_data, self._capability)
                 for k, v in map_data.segments.items():
                     if segments[1] in v.neighbors:
                         map_data.segments[k].neighbors.remove(segments[1])
@@ -472,7 +475,7 @@ class DreameMapVacuumMapEditor:
                 new_map.saved_map_status = -1
                 new_map.saved_map = True
                 new_map.cleanset = {}
-                self.map_manager._saved_map_data[new_map.map_id] = new_map
+                self.map_manager._saved_map_data[cast(int, new_map.map_id)] = new_map
                 del self.map_manager._saved_map_data[map_id]
                 self.map_manager._refresh_map_list()
 
@@ -487,10 +490,8 @@ class DreameMapVacuumMapEditor:
                 map_data.restored_map = True
                 map_data.empty_map = False
                 map_data.cleanset = {}
-                DreameVacuumMapDecoder.set_segment_cleanset(map_data, map_data.cleanset, self.map_manager._capability)
-                DreameVacuumMapDecoder.set_carpet_cleanset(
-                    map_data, map_data.carpet_cleanset, self.map_manager._capability
-                )
+                DreameVacuumMapDecoder.set_segment_cleanset(map_data, map_data.cleanset, self._capability)
+                DreameVacuumMapDecoder.set_carpet_cleanset(map_data, map_data.carpet_cleanset, self._capability)
                 self.map_manager._map_data = map_data
                 self.map_manager._selected_map_id = new_map.map_id
                 self.map_manager.request_next_map_list()
@@ -521,6 +522,8 @@ class DreameMapVacuumMapEditor:
                 if recovery_map_info.map_data is None
                 else recovery_map_info.map_data
             )
+            if recovery_map_data is None:
+                return
             recovery_map_data.recovery_map = False
             recovery_map_data.saved_map = True
             recovery_map_data.map_name = self._saved_map_data[recovery_map_info.map_id].map_name
@@ -530,15 +533,16 @@ class DreameMapVacuumMapEditor:
             recovery_map_data.recovery_map_list = self._saved_map_data[recovery_map_info.map_id].recovery_map_list
             recovery_map_data.timestamp_ms = self._saved_map_data[recovery_map_info.map_id].timestamp_ms
             recovery_map_data.last_updated = time.time()
-            if recovery_map_data.wifi_map:
-                recovery_map_data.wifi_map.last_updated = time.time()
+            if recovery_map_data.wifi_map_data:
+                recovery_map_data.wifi_map_data.last_updated = time.time()
 
             self._saved_map_data[recovery_map_info.map_id] = recovery_map_data
             self.refresh_map(recovery_map_info.map_id)
             if recovery_map_info.map_id == self._selected_map_id:
                 self.set_current_map(recovery_map_info.map_id)
                 # self._map_data.restored_map = False
-                DreameVacuumMapDecoder.set_floor_material(self._map_data, self.map_manager._capability)
+                if self._map_data is not None:
+                    DreameVacuumMapDecoder.set_floor_material(self._map_data, self._capability)
 
             self.map_manager._map_request_count = 0
             self.map_manager._map_request_time = None
@@ -572,7 +576,8 @@ class DreameMapVacuumMapEditor:
 
             self._set_updated_frame_id(map_data.frame_id)
             self.refresh_map()
-            return self.map_manager.cleaning_sequence
+            return cast("list[int] | None", self.map_manager.cleaning_sequence)
+        return None
 
     def set_segment_order(self, segment_id: int, order: int) -> list[int] | None:
         map_data = self._map_data
@@ -585,13 +590,13 @@ class DreameMapVacuumMapEditor:
                     for k, v in map_data.segments.items():
                         if k != segment_id and v.order == order:
                             map_data.segments[k].order = (
-                                len(self.map_manager.cleaning_sequence) if not current_order else current_order
+                                len(self.map_manager.cleaning_sequence or []) if not current_order else current_order
                             )
             else:
                 map_data.segments[segment_id].order = 0
 
             index = 1
-            for k in self.map_manager.cleaning_sequence:
+            for k in self.map_manager.cleaning_sequence or []:
                 if map_data.segments[k].order:
                     map_data.segments[k].order = index
                     map_data.cleanset[str(k)][3] = index
@@ -608,13 +613,14 @@ class DreameMapVacuumMapEditor:
 
             self._set_updated_frame_id(map_data.frame_id)
             self.refresh_map()
-            return self.map_manager.cleaning_sequence
+            return cast("list[int] | None", self.map_manager.cleaning_sequence)
+        return None
 
-    def cleanset(self, map_data: MapData) -> list[list[int]] | None:
-        cleanset = []
+    def cleanset(self, map_data: MapData) -> Any:
+        cleanset: list[Any] = []
         has_cleaning_mode = False
         has_mopping_settings = False
-        for k, v in map_data.segments.items():
+        for k, v in (map_data.segments or {}).items():
             if v.suction_level is None:
                 v.suction_level = 1
             if v.water_volume is None:
@@ -644,13 +650,16 @@ class DreameMapVacuumMapEditor:
             cleanset.append(settings)
         return cleanset
 
-    def set_carpet_cleanset(self, carpet_cleanset: list[list[int]]) -> None:
-        DreameVacuumMapDecoder.set_carpet_cleanset(self._map_data, carpet_cleanset, self.map_manager._capability)
-        self._map_data.carpet_cleanset = carpet_cleanset
-        self._set_updated_frame_id(self._map_data.frame_id)
+    def set_carpet_cleanset(self, carpet_cleanset: Any) -> None:
+        map_data = self._map_data
+        if map_data is None:
+            return
+        DreameVacuumMapDecoder.set_carpet_cleanset(map_data, carpet_cleanset, self._capability)
+        map_data.carpet_cleanset = carpet_cleanset
+        self._set_updated_frame_id(map_data.frame_id)
         self.refresh_map()
 
-    def set_custom_carpet_settings(self, carpet_cleanset: list[list[int]]) -> None:
+    def set_custom_carpet_settings(self, carpet_cleanset: Any) -> Any:
         map_data = self._map_data
         if map_data is not None and map_data.carpet_cleanset:
             cleanset = []
@@ -666,7 +675,7 @@ class DreameMapVacuumMapEditor:
             carpet_cleanset = cleanset
         return carpet_cleanset
 
-    def set_custom_carpet_cleaning(self, carpet_cleanset: list[list[int]]) -> None:
+    def set_custom_carpet_cleaning(self, carpet_cleanset: Any) -> Any:
         map_data = self._map_data
         if map_data is not None and map_data.carpet_cleanset:
             cleanset = []
@@ -676,7 +685,7 @@ class DreameMapVacuumMapEditor:
                     if carpet[0] == selected_carpet[0] and carpet[1] == selected_carpet[1]:
                         carpet[2] = selected_carpet[2]
                         item = [carpet[0], carpet[1], carpet[2]]
-                        if len(carpet) > 3 and self.map_manager._capability.carpet_cleanset_v3:
+                        if len(carpet) > 3 and self._capability.carpet_cleanset_v3:
                             if (
                                 carpet[2] == -1
                                 or len(selected_carpet) < 4
@@ -693,9 +702,7 @@ class DreameMapVacuumMapEditor:
             carpet_cleanset = cleanset
         return carpet_cleanset
 
-    def set_segment_suction_level(
-        self, segment_id: int, suction_level: int, refresh_map: bool = True
-    ) -> list[list[int]] | None:
+    def set_segment_suction_level(self, segment_id: int, suction_level: int, refresh_map: bool = True) -> Any:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments and not map_data.temporary_map:
             map_data.segments[segment_id].suction_level = suction_level
@@ -710,16 +717,17 @@ class DreameMapVacuumMapEditor:
                 self._set_updated_frame_id(map_data.frame_id)
                 self.refresh_map()
                 return self.cleanset(map_data)
+        return None
 
-    def set_segment_water_volume(
-        self, segment_id: int, water_volume: int, refresh_map: bool = True
-    ) -> list[list[int]] | None:
+    def set_segment_water_volume(self, segment_id: int, water_volume: int, refresh_map: bool = True) -> Any:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments:
             map_data.segments[segment_id].water_volume = water_volume
             map_data.cleanset[str(segment_id)][1] = water_volume + 1
             if map_data.segments[segment_id].custom_mopping_route is not None:
-                values = DreameVacuumMapDecoder.split_mopping_settings(map_data.segments[segment_id].mopping_settings)
+                values = DreameVacuumMapDecoder.split_mopping_settings(
+                    map_data.segments[segment_id].mopping_settings or 0
+                )
                 if values:
                     # Set mopping mode or water volume according to the mopping effect switch
                     values[2 if map_data.segments[segment_id].custom_mopping_route == -1 else 1] = water_volume
@@ -738,17 +746,16 @@ class DreameMapVacuumMapEditor:
                 self._set_updated_frame_id(map_data.frame_id)
                 self.refresh_map()
                 return self.cleanset(map_data)
+        return None
 
-    def set_segment_wetness_level(
-        self, segment_id: int, wetness_level: int, refresh_map: bool = True
-    ) -> list[list[int]] | None:
+    def set_segment_wetness_level(self, segment_id: int, wetness_level: int, refresh_map: bool = True) -> Any:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments:
             wetness_level = int(wetness_level)
             map_data.cleanset[str(segment_id)][1] = wetness_level
             map_data.segments[segment_id].wetness_level = wetness_level
 
-            if wetness_level > (14 if self.map_manager._capability.mop_clean_frequency else 26):
+            if wetness_level > (14 if self._capability.mop_clean_frequency else 26):
                 map_data.segments[segment_id].water_volume = 3
             elif wetness_level < 6:
                 map_data.segments[segment_id].water_volume = 1
@@ -758,7 +765,9 @@ class DreameMapVacuumMapEditor:
             if map_data.segments[segment_id].custom_mopping_route is not None:
                 map_data.segments[segment_id].custom_mopping_route = 0
 
-                values = DreameVacuumMapDecoder.split_mopping_settings(map_data.segments[segment_id].mopping_settings)
+                values = DreameVacuumMapDecoder.split_mopping_settings(
+                    map_data.segments[segment_id].mopping_settings or 0
+                )
                 if values:
                     values[1] = 0
                     values[2] = 0
@@ -777,10 +786,9 @@ class DreameMapVacuumMapEditor:
                 self._set_updated_frame_id(map_data.frame_id)
                 self.refresh_map()
                 return self.cleanset(map_data)
+        return None
 
-    def set_segment_cleaning_times(
-        self, segment_id: int, cleaning_times: int, refresh_map: bool = True
-    ) -> list[list[int]] | None:
+    def set_segment_cleaning_times(self, segment_id: int, cleaning_times: int, refresh_map: bool = True) -> Any:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments and not map_data.temporary_map:
             map_data.segments[segment_id].cleaning_times = cleaning_times
@@ -795,10 +803,9 @@ class DreameMapVacuumMapEditor:
                 self._set_updated_frame_id(map_data.frame_id)
                 self.refresh_map()
                 return self.cleanset(map_data)
+        return None
 
-    def set_segment_cleaning_mode(
-        self, segment_id: int, cleaning_mode: int, refresh_map: bool = True
-    ) -> list[list[int]] | None:
+    def set_segment_cleaning_mode(self, segment_id: int, cleaning_mode: int, refresh_map: bool = True) -> Any:
         map_data = self._map_data
         if (
             map_data
@@ -819,19 +826,22 @@ class DreameMapVacuumMapEditor:
                 self._set_updated_frame_id(map_data.frame_id)
                 self.refresh_map()
                 return self.cleanset(map_data)
+        return None
 
     def set_segment_custom_mopping_route(
         self, segment_id: int, custom_mopping_route: int, refresh_map: bool = True
-    ) -> list[list[int]] | None:
+    ) -> Any:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments:
             if map_data.segments[segment_id].custom_mopping_route is not None:
                 map_data.segments[segment_id].custom_mopping_route = custom_mopping_route
-                values = DreameVacuumMapDecoder.split_mopping_settings(map_data.segments[segment_id].mopping_settings)
+                values = DreameVacuumMapDecoder.split_mopping_settings(
+                    map_data.segments[segment_id].mopping_settings or 0
+                )
                 if values:
                     # Set mopping effect switch or cleaning route
                     if map_data.segments[segment_id].custom_mopping_route == -1:
-                        values[2] = map_data.segments[segment_id].water_volume
+                        values[2] = map_data.segments[segment_id].water_volume or 0
                         map_data.segments[segment_id].cleaning_route = 1 if values[2] == 2 else values[2]
                     else:
                         values[2] = 0
@@ -853,15 +863,16 @@ class DreameMapVacuumMapEditor:
                 self._set_updated_frame_id(map_data.frame_id)
                 self.refresh_map()
                 return self.cleanset(map_data)
+        return None
 
-    def set_segment_cleaning_route(
-        self, segment_id: int, cleaning_route: int, refresh_map: bool = True
-    ) -> list[list[int]] | None:
+    def set_segment_cleaning_route(self, segment_id: int, cleaning_route: int, refresh_map: bool = True) -> Any:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments:
             if map_data.segments[segment_id].cleaning_route is not None:
                 map_data.segments[segment_id].cleaning_route = cleaning_route
-                values = DreameVacuumMapDecoder.split_mopping_settings(map_data.segments[segment_id].mopping_settings)
+                values = DreameVacuumMapDecoder.split_mopping_settings(
+                    map_data.segments[segment_id].mopping_settings or 0
+                )
                 if values:
                     values[2] = 0
                     values[0] = cleaning_route
@@ -881,10 +892,9 @@ class DreameMapVacuumMapEditor:
                 self._set_updated_frame_id(map_data.frame_id)
                 self.refresh_map()
                 return self.cleanset(map_data)
+        return None
 
-    def set_segment_floor_material(
-        self, segment_id: int, floor_material: int, direction: int | None = None
-    ) -> list[list[int]] | None:
+    def set_segment_floor_material(self, segment_id: int, floor_material: int, direction: int | None = None) -> Any:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments and not map_data.temporary_map:
             if direction is not None:
@@ -895,24 +905,20 @@ class DreameMapVacuumMapEditor:
 
             map_data.segments[segment_id].floor_material = floor_material
             map_data.segments[segment_id].floor_material_direction = direction
-            if (
-                self._saved_map_data
-                and self._selected_map_id is not None
-                and self._selected_map_id in self._saved_map_data
-                and segment_id in self._saved_map_data[self._selected_map_id].segments
-            ):
-                self._saved_map_data[self._selected_map_id].segments[segment_id].floor_material = floor_material
-                self._saved_map_data[self._selected_map_id].segments[segment_id].floor_material_direction = direction
+            saved_entry = self._saved_map_data.get(self._selected_map_id) if self._selected_map_id is not None else None
+            if saved_entry and saved_entry.segments and segment_id in saved_entry.segments:
+                saved_entry.segments[segment_id].floor_material = floor_material
+                saved_entry.segments[segment_id].floor_material_direction = direction
                 DreameVacuumMapDecoder.set_segment_floor_material(
-                    self._saved_map_data[self._selected_map_id],
+                    saved_entry,
                     segment_id,
-                    self._saved_map_data[self._selected_map_id].floor_material,
-                    self.map_manager._capability,
+                    saved_entry.floor_material,
+                    self._capability,
                 )
                 self.refresh_map(self._selected_map_id)
 
             DreameVacuumMapDecoder.set_segment_floor_material(
-                map_data, segment_id, map_data.floor_material, self.map_manager._capability
+                map_data, segment_id, map_data.floor_material, self._capability
             )
             self._set_updated_frame_id(map_data.frame_id)
             self.refresh_map()
@@ -929,7 +935,7 @@ class DreameMapVacuumMapEditor:
             }
         return {}
 
-    def set_segment_visibility(self, segment_id: int, visibility: int) -> list[list[int]] | None:
+    def set_segment_visibility(self, segment_id: int, visibility: int) -> Any:
         map_data = self._map_data
         if map_data and map_data.segments and segment_id in map_data.segments and not map_data.temporary_map:
             map_data.segments[segment_id].visibility = visibility
@@ -939,9 +945,11 @@ class DreameMapVacuumMapEditor:
                 and self._selected_map_id is not None
                 and self._selected_map_id in self._saved_map_data
             ):
-                self._saved_map_data[self._selected_map_id].segments[segment_id].visibility = visibility
-                self._saved_map_data[self._selected_map_id].hidden_segments = [
-                    k for k, v in self._saved_map_data[self._selected_map_id].segments.items() if not v.visibility
+                saved_visibility_entry = self._saved_map_data[self._selected_map_id]
+                saved_segments: Any = saved_visibility_entry.segments
+                saved_segments[segment_id].visibility = visibility
+                saved_visibility_entry.hidden_segments = [
+                    k for k, v in (saved_visibility_entry.segments or {}).items() if not v.visibility
                 ]
 
             self._set_updated_frame_id(map_data.frame_id)
@@ -964,7 +972,7 @@ class DreameMapVacuumMapEditor:
                 map_data.segments[segment_id].type != segment_type
                 or map_data.segments[segment_id].custom_name != custom_name
             ):
-                segment_info = {}
+                segment_info: dict[Any, Any] = {}
                 map_data.segments[segment_id].type = segment_type
                 if segment_type == 0:
                     map_data.segments[segment_id].index = 0
@@ -980,43 +988,38 @@ class DreameMapVacuumMapEditor:
 
                 map_data.segments[segment_id].set_name()
 
-                self._saved_map_data[self._selected_map_id].segments[segment_id].custom_name = map_data.segments[
-                    segment_id
-                ].custom_name
-                self._saved_map_data[self._selected_map_id].segments[segment_id].index = map_data.segments[
-                    segment_id
-                ].index
-                self._saved_map_data[self._selected_map_id].segments[segment_id].type = map_data.segments[
-                    segment_id
-                ].type
-                self._saved_map_data[self._selected_map_id].segments[segment_id].set_name()
+                saved_name_segments: Any = self._saved_map_data[self._selected_map_id].segments
+                saved_name_segments[segment_id].custom_name = map_data.segments[segment_id].custom_name
+                saved_name_segments[segment_id].index = map_data.segments[segment_id].index
+                saved_name_segments[segment_id].type = map_data.segments[segment_id].type
+                saved_name_segments[segment_id].set_name()
                 self.refresh_map(self._selected_map_id)
 
                 for k, v in map_data.segments.items():
-                    if map_data.segments[k].custom_name is not None:
+                    segment_name = v.custom_name
+                    if segment_name is not None:
                         segment_info[k] = {
-                            MAP_PARAMETER_NAME: base64.b64encode(
-                                map_data.segments[k].custom_name.encode("utf-8")
-                            ).decode("utf-8"),
+                            MAP_PARAMETER_NAME: base64.b64encode(segment_name.encode("utf-8")).decode("utf-8"),
                             MAP_REQUEST_PARAMETER_TYPE: 0,
                             MAP_REQUEST_PARAMETER_INDEX: 0,
                         }
-                    elif map_data.segments[k].type:
+                    elif v.type:
                         segment_info[k] = {
-                            MAP_REQUEST_PARAMETER_TYPE: map_data.segments[k].type,
-                            MAP_REQUEST_PARAMETER_INDEX: map_data.segments[k].index,
+                            MAP_REQUEST_PARAMETER_TYPE: v.type,
+                            MAP_REQUEST_PARAMETER_INDEX: v.index,
                         }
                     else:
                         segment_info[k] = {}
 
-                    if map_data.segments[k].unique_id:
-                        segment_info[k][MAP_REQUEST_PARAMETER_ROOM_ID] = map_data.segments[k].unique_id
+                    if v.unique_id:
+                        segment_info[k][MAP_REQUEST_PARAMETER_ROOM_ID] = v.unique_id
 
                 self._set_updated_frame_id(map_data.frame_id)
                 self.refresh_map()
                 return segment_info
+        return None
 
-    def set_zones(self, virtual_walls, no_go_areas, no_mopping_areas) -> None:
+    def set_zones(self, virtual_walls: Any, no_go_areas: Any, no_mopping_areas: Any) -> None:
         map_data = self._map_data
         if not map_data or not self._selected_map_id:
             return
@@ -1083,7 +1086,11 @@ class DreameMapVacuumMapEditor:
         return self.map_manager._map_data
 
     @property
-    def _saved_map_data(self) -> MapData | None:
+    def _capability(self) -> Any:
+        return self.map_manager._capability
+
+    @property
+    def _saved_map_data(self) -> dict[int, MapData]:
         return self.map_manager._saved_map_data
 
     @property

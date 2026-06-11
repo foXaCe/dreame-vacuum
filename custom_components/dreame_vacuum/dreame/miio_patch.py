@@ -17,7 +17,7 @@ import warnings
 _LOGGER = logging.getLogger(__name__)
 
 
-def apply_miio_patch():
+def apply_miio_patch() -> None:
     """
     Apply patch to suppress python-miio Python 3.13 FutureWarning.
 

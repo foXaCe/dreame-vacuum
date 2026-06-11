@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.config_entries import ConfigEntry
 
@@ -54,6 +54,7 @@ CONF_HIDDEN_MAP_OBJECTS: Final = "hidden_map_objects"
 CONF_PREFER_CLOUD: Final = "prefer_cloud"
 CONF_LOW_RESOLUTION: Final = "low_resolution"
 CONF_SQUARE: Final = "square"
+CONF_VECTOR_ROOMS: Final = "vector_rooms"
 CONF_ACCOUNT_TYPE: Final = "account_type"
 CONF_VERSION: Final = "version"
 
@@ -109,7 +110,7 @@ NOTIFICATION_TRANSLATIONS: Final = {
 }
 
 
-def get_notification_labels(language: str | None = None) -> dict:
+def get_notification_labels(language: str | None = None) -> dict[str, str]:
     """Get translated notification labels based on language."""
     if language and language in NOTIFICATION_TRANSLATIONS:
         return NOTIFICATION_TRANSLATIONS[language]
@@ -281,7 +282,7 @@ NOTIFICATION_MESSAGES_TRANSLATIONS: Final = {
 }
 
 
-def get_notification_message(language: str, key: str, **kwargs) -> str:
+def get_notification_message(language: str, key: str, **kwargs: Any) -> str:
     """Get translated notification message based on language."""
     if language and language in NOTIFICATION_MESSAGES_TRANSLATIONS:
         translations = NOTIFICATION_MESSAGES_TRANSLATIONS[language]

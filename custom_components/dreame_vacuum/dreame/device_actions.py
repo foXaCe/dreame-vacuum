@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 import json
 import logging
 from random import randrange
 import re
 import time
-from typing import Any
+from typing import Any, cast
 
+from ._device_base import DreameVacuumDeviceState
 from .exceptions import (
     InvalidActionException,
     InvalidValueException,
@@ -113,24 +115,26 @@ _RESET_CONSUMABLES = {
 }
 
 
-class DreameVacuumDeviceActionsMixin:
+class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
     """Mixin providing action methods for DreameVacuumDevice."""
 
-    def call_stream_audio_action(self, property: DreameVacuumProperty, parameters=None):
+    def call_stream_audio_action(self, property: DreameVacuumProperty, parameters: Any = None) -> dict[str, Any] | None:
         return self.call_stream_action(DreameVacuumAction.STREAM_AUDIO, property, parameters)
 
-    def call_stream_video_action(self, property: DreameVacuumProperty, parameters=None):
+    def call_stream_video_action(self, property: DreameVacuumProperty, parameters: Any = None) -> dict[str, Any] | None:
         return self.call_stream_action(DreameVacuumAction.STREAM_VIDEO, property, parameters)
 
-    def call_stream_property_action(self, property: DreameVacuumProperty, parameters=None):
+    def call_stream_property_action(
+        self, property: DreameVacuumProperty, parameters: Any = None
+    ) -> dict[str, Any] | None:
         return self.call_stream_action(DreameVacuumAction.STREAM_PROPERTY, property, parameters)
 
     def call_stream_action(
         self,
         action: DreameVacuumAction,
         property: DreameVacuumProperty,
-        parameters=None,
-    ):
+        parameters: Any = None,
+    ) -> dict[str, Any] | None:
         params = {"session": self.status.stream_session}
         if parameters:
             params.update(parameters)
@@ -144,7 +148,7 @@ class DreameVacuumDeviceActionsMixin:
             ],
         )
 
-    def call_shortcut_action(self, command: str, parameters=None):
+    def call_shortcut_action(self, command: str, parameters: Any = None) -> dict[str, Any] | None:
         if parameters is None:
             parameters = {}
         return self.call_action(
@@ -162,7 +166,7 @@ class DreameVacuumDeviceActionsMixin:
             ],
         )
 
-    def call_shortcut_action_async(self, callback, command: str, parameters=None):
+    def call_shortcut_action_async(self, callback: Callable[..., Any], command: str, parameters: Any = None) -> None:
         if parameters is None:
             parameters = {}
         mapping = self.action_mapping[DreameVacuumAction.SHORTCUTS]
@@ -184,7 +188,7 @@ class DreameVacuumDeviceActionsMixin:
         )
 
     def call_action(
-        self, action: DreameVacuumAction, parameters: dict[str, Any] | None = None
+        self, action: DreameVacuumAction, parameters: list[Any] | dict[str, Any] | None = None
     ) -> dict[str, Any] | None:
         """Call an action."""
         if action not in self.action_mapping:
@@ -214,7 +218,7 @@ class DreameVacuumDeviceActionsMixin:
         )
 
         if not cleaning_action:
-            available_fn = ACTION_AVAILABILITY.get(action.name)
+            available_fn: Callable[..., Any] | None = ACTION_AVAILABILITY.get(action.name)
             if available_fn and not available_fn(self):
                 raise InvalidActionException("Action unavailable")
         elif self._map_select_time:
@@ -247,7 +251,7 @@ class DreameVacuumDeviceActionsMixin:
             self._property_changed(False)
 
         try:
-            result = self._protocol.action(mapping["siid"], mapping["aiid"], parameters)
+            result: dict[str, Any] | None = self._protocol.action(mapping["siid"], mapping["aiid"], parameters)
         except Exception as ex:
             _LOGGER.error("Send action failed %s: %s", action.name, ex)
             self.schedule_update(1, True)
@@ -277,8 +281,9 @@ class DreameVacuumDeviceActionsMixin:
         if response:
             _LOGGER.debug("Send command response: %s", response)
         self.schedule_update(2, True)
+        return None
 
-    def delete_schedule(self, schedule_id) -> dict[str, Any] | None:
+    def delete_schedule(self, schedule_id: Any) -> dict[str, Any] | None:
         """Delete a scheduled task."""
         found = False
         for schedule in self.status.schedule:
@@ -366,7 +371,7 @@ class DreameVacuumDeviceActionsMixin:
 
         return self.call_action(DreameVacuumAction.START)
 
-    def start_custom(self, status, parameters: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    def start_custom(self, status: Any, parameters: Any = None) -> dict[str, Any] | None:
         """Start custom cleaning task."""
         if not self.capability.cruising and status != DreameVacuumStatus.ZONE_CLEANING.value:
             self._restore_go_to_zone()
@@ -479,10 +484,10 @@ class DreameVacuumDeviceActionsMixin:
 
     def clean_zone(
         self,
-        zones: list[int] | list[list[int]],
-        cleaning_times: int | list[int],
-        suction_level: int | list[int],
-        water_volume: int | list[int],
+        zones: Any,
+        cleaning_times: Any,
+        suction_level: Any,
+        water_volume: Any,
     ) -> dict[str, Any] | None:
         """Clean selected area."""
         if self.status.draining or self.status.self_repairing:
@@ -547,7 +552,11 @@ class DreameVacuumDeviceActionsMixin:
             x_coords = sorted([zone[0], zone[2]])
             y_coords = sorted([zone[1], zone[3]])
 
-            size = (self.status.current_map.dimensions.grid_size * 2) if self.status.current_map else 100
+            size = (
+                (self.status.current_map.dimensions.grid_size * 2)
+                if self.status.current_map and self.status.current_map.dimensions
+                else 100
+            )
             w = (x_coords[1] - x_coords[0]) / size
             h = (y_coords[1] - y_coords[0]) / size
 
@@ -592,11 +601,11 @@ class DreameVacuumDeviceActionsMixin:
 
     def clean_segment(
         self,
-        selected_segments: int | list[int],
-        cleaning_times: int | list[int] | None = None,
-        suction_level: int | list[int] | None = None,
-        water_volume: int | list[int] | None = None,
-        timestamp: int | None = None,
+        selected_segments: Any,
+        cleaning_times: Any = None,
+        suction_level: Any = None,
+        water_volume: Any = None,
+        timestamp: Any = None,
     ) -> dict[str, Any] | None:
         """Clean selected segment using id."""
         if self.status.draining or self.status.self_repairing:
@@ -675,7 +684,7 @@ class DreameVacuumDeviceActionsMixin:
                 # Set active segments on current map data is implemented on the app
                 self._map_manager.editor.set_active_segments(selected_segments)
 
-        data = {"selects": cleanlist}
+        data: dict[str, Any] = {"selects": cleanlist}
         if timestamp is not None:
             data["timestamp"] = timestamp
 
@@ -686,10 +695,10 @@ class DreameVacuumDeviceActionsMixin:
 
     def clean_spot(
         self,
-        points: list[int] | list[list[int]],
-        cleaning_times: int | list[int] | None,
-        suction_level: int | list[int] | None,
-        water_volume: int | list[int] | None,
+        points: Any,
+        cleaning_times: Any,
+        suction_level: Any,
+        water_volume: Any,
     ) -> dict[str, Any] | None:
         """Clean 1.5 square meters area of selected points."""
         if self.status.draining or self.status.self_repairing:
@@ -784,7 +793,7 @@ class DreameVacuumDeviceActionsMixin:
             str(json.dumps({"points": cleanlist}, separators=(",", ":"))).replace(" ", ""),
         )
 
-    def go_to(self, x, y) -> dict[str, Any] | None:
+    def go_to(self, x: Any, y: Any) -> dict[str, Any] | None:
         """Go to a point and take pictures around."""
         if self.status.draining or self.status.self_repairing:
             raise InvalidActionException("Cannot go to point while draining or self repairing/testing")
@@ -798,7 +807,11 @@ class DreameVacuumDeviceActionsMixin:
             )
 
         if not self.capability.cruising:
-            size = (self.status.current_map.dimensions.grid_size * 2) if self.status.current_map else 100
+            size = (
+                (self.status.current_map.dimensions.grid_size * 2)
+                if self.status.current_map and self.status.current_map.dimensions
+                else 100
+            )
             if self.status.current_map and self.status.current_map.robot_position:
                 position = self.status.current_map.robot_position
                 if abs(x - position.x) <= size and abs(y - position.y) <= size:
@@ -861,7 +874,7 @@ class DreameVacuumDeviceActionsMixin:
 
         return response
 
-    def follow_path(self, points: list[int] | list[list[int]]) -> dict[str, Any] | None:
+    def follow_path(self, points: Any) -> dict[str, Any] | None:
         """Start a surveillance job."""
         if not self.capability.cruising:
             raise InvalidActionException("Follow path is not supported on this device")
@@ -985,7 +998,7 @@ class DreameVacuumDeviceActionsMixin:
 
         return self.start_custom(DreameVacuumStatus.CLEANING.value, "3")
 
-    def start_self_wash_base(self, parameters: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    def start_self_wash_base(self, parameters: Any = None) -> dict[str, Any] | None:
         """Start self-wash base for cleaning or drying the mop."""
         if not self.capability.self_wash_base:
             return None
@@ -1025,6 +1038,7 @@ class DreameVacuumDeviceActionsMixin:
                 DreameVacuumSelfWashBaseStatus.WASHING.value,
             )
             return self.start_self_wash_base("2,1")
+        return None
 
     def pause_washing(self) -> dict[str, Any] | None:
         """Pause washing the mop if self-wash base is present."""
@@ -1036,6 +1050,7 @@ class DreameVacuumDeviceActionsMixin:
             if self.info and self.info.version <= 1037:
                 return self.pause()
             return self.start_self_wash_base("1,0")
+        return None
 
     def toggle_drying(self) -> dict[str, Any] | None:
         """Toggle drying the mop if self-wash base is present."""
@@ -1051,6 +1066,7 @@ class DreameVacuumDeviceActionsMixin:
                 DreameVacuumSelfWashBaseStatus.DRYING.value,
             )
             return self.start_self_wash_base("3,1")
+        return None
 
     def stop_drying(self) -> dict[str, Any] | None:
         """Stop drying the mop if self-wash base is present."""
@@ -1060,14 +1076,16 @@ class DreameVacuumDeviceActionsMixin:
                 DreameVacuumSelfWashBaseStatus.IDLE.value,
             )
             return self.start_self_wash_base("3,0")
+        return None
 
-    def start_draining(self, clean_water_tank=False) -> dict[str, Any] | None:
+    def start_draining(self, clean_water_tank: bool = False) -> dict[str, Any] | None:
         """Start draining water if self-wash base is present."""
         if clean_water_tank:
             if self.capability.empty_water_tank:
                 return self.start_self_wash_base("9,1")
         if self.status.washing_available and self.status.drying_available:
             return self.start_self_wash_base("7,1")
+        return None
 
     def start_self_repairing(self) -> dict[str, Any] | None:
         """Start self repairing if self-wash base is present."""
@@ -1083,7 +1101,8 @@ class DreameVacuumDeviceActionsMixin:
                 _LOGGER.error("Start self repairing failed")
                 self._update_property(DreameVacuumProperty.STATUS, current_status)
                 raise InvalidActionException("Start self repairing failed")
-            return result
+            return cast("dict[str, Any] | None", result)
+        return None
 
     def start_station_cleaning(self) -> dict[str, Any] | None:
         """Start base station cleaning if self-wash base is present."""
@@ -1096,13 +1115,14 @@ class DreameVacuumDeviceActionsMixin:
             current_status = self.status.task_status
             self.schedule_update(10)
             self._update_property(DreameVacuumProperty.TASK_STATUS, DreameVacuumTaskStatus.STATION_CLEANING.value)
-            result = self.start_self_wash_base("5,1")
+            result: Any = self.start_self_wash_base("5,1")
             self.schedule_update(3)
             if result is None or not result or result[0].get("code") != 0:
                 _LOGGER.error("Start base station cleaning failed")
                 self._update_property(DreameVacuumProperty.TASK_STATUS, current_status)
                 raise InvalidActionException("Start base station cleaning failed")
-            return result
+            return cast("dict[str, Any] | None", result)
+        return None
 
     def start_recleaning(self) -> dict[str, Any] | None:
         """Start self repairing if dirty areas or neglected rooms are present."""
@@ -1110,18 +1130,15 @@ class DreameVacuumDeviceActionsMixin:
             history = self.status._cleaning_history[0]
             map_data = self.status._history_map_data.get(history.object_name) if history.object_name else None
             if map_data and self.status.current_map.map_id == map_data.map_id:
+                neglected: Any = map_data.neglected_segments
                 timestamp = history.multiple_cleaning_time if history.multiple_cleaning_time else ""
-                if (
-                    history.cleanup_method != CleanupMethod.CLEANGENIUS
-                    and not map_data.cleaned_segments
-                    and map_data.neglected_segments
-                ):
-                    return self.clean_segment(map_data.neglected_segments.keys(), timestamp=timestamp)
-                data = {
+                if history.cleanup_method != CleanupMethod.CLEANGENIUS and not map_data.cleaned_segments and neglected:
+                    return self.clean_segment(neglected.keys(), timestamp=timestamp)
+                data: dict[str, Any] = {
                     "MopAgain": map_data.dos if map_data.dos is not None else 1,
                     "timestamp": timestamp,
                     "CleanArea": map_data.cleaned_segments if map_data.cleaned_segments else [],
-                    "BigArea": map_data.neglected_segments.keys() if map_data.neglected_segments else [],
+                    "BigArea": neglected.keys() if neglected else [],
                 }
                 self.schedule_update(10, True)
                 self._update_property(
@@ -1137,6 +1154,7 @@ class DreameVacuumDeviceActionsMixin:
                     DreameVacuumStatus.CLEANING.value,
                     str(json.dumps(data, separators=(",", ":"))).replace(" ", ""),
                 )
+        return None
 
     def reload_shortcuts(self) -> None:
         shortcuts = self.get_property(DreameVacuumProperty.SHORTCUTS)
@@ -1154,7 +1172,7 @@ class DreameVacuumDeviceActionsMixin:
                 self.status.shortcuts = new_shortcuts
                 self._property_changed()
 
-                def callback(response):
+                def callback(response: Any) -> None:
                     detail = {}
                     if response and "out" in response:
                         data = response["out"]
@@ -1199,7 +1217,7 @@ class DreameVacuumDeviceActionsMixin:
 
                 self.call_shortcut_action_async(callback, "GET_COMMANDS")
 
-    def clear_warning(self) -> dict[str, Any] | None:
+    def clear_warning(self) -> bool | dict[str, Any] | None:
         """Clear warning error code from the vacuum cleaner."""
         if self.status.draining_complete:
             return self.set_property(DreameVacuumProperty.DRAINAGE_STATUS, 0)
@@ -1218,10 +1236,11 @@ class DreameVacuumDeviceActionsMixin:
             )
         return self.clear_low_water_warning()
 
-    def clear_low_water_warning(self) -> dict[str, Any] | None:
+    def clear_low_water_warning(self) -> bool | dict[str, Any] | None:
         """Clear low water warning error code from the vacuum cleaner."""
         if self.status.low_water:
             return self.set_property(DreameVacuumProperty.LOW_WATER_WARNING, 1)
+        return None
 
     def remote_control_move_step(
         self, rotation: int = 0, velocity: int = 0, prompt: bool | None = None
@@ -1249,7 +1268,7 @@ class DreameVacuumDeviceActionsMixin:
         }
         self._remote_control = True
         mapping = self.property_mapping[DreameVacuumProperty.REMOTE_CONTROL]
-        return self._protocol.set_property(mapping["siid"], mapping["piid"], payload, 1)
+        return cast("dict[str, Any] | None", self._protocol.set_property(mapping["siid"], mapping["piid"], payload, 1))
 
     def install_voice_pack(self, lang_id: int, url: str, md5: str, size: int) -> dict[str, Any] | None:
         """install a custom language pack"""
@@ -1265,24 +1284,27 @@ class DreameVacuumDeviceActionsMixin:
             separators=(",", ":"),
         )
         mapping = self.property_mapping[DreameVacuumProperty.VOICE_CHANGE]
-        return self._protocol.set_property(mapping["siid"], mapping["piid"], payload, 3)
+        return cast("dict[str, Any] | None", self._protocol.set_property(mapping["siid"], mapping["piid"], payload, 3))
 
-    def obstacle_image(self, index):
-        if self.capability.map and self.status.current_map:
+    def obstacle_image(self, index: Any) -> Any:
+        mgr: Any = self._map_manager
+        if self.capability.map and self.status.current_map and mgr:
             map_data = self.status.current_map
             if map_data:
-                return self._map_manager.get_obstacle_image(map_data, index)
+                return mgr.get_obstacle_image(map_data, index)
         return (None, None)
 
-    def obstacle_history_image(self, index, history_index, cruising=False):
-        if self.capability.map:
+    def obstacle_history_image(self, index: Any, history_index: Any, cruising: bool = False) -> Any:
+        mgr: Any = self._map_manager
+        if self.capability.map and mgr:
             map_data = self.history_map(history_index, cruising)
             if map_data:
-                return self._map_manager.get_obstacle_image(map_data, index)
+                return mgr.get_obstacle_image(map_data, index)
         return (None, None)
 
-    def history_map(self, index, cruising=False):
-        if self.capability.map and index and str(index).isnumeric():
+    def history_map(self, index: Any, cruising: bool = False) -> Any:
+        mgr: Any = self._map_manager
+        if self.capability.map and index and str(index).isnumeric() and mgr:
             item = None
             if cruising:
                 if self.status._cruising_history and len(self.status._cruising_history) > int(index) - 1:
@@ -1292,7 +1314,7 @@ class DreameVacuumDeviceActionsMixin:
                     item = self.status._cleaning_history[int(index) - 1]
             if item and item.object_name:
                 if item.object_name not in self.status._history_map_data:
-                    map_data = self._map_manager.get_history_map(item.object_name, item.key)
+                    map_data = mgr.get_history_map(item.object_name, item.key)
                     if map_data is None:
                         return None
                     map_data.last_updated = item.date.timestamp()
@@ -1314,19 +1336,23 @@ class DreameVacuumDeviceActionsMixin:
                     self.status._history_map_data[item.object_name] = map_data
                 return self.status._history_map_data[item.object_name]
 
-    def recovery_map(self, map_id, index):
-        if self.capability.map and map_id and index and str(index).isnumeric():
+    def recovery_map(self, map_id: Any, index: Any) -> Any:
+        mgr: Any = self._map_manager
+        if self.capability.map and map_id and index and str(index).isnumeric() and mgr:
             if (map_id is None or map_id == "") and self.status.selected_map:
                 map_id = self.status.selected_map.map_id
 
-            return self._map_manager.get_recovery_map(map_id, index)
+            return mgr.get_recovery_map(map_id, index)
+        return None
 
-    def recovery_map_file(self, map_id, index):
-        if self.capability.map and map_id and index and str(index).isnumeric():
+    def recovery_map_file(self, map_id: Any, index: Any) -> Any:
+        mgr: Any = self._map_manager
+        if self.capability.map and map_id and index and str(index).isnumeric() and mgr:
             if (map_id is None or map_id == "") and self.status.selected_map:
                 map_id = self.status.selected_map.map_id
 
-            return self._map_manager.get_recovery_map_file(map_id, index)
+            return mgr.get_recovery_map_file(map_id, index)
+        return None
 
     def rename_shortcut(self, shortcut_id: int, shortcut_name: str = "") -> dict[str, Any] | None:
         """Rename a shortcut"""
@@ -1380,3 +1406,4 @@ class DreameVacuumDeviceActionsMixin:
                     self.status.shortcuts[shortcut_id].name = current_name
                     self._property_changed(False)
                 return response
+        return None

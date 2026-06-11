@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.binary_sensor import BinarySensorEntityDescription
 from homeassistant.components.button import ButtonEntityDescription
@@ -21,8 +21,9 @@ from homeassistant.components.switch import SwitchEntityDescription
 from homeassistant.components.time import TimeEntityDescription
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.helpers.entity import UNDEFINED, DeviceInfo, EntityDescription, async_generate_entity_id
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from homeassistant.helpers.entity import EntityDescription, async_generate_entity_id
+from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LOGGER
@@ -81,33 +82,33 @@ class DreameVacuumEntityDescriptionMixin:
     available_fn: Callable[[Any], bool] | None = None
     icon_fn: Callable[[Any, Any], str] | None = None
     name_fn: Callable[[str, Any], str] | None = None
-    attrs_fn: Callable[[Any], dict[str, Any]] | None = None
+    attrs_fn: Callable[[Any], dict[str, Any] | None] | None = None
 
 
 # Platform-specific entity descriptions that inherit from HA classes
 @dataclass(frozen=True, kw_only=True)
-class DreameVacuumEntityDescription(EntityDescription, DreameVacuumEntityDescriptionMixin):  # type: ignore[misc]
+class DreameVacuumEntityDescription(EntityDescription, DreameVacuumEntityDescriptionMixin):
     """Base description for Dreame Vacuum entities."""
 
     key: str = ""  # Override to provide default
 
 
 @dataclass(frozen=True, kw_only=True)
-class DreameVacuumSensorEntityDescription(SensorEntityDescription, DreameVacuumEntityDescriptionMixin):  # type: ignore[misc]
+class DreameVacuumSensorEntityDescription(SensorEntityDescription, DreameVacuumEntityDescription):
     """Describes Dreame Vacuum Sensor entity."""
 
     key: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)
-class DreameVacuumBinarySensorEntityDescription(BinarySensorEntityDescription, DreameVacuumEntityDescriptionMixin):  # type: ignore[misc]
+class DreameVacuumBinarySensorEntityDescription(BinarySensorEntityDescription, DreameVacuumEntityDescription):
     """Describes Dreame Vacuum BinarySensor entity."""
 
     key: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)
-class DreameVacuumSwitchEntityDescription(SwitchEntityDescription, DreameVacuumEntityDescriptionMixin):  # type: ignore[misc]
+class DreameVacuumSwitchEntityDescription(SwitchEntityDescription, DreameVacuumEntityDescription):
     """Describes Dreame Vacuum Switch entity."""
 
     key: str = ""
@@ -115,7 +116,7 @@ class DreameVacuumSwitchEntityDescription(SwitchEntityDescription, DreameVacuumE
 
 
 @dataclass(frozen=True, kw_only=True)
-class DreameVacuumButtonEntityDescription(ButtonEntityDescription, DreameVacuumEntityDescriptionMixin):  # type: ignore[misc]
+class DreameVacuumButtonEntityDescription(ButtonEntityDescription, DreameVacuumEntityDescription):
     """Describes Dreame Vacuum Button entity."""
 
     key: str = ""
@@ -123,7 +124,7 @@ class DreameVacuumButtonEntityDescription(ButtonEntityDescription, DreameVacuumE
 
 
 @dataclass(frozen=True, kw_only=True)
-class DreameVacuumSelectEntityDescription(SelectEntityDescription, DreameVacuumEntityDescriptionMixin):  # type: ignore[misc]
+class DreameVacuumSelectEntityDescription(SelectEntityDescription, DreameVacuumEntityDescription):
     """Describes Dreame Vacuum Select entity."""
 
     key: str = ""
@@ -135,7 +136,7 @@ class DreameVacuumSelectEntityDescription(SelectEntityDescription, DreameVacuumE
 
 
 @dataclass(frozen=True, kw_only=True)
-class DreameVacuumNumberEntityDescription(NumberEntityDescription, DreameVacuumEntityDescriptionMixin):  # type: ignore[misc]
+class DreameVacuumNumberEntityDescription(NumberEntityDescription, DreameVacuumEntityDescription):
     """Describes Dreame Vacuum Number entity."""
 
     key: str = ""
@@ -148,7 +149,7 @@ class DreameVacuumNumberEntityDescription(NumberEntityDescription, DreameVacuumE
 
 
 @dataclass(frozen=True, kw_only=True)
-class DreameVacuumTimeEntityDescription(TimeEntityDescription, DreameVacuumEntityDescriptionMixin):  # type: ignore[misc]
+class DreameVacuumTimeEntityDescription(TimeEntityDescription, DreameVacuumEntityDescription):
     """Describes Dreame Vacuum Time entity."""
 
     key: str = ""
@@ -167,6 +168,7 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
     )
 
     _attr_has_entity_name = True
+    entity_description: DreameVacuumEntityDescription
 
     def __init__(
         self,
@@ -262,13 +264,15 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
         Shared by the switch / number / time platforms (identical resolution).
         """
         if description.set_fn is None and (description.property_key is not None or self._computed_key is not None):
+            prop: str | None = None
             if description.property_key is not None:
                 prop = f"set_{description.property_key.name.lower()}"
-            else:
-                prop = f"set_{self._computed_key.lower()}" if self._computed_key else None
-            if prop and hasattr(coordinator.device, prop):
-                return lambda device, value, p=prop: getattr(device, p)(value)
-        return description.set_fn
+            elif self._computed_key:
+                prop = f"set_{self._computed_key.lower()}"
+            if prop is not None and hasattr(coordinator.device, prop):
+                method_name = prop
+                return lambda device, value: getattr(device, method_name)(value)
+        return cast("Callable[[Any, int], None] | None", description.set_fn)
 
     def _resolve_value_fn(
         self,
@@ -283,13 +287,15 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
         target the display-name variant), in which case a getter wrapper is returned.
         """
         if description.value_fn is None and (description.property_key is not None or self._computed_key is not None):
+            prop: str | None = None
             if description.property_key is not None:
                 prop = f"{description.property_key.name.lower()}{suffix}"
-            else:
-                prop = f"{self._computed_key.lower()}{suffix}" if self._computed_key else None
-            if prop and hasattr(coordinator.device.status, prop):
-                return lambda value, device, p=prop: getattr(device.status, p)
-        return description.value_fn
+            elif self._computed_key:
+                prop = f"{self._computed_key.lower()}{suffix}"
+            if prop is not None and hasattr(coordinator.device.status, prop):
+                attr_name = prop
+                return lambda value, device: getattr(device.status, attr_name)
+        return cast("Callable[[Any, Any], Any] | None", description.value_fn)
 
     def _resolve_segment_set_fn(
         self,
@@ -302,13 +308,15 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
         method exists on the device. Shared by the segment number/select entities.
         """
         if description.set_fn is None and (description.property_key is not None or self._computed_key is not None):
+            prop: str | None = None
             if description.property_key is not None:
                 prop = f"set_segment_{description.property_key.name.lower()}"
-            else:
-                prop = f"set_segment_{self._computed_key.lower()}" if self._computed_key else None
-            if prop and hasattr(coordinator.device, prop):
-                return lambda device, segment_id, value, p=prop: getattr(device, p)(segment_id, value)
-        return description.set_fn
+            elif self._computed_key:
+                prop = f"set_segment_{self._computed_key.lower()}"
+            if prop is not None and hasattr(coordinator.device, prop):
+                method_name = prop
+                return lambda device, segment_id, value: getattr(device, method_name)(segment_id, value)
+        return cast("Callable[..., None] | None", description.set_fn)
 
     def _set_id(self) -> None:
         if self.entity_description:
@@ -329,7 +337,7 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
             if self.entity_description.name_fn is not None:
                 self._attr_name = self.entity_description.name_fn(self.native_value, self.device)
 
-    def _generate_entity_id(self, format) -> None:
+    def _generate_entity_id(self, format: str) -> None:
         if self._computed_key:
             self.entity_id = async_generate_entity_id(
                 format, f"{self.device.name} {self._computed_key}", hass=self.coordinator.hass
@@ -343,8 +351,10 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
         self._set_id()
         self.async_write_ha_state()
 
-    async def _try_command(self, mask_error, func, *args, **kwargs) -> bool:
+    async def _try_command(self, mask_error: str, func: Callable[..., Any] | None, *args: Any, **kwargs: Any) -> bool:
         """Call a vacuum command handling error messages."""
+        if func is None:
+            return False
         if not self.device.device_connected:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
@@ -375,7 +385,11 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
             connections={(CONNECTION_NETWORK_MAC, self.device.mac)},
             identifiers={(DOMAIN, self.device.mac)},
             name=self.device.name,
-            serial_number=self.device.status.serial_number if self.device.status else None,
+            serial_number=(
+                str(self.device.status.serial_number)
+                if self.device.status and self.device.status.serial_number is not None
+                else None
+            ),
         )
         if self.device.info:
             info["manufacturer"] = self.device.info.manufacturer

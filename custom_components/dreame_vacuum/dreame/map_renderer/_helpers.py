@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import math
+from typing import Any
 
 import numpy as np
 from PIL import Image
@@ -35,7 +36,7 @@ class _StaticHelpersMixin:
     """
 
     @staticmethod
-    def _to_buffer(image) -> bytes | None:
+    def _to_buffer(image: Image.Image | None) -> bytes | None:
         if image:
             buffer = io.BytesIO()
             image.save(buffer, format="PNG")
@@ -43,7 +44,7 @@ class _StaticHelpersMixin:
         return None
 
     @staticmethod
-    def _set_icon_color(image, size, color):
+    def _set_icon_color(image: Image.Image, size: float, color: Any) -> Image.Image:
         ico = image.resize((int(size), int(size)))
         arr = np.array(ico)
         mask = (arr[:, :, 0] > 80) & (arr[:, :, 1] > 80) & (arr[:, :, 2] > 80) & (arr[:, :, 3] > 80)
@@ -51,14 +52,14 @@ class _StaticHelpersMixin:
         return Image.fromarray(arr)
 
     @staticmethod
-    def _round_coord(coord, grid_size):
+    def _round_coord(coord: float, grid_size: float) -> float:
         remainder = coord % grid_size
         if remainder <= grid_size / 2:
             return coord - remainder
         return coord + grid_size - remainder
 
     @staticmethod
-    def _calculate_calibration_points(map_data: MapData) -> list[dict] | None:
+    def _calculate_calibration_points(map_data: MapData) -> list[dict[str, Any]] | None:
         if map_data.dimensions and (map_data.dimensions.width * map_data.dimensions.height) > 0:
             calibration_points = []
             for point in [Point(0, 0), Point(1000, 0), Point(0, 1000)]:
@@ -79,7 +80,7 @@ class _StaticHelpersMixin:
         return None
 
     @staticmethod
-    def _alpha_composite(source, destination):
+    def _alpha_composite(source: Any, destination: Any) -> Any:
         srcA = source[3] / 255.0
         dstA = destination[3] / 255.0
         outA = srcA + dstA * (1 - srcA)
@@ -91,7 +92,7 @@ class _StaticHelpersMixin:
         return source
 
     @staticmethod
-    def _close_image(img) -> None:
+    def _close_image(img: Image.Image | None) -> None:
         """Safely close a PIL Image to release memory."""
         if img is not None:
             try:
@@ -101,7 +102,7 @@ class _StaticHelpersMixin:
                 pass
 
     @staticmethod
-    def _del_layer(cached_layers, key) -> None:
+    def _del_layer(cached_layers: dict[Any, Any], key: Any) -> None:
         """Remove a layer from cache, closing its image(s) to free memory."""
         old = cached_layers.pop(key, None)
         if old is None:
@@ -113,7 +114,7 @@ class _StaticHelpersMixin:
             _StaticHelpersMixin._close_image(old)
 
     @staticmethod
-    def _replace_layer(cached_layers, key, new_image) -> None:
+    def _replace_layer(cached_layers: dict[Any, Any], key: Any, new_image: Image.Image | None) -> None:
         """Replace a cached layer, closing the old image to free memory."""
         old = cached_layers.get(key)
         cached_layers[key] = new_image
@@ -121,7 +122,7 @@ class _StaticHelpersMixin:
             _StaticHelpersMixin._close_image(old)
 
     @staticmethod
-    def _combine_layers(cached_layers, layer_size, parent, sub) -> None:
+    def _combine_layers(cached_layers: dict[Any, Any], layer_size: tuple[int, int], parent: Any, sub: Any) -> None:
         old_parent = cached_layers.get(parent)
         cached_layers[parent] = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         if old_parent is not None:
@@ -134,7 +135,9 @@ class _StaticHelpersMixin:
                     _StaticHelpersMixin._close_image(old)
 
     @staticmethod
-    def _coords_on_line(x0, y0, x1, y1, spacing, size=None):
+    def _coords_on_line(
+        x0: float, y0: float, x1: float, y1: float, spacing: float, size: int | None = None
+    ) -> list[tuple[float, float]]:
         x = x1 - x0
         y = y1 - y0
         count = size - 1 if size else math.floor(math.sqrt(x * x + y * y) / spacing) if spacing else 0

@@ -104,7 +104,8 @@
           "low_resolution": "Low resolution map",
           "name": "Name",
           "notify": "Notification",
-          "square": "Square map"
+          "square": "Square map",
+          "vector_rooms": "Smooth map edges"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-alias diagonal room and wall edges for a cleaner, more premium map."
         }
       },
       "reauth_confirm": {
@@ -1421,7 +1423,8 @@
           "low_resolution": "Low resolution map",
           "notify": "Notification",
           "prefer_cloud": "Prefer cloud connection",
-          "square": "Square map"
+          "square": "Square map",
+          "vector_rooms": "Smooth map edges"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1431,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-alias diagonal room and wall edges for a cleaner, more premium map."
         }
       }
     }

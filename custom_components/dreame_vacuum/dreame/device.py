@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 import copy
 from datetime import datetime
 from functools import cmp_to_key
@@ -8,11 +9,11 @@ import json
 import logging
 from threading import Lock, RLock, Timer
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 import zlib
 
 if TYPE_CHECKING:
-    from .map import DreameMapVacuumMapManager
+    from .map_manager import DreameMapVacuumMapManager
 
 from .const import (
     CARPET_CLEANING_ADAPTATION_WITHOUT_ROUTE,
@@ -49,7 +50,7 @@ from .exceptions import (
 _map_module = None
 
 
-def _get_map_module():
+def _get_map_module() -> Any:
     """Lazy import of map module to avoid loading numpy/PIL at startup."""
     global _map_module
     if _map_module is None:
@@ -119,13 +120,13 @@ class DreameVacuumDevice(
     ) -> None:
         # Used for easy filtering the device from cloud device list and generating unique ids
         self.info = None
-        self.mac: str = None
-        self.token: str = None  # Local api token
-        self.host: str = None  # IP address or host name of the device
+        self.mac: str | None = None
+        self.token: str | None = None  # Local api token
+        self.host: str | None = None  # IP address or host name of the device
         # Dictionary for storing the current property values
-        self.data: dict[DreameVacuumProperty, Any] = {}
-        self.auto_switch_data: dict[DreameVacuumAutoSwitchProperty, Any] = None
-        self.ai_data: dict[DreameVacuumStrAIProperty | DreameVacuumAIProperty, Any] = None
+        self.data: dict[int, Any] = {}
+        self.auto_switch_data: dict[str, Any] | None = None
+        self.ai_data: dict[str, Any] | None = None
         self.available: bool = False  # Last update is successful or not
         self.disconnected: bool = False
 
@@ -140,8 +141,8 @@ class DreameVacuumDevice(
         self._timer_lock = RLock()
         self._update_running: bool = False  # Update is running
         # Previous cleaning mode for restoring it after water tank is installed or removed
-        self._previous_cleaning_mode: DreameVacuumCleaningMode = None
-        self._previous_cleangenius: int = None
+        self._previous_cleaning_mode: DreameVacuumCleaningMode | None = None
+        self._previous_cleangenius: int | None = None
         # Device do not request properties that returned -1 as result. This property used for overriding that behavior at first connection
         self._ready: bool = False
         # Last settings properties requested time
@@ -149,27 +150,27 @@ class DreameVacuumDevice(
         self._last_map_list_request: float = 0  # Last map list property requested time
         self._last_map_request: float = 0  # Last map request trigger time
         self._last_change: float = 0  # Last property change time
-        self._last_update_failed: float = 0  # Last update failed time
+        self._last_update_failed: float | None = 0  # Last update failed time
         self._cleaning_history_update: float = 0  # Cleaning history update time
         self._cleaning_history_retry_after: float = 0  # Next allowed cleaning history retry time
         self._update_fail_count: int = 0  # Update failed counter
-        self._draining_complete_time: int = None
-        self._map_select_time: float = None
-        self._last_map_change_time: float = None
+        self._draining_complete_time: float | None = None
+        self._map_select_time: float | None = None
+        self._last_map_change_time: float | None = None
         # Map Manager object. Only available when cloud connection is present
-        self._map_manager: DreameMapVacuumMapManager = None
-        self._update_callback = None  # External update callback for device
-        self._error_callback = None  # External update failed callback
+        self._map_manager: DreameMapVacuumMapManager | None = None
+        self._update_callback: Callable[..., Any] | None = None  # External update callback for device
+        self._error_callback: Callable[..., None] | None = None  # External update failed callback
         # External update callbacks for specific device property
-        self._property_update_callback = {}
-        self._update_timer: Timer = None  # Update schedule timer
-        self._callback_timer: Timer = None  # Update listener debouncing timer
+        self._property_update_callback: dict[int, list[Callable[..., Any]]] = {}
+        self._update_timer: Timer | None = None  # Update schedule timer
+        self._callback_timer: Timer | None = None  # Update listener debouncing timer
         # Used for requesting consumable properties after reset action otherwise they will only requested when cleaning completed
         self._consumable_change: bool = False
         self._remote_control: bool = False
-        self._dirty_data: dict[DreameVacuumProperty, DirtyData] = {}
-        self._dirty_auto_switch_data: dict[DreameVacuumAutoSwitchProperty, DirtyData] = {}
-        self._dirty_ai_data: dict[DreameVacuumStrAIProperty | DreameVacuumAIProperty, Any] = None
+        self._dirty_data: dict[int, DirtyData] = {}
+        self._dirty_auto_switch_data: dict[str, DirtyData] = {}
+        self._dirty_ai_data: dict[str, DirtyData] = {}
         self._discard_timeout = 5
         self._restore_timeout = 15
 
@@ -380,7 +381,7 @@ class DreameVacuumDevice(
             self._map_manager.listen(self._map_changed, self._map_updated)
             self._map_manager.listen_error(self._update_failed)
 
-    def _connected_callback(self):
+    def _connected_callback(self) -> None:
         if not self._ready:
             return
         _LOGGER.debug("Requesting properties after connect")
@@ -388,7 +389,7 @@ class DreameVacuumDevice(
         self.schedule_update(2, True)
         self._property_changed()
 
-    def _message_callback(self, message):
+    def _message_callback(self, message: Any) -> None:
         if not self._ready:
             return
 
@@ -434,9 +435,9 @@ class DreameVacuumDevice(
                     if self._ready:
                         self._property_changed()
 
-    def _handle_properties(self, properties) -> bool:
+    def _handle_properties(self, properties: list[Any]) -> bool:
         changed = False
-        callbacks = []
+        callbacks: list[tuple[Callable[..., Any], Any]] = []
         # Collect per-property noise during the initial burst so we can emit a
         # single summary line instead of ~100 DEBUG entries at setup time.
         collect_summary = not self._ready
@@ -447,16 +448,16 @@ class DreameVacuumDevice(
                 continue
             did = int(prop["did"])
             if did not in DreameVacuumProperty._value2member_map_:
-                did = DID(prop["siid"], prop["piid"])
-                if did is None:
+                mapped = DID(prop["siid"], prop["piid"])
+                if mapped is None:
                     continue
-                did = int(did.value)
+                did = int(mapped.value)
             if prop["code"] == 0 and "value" in prop:
                 value = prop["value"]
                 if did in self._dirty_data:
                     if (
                         self._dirty_data[did].value != value
-                        and time.time() - self._dirty_data[did].update_time < self._discard_timeout
+                        and time.time() - (self._dirty_data[did].update_time or 0) < self._discard_timeout
                     ):
                         _LOGGER.debug(
                             "Property %s Value Discarded: %s <- %s",
@@ -509,7 +510,7 @@ class DreameVacuumDevice(
                             if not self._ready and custom_property:
                                 callback(current_value)
                             else:
-                                callbacks.append([callback, current_value])
+                                callbacks.append((callback, current_value))
             else:
                 if collect_summary:
                     unavailable_count += 1
@@ -526,8 +527,8 @@ class DreameVacuumDevice(
         if not self._ready:
             self.capability.load(json.loads(zlib.decompress(base64.b64decode(DEVICE_INFO), zlib.MAX_WBITS | 32)))
 
-        for callback in callbacks:
-            callback[0](callback[1])
+        for cb, cb_value in callbacks:
+            cb(cb_value)
 
         if changed:
             self._last_change = time.time()
@@ -693,7 +694,7 @@ class DreameVacuumDevice(
         self._update_property(DreameVacuumProperty.STATUS, status.value)
         self._update_property(DreameVacuumProperty.TASK_STATUS, task_status.value)
 
-    def _update_property(self, prop: DreameVacuumProperty, value: Any, delay=True) -> Any:
+    def _update_property(self, prop: DreameVacuumProperty, value: Any, delay: bool = True) -> Any:
         """Update device property on memory and notify listeners."""
         if prop in self.property_mapping:
             if (
@@ -743,7 +744,9 @@ class DreameVacuumDevice(
                     if values[2] <= 0:
                         if self.capability.custom_mopping_route:
                             if not self.status.custom_mopping_mode:
-                                values[2] = self.get_auto_switch_property(DreameVacuumAutoSwitchProperty.MOPPING_MODE)
+                                values[2] = (
+                                    self.get_auto_switch_property(DreameVacuumAutoSwitchProperty.MOPPING_MODE) or 0
+                                )
                         elif self.status.water_volume:
                             values[2] = self.status.water_volume.value
 
@@ -800,7 +803,10 @@ class DreameVacuumDevice(
                     new_list.pop(DreameVacuumCleaningRoute.INTENSIVE)
                 self.status.cleaning_route_list = {v: k for k, v in new_list.items()}
 
-                if self.status.cleaning_route and self.status.cleaning_route not in self.status.cleaning_route_list:
+                if (
+                    self.status.cleaning_route
+                    and self.status.cleaning_route not in self.status.cleaning_route_list.values()
+                ):
                     self.set_auto_switch_property(
                         DreameVacuumAutoSwitchProperty.CLEANING_ROUTE,
                         DreameVacuumCleaningRoute.STANDARD.value,
@@ -1062,7 +1068,8 @@ class DreameVacuumDevice(
             ):
                 self.status.cleanup_started = False
                 self.status.cleanup_completed = False
-                self.status.go_to_zone.stop = True
+                if self.status.go_to_zone:
+                    self.status.go_to_zone.stop = True
                 self._restore_go_to_zone(True)
             elif (
                 not self.status.started
@@ -1118,8 +1125,9 @@ class DreameVacuumDevice(
         changed = False
         if isinstance(ai_value, str):
             settings = json.loads(ai_value)
-            if settings and self.ai_data is None:
+            if self.ai_data is None:
                 self.ai_data = {}
+            ai_data = self.ai_data
 
             for prop in DreameVacuumStrAIProperty:
                 if prop.value in settings:
@@ -1127,7 +1135,7 @@ class DreameVacuumDevice(
                     if prop.name in self._dirty_ai_data:
                         if (
                             self._dirty_ai_data[prop.name].value != value
-                            and time.time() - self._dirty_ai_data[prop.name].update_time < self._discard_timeout
+                            and time.time() - (self._dirty_ai_data[prop.name].update_time or 0) < self._discard_timeout
                         ):
                             _LOGGER.debug(
                                 "AI Property %s Value Discarded: %s <- %s",
@@ -1139,7 +1147,7 @@ class DreameVacuumDevice(
                             continue
                         del self._dirty_ai_data[prop.name]
 
-                    current_value = self.ai_data.get(prop.name)
+                    current_value = ai_data.get(prop.name)
                     if current_value != value:
                         if current_value is not None:
                             _LOGGER.debug(
@@ -1156,47 +1164,48 @@ class DreameVacuumDevice(
                         else:
                             _LOGGER.debug("AI Property %s Added: %s", prop.name, value)
                         changed = True
-                        self.ai_data[prop.name] = value
+                        ai_data[prop.name] = value
         elif isinstance(ai_value, int):
             if self.ai_data is None:
                 self.ai_data = {}
+            ai_data = self.ai_data
 
-            for prop in DreameVacuumAIProperty:
-                bit = int(prop.value)
+            for ai_prop in DreameVacuumAIProperty:
+                bit = int(ai_prop.value)
                 value = (ai_value & bit) == bit
-                if prop.name in self._dirty_ai_data:
+                if ai_prop.name in self._dirty_ai_data:
                     if (
-                        self._dirty_ai_data[prop.name].value != value
-                        and time.time() - self._dirty_ai_data[prop.name].update_time < self._discard_timeout
+                        self._dirty_ai_data[ai_prop.name].value != value
+                        and time.time() - (self._dirty_ai_data[ai_prop.name].update_time or 0) < self._discard_timeout
                     ):
                         _LOGGER.debug(
                             "AI Property %s Value Discarded: %s <- %s",
-                            prop.name,
-                            self._dirty_ai_data[prop.name].value,
+                            ai_prop.name,
+                            self._dirty_ai_data[ai_prop.name].value,
                             value,
                         )
-                        del self._dirty_ai_data[prop.name]
+                        del self._dirty_ai_data[ai_prop.name]
                         continue
-                    del self._dirty_ai_data[prop.name]
+                    del self._dirty_ai_data[ai_prop.name]
 
-                current_value = self.ai_data.get(prop.name)
+                current_value = ai_data.get(ai_prop.name)
                 if current_value != value:
                     if current_value is not None:
                         _LOGGER.debug(
                             "AI Property %s Changed: %s -> %s",
-                            prop.name,
+                            ai_prop.name,
                             current_value,
                             value,
                         )
                         if (
-                            prop == DreameVacuumAIProperty.AI_PET_DETECTION
-                            or prop == DreameVacuumAIProperty.AI_FLUID_DETECTION
+                            ai_prop == DreameVacuumAIProperty.AI_PET_DETECTION
+                            or ai_prop == DreameVacuumAIProperty.AI_FLUID_DETECTION
                         ):
                             self._map_property_changed(current_value)
                     else:
-                        _LOGGER.debug("AI Property %s Added: %s", prop.name, value)
+                        _LOGGER.debug("AI Property %s Added: %s", ai_prop.name, value)
                     changed = True
-                    self.ai_data[prop.name] = value
+                    ai_data[ai_prop.name] = value
 
         if changed:
             self._last_change = time.time()
@@ -1222,8 +1231,9 @@ class DreameVacuumDevice(
                 elif "k" in settings:
                     settings_dict[settings["k"]] = settings["v"]
 
-                if settings_dict and self.auto_switch_data is None:
+                if self.auto_switch_data is None:
                     self.auto_switch_data = {}
+                auto_switch_data = self.auto_switch_data
 
                 changed = False
                 for prop in DreameVacuumAutoSwitchProperty:
@@ -1233,7 +1243,7 @@ class DreameVacuumDevice(
                         if prop.name in self._dirty_auto_switch_data:
                             if (
                                 self._dirty_auto_switch_data[prop.name].value != value
-                                and time.time() - self._dirty_auto_switch_data[prop.name].update_time
+                                and time.time() - (self._dirty_auto_switch_data[prop.name].update_time or 0)
                                 < self._discard_timeout
                             ):
                                 _LOGGER.debug(
@@ -1246,7 +1256,7 @@ class DreameVacuumDevice(
                                 continue
                             del self._dirty_auto_switch_data[prop.name]
 
-                        current_value = self.auto_switch_data.get(prop.name)
+                        current_value = auto_switch_data.get(prop.name)
                         if current_value != value:
                             if (
                                 prop == DreameVacuumAutoSwitchProperty.MOPPING_MODE
@@ -1268,7 +1278,7 @@ class DreameVacuumDevice(
                             else:
                                 _LOGGER.debug("Property %s Added: %s", prop.name, value)
                             changed = True
-                            self.auto_switch_data[prop.name] = value
+                            auto_switch_data[prop.name] = value
 
                 if changed:
                     self._last_change = time.time()
@@ -1336,7 +1346,10 @@ class DreameVacuumDevice(
             schedule_list.sort(
                 key=cmp_to_key(
                     lambda a, b: (
-                        b.id - a.id if a.time == b.time else int(a.time.replace(":", "")) - int(b.time.replace(":", ""))
+                        b.id - a.id
+                        if a.time == b.time
+                        else (int(a.time.replace(":", "")) if a.time else 0)
+                        - (int(b.time.replace(":", "")) if b.time else 0)
                     )
                 )
             )
@@ -1367,7 +1380,7 @@ class DreameVacuumDevice(
 
     def _voice_assistant_language_changed(self, previous_voice_assistant_language: Any = None) -> None:
         value = self.get_property(DreameVacuumProperty.VOICE_ASSISTANT_LANGUAGE)
-        language_list = self.status.voice_assistant_language_list
+        language_list: dict[Any, Any] = self.status.voice_assistant_language_list
         if value and len(value):
             language_list = VOICE_ASSISTANT_LANGUAGE_TO_NAME.copy()
             language_list.pop(DreameVacuumVoiceAssistantLanguage.DEFAULT)
@@ -1412,7 +1425,7 @@ class DreameVacuumDevice(
         if self.capability.wetness and not self.capability.wetness_level:
             self.status.mop_pad_humidity = self.status.water_volume.value
         if previous_water_volume is not None and self.status.go_to_zone:
-            self.status.go_to_zone.water_volume = None
+            self.status.go_to_zone.water_level = None
 
     def _wetness_level_changed(self, previous_wetness_level: Any = None) -> None:
         wetness_level = self.status.wetness_level
@@ -1509,7 +1522,7 @@ class DreameVacuumDevice(
                 if result is None:
                     request_failed = True
                 if result:
-                    cleaning_history = []
+                    cleaning_history: list[CleaningHistory] = []
                     history_size = 0
                     for data in result:
                         history = CleaningHistory(
@@ -1531,8 +1544,9 @@ class DreameVacuumDevice(
                         _LOGGER.debug("Cleaning History Changed")
                         self.status._cleaning_history = cleaning_history
                         self.status._cleaning_history_attrs = None
-                        if cleaning_history:
-                            self.status._last_cleaning_time = cleaning_history[0].date.replace(
+                        first_date = cleaning_history[0].date if cleaning_history else None
+                        if first_date is not None:
+                            self.status._last_cleaning_time = first_date.replace(
                                 tzinfo=datetime.now().astimezone().tzinfo
                             )
                         changed = True
@@ -1547,7 +1561,7 @@ class DreameVacuumDevice(
                     if result is None:
                         request_failed = True
                     if result:
-                        cruising_history = []
+                        cruising_history: list[CleaningHistory] = []
                         history_size = 0
                         for data in result:
                             history = CleaningHistory(
@@ -1565,8 +1579,9 @@ class DreameVacuumDevice(
                             _LOGGER.debug("Cruising History Changed")
                             self.status._cruising_history = cruising_history
                             self.status._cruising_history_attrs = None
-                            if cruising_history:
-                                self.status._last_cruising_time = cruising_history[0].date.replace(
+                            cruising_first_date = cruising_history[0].date if cruising_history else None
+                            if cruising_first_date is not None:
+                                self.status._last_cruising_time = cruising_first_date.replace(
                                     tzinfo=datetime.now().astimezone().tzinfo
                                 )
                             changed = True
@@ -1616,7 +1631,7 @@ class DreameVacuumDevice(
                             self._cleaning_history_update = pending_cleaning_history_update
                             self._cleaning_history_retry_after = time.time() + 300
 
-    def _property_changed(self, delay=True) -> None:
+    def _property_changed(self, delay: bool = True) -> None:
         """Call external listener when a property changed"""
         if self._update_callback:
             if self._callback_timer is not None:
@@ -1628,7 +1643,7 @@ class DreameVacuumDevice(
             else:
                 self._update_callback()
 
-    def _update_failed(self, ex) -> None:
+    def _update_failed(self, ex: Exception) -> None:
         """Call external listener when update failed"""
         if self._error_callback:
             self._error_callback(ex)
@@ -1636,7 +1651,7 @@ class DreameVacuumDevice(
     def _action_update_task(self) -> None:
         self._update_task(True)
 
-    def _update_task(self, force_request_properties=False) -> None:
+    def _update_task(self, force_request_properties: bool = False) -> None:
         """Timer task for updating properties periodically"""
         self._update_timer = None
         try:
@@ -1681,6 +1696,7 @@ class DreameVacuumDevice(
     def combine_group_value(values: list[int]) -> int:
         if values and len(values) == 3:
             return ((((0 ^ values[2]) << 8) ^ values[1]) << 8) ^ values[0]
+        return 0
 
     def connect_device(self) -> None:
         """Connect to the device api."""
@@ -1733,9 +1749,10 @@ class DreameVacuumDevice(
                 if self._protocol.cloud.auth_failed:
                     self.auth_failed = True
                     self._property_changed(False)
-                self._map_manager.schedule_update(-1)
+                if self._map_manager:
+                    self._map_manager.schedule_update(-1)
             elif self._protocol.cloud.logged_in:
-                if self._protocol.connected:
+                if self._protocol.connected and self._map_manager:
                     self._map_manager.schedule_update(5)
 
                 self.token, self.host = self._protocol.cloud.get_info(self.mac)
@@ -1759,7 +1776,9 @@ class DreameVacuumDevice(
             self._map_manager.disconnect()
         self._property_changed(False)
 
-    def listen(self, callback, property: DreameVacuumProperty = None):
+    def listen(
+        self, callback: Callable[..., Any] | None, property: DreameVacuumProperty | None = None
+    ) -> Callable[[], None] | None:
         """Register a callback and return an unsubscribe callable.
 
         Historical behavior: ``listen(None)`` wipes every registered callback.
@@ -1798,7 +1817,7 @@ class DreameVacuumDevice(
 
         return _unsub_property
 
-    def listen_error(self, callback):
+    def listen_error(self, callback: Callable[..., None]) -> Callable[[], None]:
         """Register an error callback and return an unsubscribe callable."""
         self._error_callback = callback
 
@@ -1808,7 +1827,7 @@ class DreameVacuumDevice(
 
         return _unsub
 
-    def schedule_update(self, wait: float | None = None, force_request_properties=False) -> None:
+    def schedule_update(self, wait: float | None = None, force_request_properties: bool = False) -> None:
         """Schedule a device update for future"""
         if wait is None:
             wait = self._update_interval
@@ -1827,7 +1846,7 @@ class DreameVacuumDevice(
                 )
                 self._update_timer.start()
 
-    def update(self, force_request_properties=False) -> None:
+    def update(self, force_request_properties: bool = False) -> None:
         """Get properties from the device."""
         with self._update_lock:
             if self._update_running:
@@ -1840,7 +1859,7 @@ class DreameVacuumDevice(
         finally:
             self._update_running = False
 
-    def _perform_update(self, force_request_properties=False) -> None:
+    def _perform_update(self, force_request_properties: bool = False) -> None:
         """Run one device update after the concurrency guard has been acquired."""
         if not self.cloud_connected:
             self.connect_cloud()
@@ -2023,7 +2042,7 @@ class DreameVacuumDevice(
 
         if self._dirty_data:
             for k, v in copy.deepcopy(self._dirty_data).items():
-                if time.time() - v.update_time >= self._restore_timeout:
+                if time.time() - (v.update_time or 0) >= self._restore_timeout:
                     if v.previous_value is not None:
                         value = self.data.get(k)
                         if value is None or v.value == value:
@@ -2043,14 +2062,14 @@ class DreameVacuumDevice(
                     del self._dirty_data[k]
 
         if self._dirty_auto_switch_data:
-            for k, v in copy.deepcopy(self._dirty_auto_switch_data).items():
-                if time.time() - v.update_time >= self._restore_timeout:
-                    del self._dirty_auto_switch_data[k]
+            for auto_k, v in copy.deepcopy(self._dirty_auto_switch_data).items():
+                if time.time() - (v.update_time or 0) >= self._restore_timeout:
+                    del self._dirty_auto_switch_data[auto_k]
 
         if self._dirty_ai_data:
-            for k, v in copy.deepcopy(self._dirty_ai_data).items():
-                if time.time() - v.update_time >= self._restore_timeout:
-                    del self._dirty_ai_data[k]
+            for ai_k, v in copy.deepcopy(self._dirty_ai_data).items():
+                if time.time() - (v.update_time or 0) >= self._restore_timeout:
+                    del self._dirty_ai_data[ai_k]
 
         if self._consumable_change:
             self._consumable_change = False
@@ -2137,7 +2156,7 @@ class DreameVacuumDevice(
     @property
     def cloud_connected(self) -> bool:
         """Return connection status of the device."""
-        return (
+        return bool(
             self._protocol.cloud
             and self._protocol.cloud.connected
             and (not self._protocol.prefer_cloud or self.device_connected)
@@ -2147,7 +2166,7 @@ class DreameVacuumDevice(
     def cloud_auth_key(self) -> str | None:
         """Return the cloud auth key if available."""
         if self._protocol.cloud:
-            return self._protocol.cloud.auth_key
+            return cast("str | None", self._protocol.cloud.auth_key)
         return None
 
 

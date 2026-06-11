@@ -15,13 +15,23 @@ import math
 
 from PIL import Image, ImageDraw
 
-from ..vacuum_types import Area, Point
+from ..vacuum_types import Area, MapImageDimensions, Point, Wall
+from ._base import _MapRendererState
 
 
-class _ShapesMixin:
+class _ShapesMixin(_MapRendererState):
     """Draws polygons, walls, thresholds, curtains, ramps and points."""
 
-    def render_areas(self, areas, color, fill, layer_size, dimensions, width, scale):
+    def render_areas(
+        self,
+        areas: list[Area],
+        color: tuple[int, ...],
+        fill: tuple[int, ...] | None,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        width: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for area in areas:
@@ -43,7 +53,16 @@ class _ShapesMixin:
             )
         return new_layer
 
-    def render_points(self, points, color, fill, layer_size, dimensions, width, scale):
+    def render_points(
+        self,
+        points: list[Point],
+        color: tuple[int, ...],
+        fill: tuple[int, ...] | None,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        width: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         size = 15 * dimensions.grid_size
@@ -73,7 +92,15 @@ class _ShapesMixin:
             draw.polygon(coords, fill, color, width=(width * scale))
         return new_layer
 
-    def render_walls(self, walls, color, layer_size, dimensions, width, scale):
+    def render_walls(
+        self,
+        walls: list[Wall],
+        color: tuple[int, ...],
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        width: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for wall in walls:
@@ -85,7 +112,16 @@ class _ShapesMixin:
             )
         return new_layer
 
-    def render_thresholds(self, thresholds, color, fill, layer_size, dimensions, width, scale):
+    def render_thresholds(
+        self,
+        thresholds: list[Wall],
+        color: tuple[int, ...],
+        fill: tuple[int, ...] | None,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        width: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for wall in thresholds:
@@ -136,7 +172,15 @@ class _ShapesMixin:
                 draw.line([tp[i][0], tp[i][1], bp[i + 1][0], bp[i + 1][1]], color, width=(width * scale), joint="curve")
         return new_layer
 
-    def render_curtains(self, curtains, color, layer_size, dimensions, width, scale):
+    def render_curtains(
+        self,
+        curtains: list[Wall],
+        color: tuple[int, ...],
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        width: int,
+        scale: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for wall in curtains:
@@ -175,7 +219,17 @@ class _ShapesMixin:
 
         return new_layer
 
-    def render_ramps(self, ramps, color, fill, layer_size, dimensions, width, scale, rotation):
+    def render_ramps(
+        self,
+        ramps: list[Area],
+        color: tuple[int, ...],
+        fill: tuple[int, ...] | None,
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        width: int,
+        scale: int,
+        rotation: int,
+    ) -> Image.Image:
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for area in ramps:
@@ -209,7 +263,7 @@ class _ShapesMixin:
             h = max_y - min_y
 
             m = min(w, h)
-            s = width
+            s: float = width
             size = 8.165 * dimensions.scale
 
             if m < size:
@@ -238,7 +292,7 @@ class _ShapesMixin:
                     )
 
             unrotated = arrow_image
-            arrow_image = arrow_image.rotate(area.angle, expand=1)
+            arrow_image = arrow_image.rotate(area.angle or 0, expand=1)
             self._close_image(unrotated)
             new_layer.paste(
                 arrow_image,

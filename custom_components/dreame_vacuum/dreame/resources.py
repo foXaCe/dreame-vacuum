@@ -8,6 +8,15 @@ Resources are loaded on-demand when first accessed and cached in memory for subs
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    # Re-export the lazily-loaded resource constants so static type checkers can
+    # resolve ``from .resources import *``. At runtime these names are provided
+    # on demand by ``__getattr__`` below; this block never executes and triggers
+    # no eager import of the heavy backing modules.
+    from ._notification_images import *
+    from ._resources_data import *
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -125,7 +134,7 @@ _notification_load_logged = False
 _resources_load_logged = False
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> Any:
     """Lazy-load a resource attribute from the appropriate backing module.
 
     Resources live in two sibling modules:
@@ -156,7 +165,7 @@ def __getattr__(name):
 
                 _notification_module = _notification_images
             except ImportError:
-                import _notification_images
+                import _notification_images  # type: ignore[import-not-found, no-redef]
 
                 _notification_module = _notification_images
         module = _notification_module
@@ -170,7 +179,7 @@ def __getattr__(name):
 
                 _resources_module = _resources_data
             except ImportError:
-                import _resources_data
+                import _resources_data  # type: ignore[import-not-found, no-redef]
 
                 _resources_module = _resources_data
         module = _resources_module
@@ -203,6 +212,6 @@ def get_cache_stats() -> dict[str, object]:
     }
 
 
-def __dir__():
+def __dir__() -> list[str]:
     """Return list of available attributes."""
     return __all__

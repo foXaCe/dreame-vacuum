@@ -7,6 +7,8 @@ are imported immediately. Other types and constants are loaded on-demand.
 
 from __future__ import annotations
 
+from typing import Any
+
 VERSION = "v2.0.0b20"
 
 # Core imports - always needed, imported immediately
@@ -29,7 +31,7 @@ from .protocol import DreameVacuumProtocol as DreameVacuumProtocol
 _lazy_imports: dict[str, object] = {}
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> Any:
     """
     Lazy load attributes from const and types modules.
 
@@ -65,7 +67,7 @@ def __getattr__(name):
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
-def __dir__():
+def __dir__() -> list[str]:
     """Return list of available attributes including lazily loaded ones."""
     # Base attributes
     base_attrs = [

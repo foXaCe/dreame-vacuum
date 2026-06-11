@@ -14,7 +14,7 @@ import logging
 import math
 import re
 import traceback
-from typing import Any
+from typing import Any, cast
 import zlib
 
 from cryptography.hazmat.backends import default_backend
@@ -30,7 +30,6 @@ from .vacuum_types import (
     Carpet,
     CleansetType,
     Coordinate,
-    DreameVacuumDeviceCapability,
     Furniture,
     FurnitureType,
     MapData,
@@ -91,7 +90,7 @@ class DreameVacuumMapDecoder:
         return c1[1] - c2[1] if c1[1] != c2[1] else c1[0] - c2[0]
 
     @staticmethod
-    def _get_pixel_type(map_data: MapData, pixel, vslam_map: bool = False) -> tuple[MapPixelType, bool]:
+    def _get_pixel_type(map_data: MapData, pixel: Any, vslam_map: bool = False) -> tuple[int, bool]:
         if map_data.frame_map:
             carpet = bool((pixel & 0x03) == 3)
             segment_id = pixel >> 2
@@ -147,20 +146,19 @@ class DreameVacuumMapDecoder:
         return (MapPixelType.OUTSIDE.value, False)
 
     @staticmethod
-    def _get_segment_center(map_data, segment_id: int, center: int, vertical: bool) -> int | None:
+    def _get_segment_center(map_data: MapData, segment_id: int, center: int, vertical: bool) -> int | None:
         # Find center point implemented as on the app
         lines = []
         zero_pixels = -1
         segment_pixel = 0
         line = None
 
-        for k in range(map_data.dimensions.height if vertical else map_data.dimensions.width):
-            pixel_type = (
-                map_data.data[
-                    (k * map_data.dimensions.width + center) if vertical else (center * map_data.dimensions.width + k)
-                ]
-                & 0x3F
-            )
+        dims = map_data.dimensions
+        if dims is None or map_data.data is None:
+            return None
+
+        for k in range(dims.height if vertical else dims.width):
+            pixel_type = map_data.data[(k * dims.width + center) if vertical else (center * dims.width + k)] & 0x3F
             if pixel_type == segment_id:
                 segment_pixel = k
                 zero_pixels = 0
@@ -194,7 +192,7 @@ class DreameVacuumMapDecoder:
         return None
 
     @staticmethod
-    def decode_map_partial(raw_data, iv=None, key=None) -> MapDataPartial | None:
+    def decode_map_partial(raw_data: Any, iv: Any = None, key: Any = None) -> MapDataPartial | None:
         _LOGGER.debug("raw_map: %s", raw_data)
         raw_map = raw_data.replace("_", "/").replace("-", "+")
 
@@ -257,22 +255,25 @@ class DreameVacuumMapDecoder:
     def decode_map(
         raw_map: str,
         vslam_map: bool,
-        rotation: int = 0,
+        rotation: Any = 0,
         iv: str | None = None,
         key: str | None = None,
     ) -> tuple[MapData, MapData | None]:
-        return DreameVacuumMapDecoder.decode_map_data_from_partial(
-            DreameVacuumMapDecoder.decode_map_partial(raw_map, iv, key),
-            vslam_map,
-            rotation,
+        return cast(
+            "tuple[MapData, MapData | None]",
+            DreameVacuumMapDecoder.decode_map_data_from_partial(
+                DreameVacuumMapDecoder.decode_map_partial(raw_map, iv, key),
+                vslam_map,
+                rotation,
+            ),
         )
 
     @staticmethod
-    def decode_saved_map(raw_map: str, vslam_map: bool, rotation: int = 0, iv: str | None = None) -> MapData | None:
+    def decode_saved_map(raw_map: str, vslam_map: bool, rotation: Any = 0, iv: str | None = None) -> MapData | None:
         return DreameVacuumMapDecoder.decode_map(raw_map, vslam_map, rotation, iv)[0]
 
     @staticmethod
-    def decode_map_data_from_partial(partial_map: MapDataPartial, vslam_map: bool, rotation: int = 0) -> MapData | None:
+    def decode_map_data_from_partial(partial_map: MapDataPartial | None, vslam_map: bool, rotation: Any = 0) -> Any:
         if partial_map is None:
             return None
 
@@ -283,6 +284,8 @@ class DreameVacuumMapDecoder:
         map_data.timestamp_ms = partial_map.timestamp_ms
 
         raw = partial_map.raw
+        if raw is None:
+            return None, None
         map_data.robot_position = Point(
             DreameVacuumMapDecoder._read_int_16_le(raw, 5),
             DreameVacuumMapDecoder._read_int_16_le(raw, 7),
@@ -654,6 +657,8 @@ class DreameVacuumMapDecoder:
                             map_data.hidden_segments = copy.deepcopy(saved_map_data.hidden_segments)
 
                         if map_data.saved_map_status == 2 and not map_data.frame_map:
+                            assert map_data.dimensions is not None
+                            assert saved_map_data.dimensions is not None
                             left = min(map_data.dimensions.left, saved_map_data.dimensions.left)
                             top = min(map_data.dimensions.top, saved_map_data.dimensions.top)
                             width = int(
@@ -873,7 +878,7 @@ class DreameVacuumMapDecoder:
                                 start_y0 = center_y
                                 rect_width = 0
                                 rect_height = 0
-                                angle = 0
+                                angle: float = 0
                                 scale = 1.0
                                 if size >= 8:
                                     start_x0 = int(furniture[4])
@@ -912,23 +917,23 @@ class DreameVacuumMapDecoder:
                         obstacle_type = int(obstacle[2])
                         if obstacle_type in ObstacleType._value2member_map_:
                             id = obstacle[4]
-                            x = float(obstacle[0])
-                            y = float(obstacle[1])
-                            possibility = int(float(obstacle[3]) * 100)
+                            obstacle_x: Any = float(obstacle[0])
+                            obstacle_y: Any = float(obstacle[1])
+                            possibility: int | None = int(float(obstacle[3]) * 100)
                             if size >= 7 and (float(id) >= 1000 or obstacle_type == ObstacleType.NEGLECTED_ROOM.value):
                                 if size >= 8:
                                     if obstacle_type == ObstacleType.NEGLECTED_ROOM.value:
-                                        segment_id = int(x)
-                                        x = 0
-                                        y = 0
+                                        segment_id = int(obstacle_x)
+                                        obstacle_x = 0
+                                        obstacle_y = 0
                                         possibility = None
                                         if map_data.segments and segment_id in map_data.segments:
-                                            x = map_data.segments[segment_id].x
-                                            y = map_data.segments[segment_id].y
+                                            obstacle_x = map_data.segments[segment_id].x
+                                            obstacle_y = map_data.segments[segment_id].y
 
                                     map_data.obstacles[str(index)] = Obstacle(
-                                        x,
-                                        y,
+                                        obstacle_x,
+                                        obstacle_y,
                                         ObstacleType(obstacle_type),
                                         possibility,
                                         id,
@@ -948,8 +953,8 @@ class DreameVacuumMapDecoder:
                                     )
                                 else:
                                     map_data.obstacles[str(index)] = Obstacle(
-                                        x,
-                                        y,
+                                        obstacle_x,
+                                        obstacle_y,
                                         ObstacleType(obstacle_type),
                                         possibility,
                                         id,
@@ -1295,7 +1300,7 @@ class DreameVacuumMapDecoder:
 
     @staticmethod
     def decode_p_map_data_from_partial(
-        partial_map: MapDataPartial, current_map_data: MapData, vslam_map: bool
+        partial_map: MapDataPartial, current_map_data: MapData | None, vslam_map: bool
     ) -> MapData | None:
         if partial_map.frame_type != MapFrameType.P.value:
             return None
@@ -1304,7 +1309,7 @@ class DreameVacuumMapDecoder:
             partial_map,
             vslam_map,
         )
-        if map_data is None:
+        if map_data is None or current_map_data is None:
             return None
 
         current_map_data.frame_id = map_data.frame_id
@@ -1342,6 +1347,8 @@ class DreameVacuumMapDecoder:
         if map_data.data:
             current_dimensions = current_map_data.dimensions
             new_dimensions = map_data.dimensions
+            assert current_dimensions is not None
+            assert new_dimensions is not None
 
             # Find max image size
             grid_size = new_dimensions.grid_size
@@ -1427,7 +1434,7 @@ class DreameVacuumMapDecoder:
         return current_map_data
 
     @staticmethod
-    def decode_cleaning_map_data(map_data, cleaning_map_str):
+    def decode_cleaning_map_data(map_data: Any, cleaning_map_str: Any) -> Any:
         partial_cleaning_map = None
         if cleaning_map_str and len(cleaning_map_str) > 1:
             partial_cleaning_map = DreameVacuumMapDecoder.decode_map_partial(cleaning_map_str)
@@ -1468,14 +1475,15 @@ class DreameVacuumMapDecoder:
             cleaning_map.robot_position = map_data.charger_position
 
         cleaning_map.multiple_cleaning_time = map_data.multiple_cleaning_time
-        if partial_cleaning_map:
-            grid_size = DreameVacuumMapDecoder._read_int_16_le(partial_cleaning_map.raw, 17)
-            width = DreameVacuumMapDecoder._read_int_16_le(partial_cleaning_map.raw, 19)
-            height = DreameVacuumMapDecoder._read_int_16_le(partial_cleaning_map.raw, 21)
-            left = DreameVacuumMapDecoder._read_int_16_le(partial_cleaning_map.raw, 23)
-            top = DreameVacuumMapDecoder._read_int_16_le(partial_cleaning_map.raw, 25)
+        if partial_cleaning_map and partial_cleaning_map.raw is not None:
+            cleaning_raw = partial_cleaning_map.raw
+            grid_size = DreameVacuumMapDecoder._read_int_16_le(cleaning_raw, 17)
+            width = DreameVacuumMapDecoder._read_int_16_le(cleaning_raw, 19)
+            height = DreameVacuumMapDecoder._read_int_16_le(cleaning_raw, 21)
+            left = DreameVacuumMapDecoder._read_int_16_le(cleaning_raw, 23)
+            top = DreameVacuumMapDecoder._read_int_16_le(cleaning_raw, 25)
 
-            data = partial_cleaning_map.raw[
+            data = cleaning_raw[
                 DreameVacuumMapDecoder.HEADER_SIZE : DreameVacuumMapDecoder.HEADER_SIZE + width * height
             ]
 
@@ -1498,6 +1506,7 @@ class DreameVacuumMapDecoder:
         map_data: MapData, segment_id: int, x0_px: int, y0_px: int, x1_px: int, y1_px: int
     ) -> list[list[int]]:
         """Extract the real outline of a segment using Moore-Neighbor contour tracing"""
+        assert map_data.dimensions is not None
         # Validate indices are within bounds
         if (
             x0_px < 0
@@ -1553,7 +1562,7 @@ class DreameVacuumMapDecoder:
             if start_x is not None:
                 break
 
-        if start_x is None:
+        if start_x is None or start_y is None:
             # No pixels found, return bounding box
             return [
                 [
@@ -1703,13 +1712,13 @@ class DreameVacuumMapDecoder:
         )
 
     @staticmethod
-    def _simplify_contour(points: list, epsilon: float) -> list:
+    def _simplify_contour(points: list[Any], epsilon: float) -> list[Any]:
         """Simplify contour using Ramer-Douglas-Peucker algorithm"""
         if len(points) < 3:
             return points
 
         # Find the point with maximum distance
-        dmax = 0
+        dmax: float = 0
         index = 0
         end = len(points) - 1
 
@@ -1733,14 +1742,14 @@ class DreameVacuumMapDecoder:
         return result
 
     @staticmethod
-    def _perpendicular_distance(point, line_start, line_end):
+    def _perpendicular_distance(point: Any, line_start: Any, line_end: Any) -> float:
         """Calculate perpendicular distance from point to line"""
         x, y = point
         x1, y1 = line_start
         x2, y2 = line_end
 
         if x1 == x2 and y1 == y2:
-            return ((x - x1) ** 2 + (y - y1) ** 2) ** 0.5
+            return float(((x - x1) ** 2 + (y - y1) ** 2) ** 0.5)
 
         num = abs((y2 - y1) * x - (x2 - x1) * y + x2 * y1 - y2 * x1)
         den = ((y2 - y1) ** 2 + (x2 - x1) ** 2) ** 0.5
@@ -1748,8 +1757,9 @@ class DreameVacuumMapDecoder:
         return num / den if den > 0 else 0
 
     @staticmethod
-    def get_segments(map_data: MapData, vslam_map: bool) -> dict[str, Any]:
+    def get_segments(map_data: MapData, vslam_map: bool) -> dict[int, Any]:
         segments = {}
+        assert map_data.dimensions is not None
         for y in range(map_data.dimensions.height):
             for x in range(map_data.dimensions.width):
                 segment_id = int(map_data.pixel_type[x, y])
@@ -1816,7 +1826,7 @@ class DreameVacuumMapDecoder:
 
                 # Extract real outline instead of just bounding box using pixel indices
                 segments[k]._outline_points = DreameVacuumMapDecoder.extract_segment_outline(
-                    map_data, k, x0_px, y0_px, x1_px, y1_px
+                    map_data, k, int(x0_px), int(y0_px), int(x1_px), int(y1_px)
                 )
 
                 segments[k].set_name()
@@ -1824,7 +1834,12 @@ class DreameVacuumMapDecoder:
 
     @staticmethod
     def set_robot_segment(map_data: MapData) -> None:
-        if map_data.segments and map_data.saved_map_status == 2 and map_data.robot_position is not None:
+        if (
+            map_data.segments
+            and map_data.saved_map_status == 2
+            and map_data.robot_position is not None
+            and map_data.dimensions is not None
+        ):
             x = int((map_data.robot_position.x - map_data.dimensions.left) / map_data.dimensions.grid_size)
             y = int((map_data.robot_position.y - map_data.dimensions.top) / map_data.dimensions.grid_size)
             map_data.robot_segment = (
@@ -1848,8 +1863,8 @@ class DreameVacuumMapDecoder:
     @staticmethod
     def set_segment_cleanset(
         map_data: MapData,
-        cleanset: dict[str, list[int]],
-        capability: DreameVacuumDeviceCapability = None,
+        cleanset: Any,
+        capability: Any = None,
     ) -> None:
         if map_data is not None and map_data.segments is not None:
             default_cleanset = [
@@ -1929,7 +1944,7 @@ class DreameVacuumMapDecoder:
                             # Logic for custom room mopping effect settings (mopping effect, mop pad humidity, route)
                             if item[5] > 0:
                                 values = DreameVacuumMapDecoder.split_mopping_settings(
-                                    map_data.segments[k].mopping_settings
+                                    map_data.segments[k].mopping_settings or 0
                                 )
                                 if values:
                                     if values[2] == 0:  # Means custom mopping route enabled
@@ -1945,9 +1960,9 @@ class DreameVacuumMapDecoder:
                                         map_data.segments[k].custom_mopping_route = 0
                                         if values[2] == 0 and values[1] == 0:
                                             map_data.segments[k].wetness_level = item[1] if item[1] else 16
-                                            if map_data.segments[k].wetness_level > 26:
+                                            if (map_data.segments[k].wetness_level or 0) > 26:
                                                 map_data.segments[k].water_volume = 3
-                                            elif map_data.segments[k].wetness_level < 6:
+                                            elif (map_data.segments[k].wetness_level or 0) < 6:
                                                 map_data.segments[k].water_volume = 1
                                             else:
                                                 map_data.segments[k].water_volume = 2
@@ -1961,9 +1976,9 @@ class DreameVacuumMapDecoder:
                                         map_data.segments[k].custom_mopping_route = 0
                                         if values[2] == 0 and values[1] == 0:
                                             map_data.segments[k].wetness_level = item[1] if item[1] else 10
-                                            if map_data.segments[k].wetness_level > 14:
+                                            if (map_data.segments[k].wetness_level or 0) > 14:
                                                 map_data.segments[k].water_volume = 3
-                                            elif map_data.segments[k].wetness_level < 6:
+                                            elif (map_data.segments[k].wetness_level or 0) < 6:
                                                 map_data.segments[k].water_volume = 1
                                             else:
                                                 map_data.segments[k].water_volume = 2
@@ -1991,9 +2006,7 @@ class DreameVacuumMapDecoder:
                     map_data.segments[k].custom_mopping_route = None
 
     @staticmethod
-    def set_carpet_cleanset(
-        map_data: MapData, cleanset: list[list[int]], capability: DreameVacuumDeviceCapability = None
-    ):
+    def set_carpet_cleanset(map_data: MapData, cleanset: Any, capability: Any = None) -> None:
         if (
             map_data is not None
             and cleanset is not None
@@ -2035,16 +2048,21 @@ class DreameVacuumMapDecoder:
             value = 0 ^ values[2]
             value = value << 4 ^ values[1]
             return value << 4 ^ values[0]
+        return 0
 
     @staticmethod
     def set_segment_color_index(map_data: MapData) -> None:
         """Assign a unique color index to each segment (0, 1, 2, ..., N-1)."""
+        if not map_data.segments:
+            return
         for idx, segment_id in enumerate(sorted(map_data.segments.keys())):
             map_data.segments[segment_id].color_index = idx % 16
 
     @staticmethod
-    def get_carpets(map_data: MapData, saved_map_data: MapData) -> list[tuple]:
+    def get_carpets(map_data: MapData, saved_map_data: MapData | None) -> Any:
         if saved_map_data and saved_map_data.carpet_pixels:
+            assert map_data.dimensions is not None
+            assert saved_map_data.dimensions is not None
             left_offset = 0
             if saved_map_data.dimensions.left < map_data.dimensions.left:
                 left_offset = int(
@@ -2071,9 +2089,7 @@ class DreameVacuumMapDecoder:
         return None
 
     @staticmethod
-    def set_segment_floor_material(
-        map_data: MapData, segment_id: int, floor_material, capability: DreameVacuumDeviceCapability
-    ) -> None:
+    def set_segment_floor_material(map_data: MapData, segment_id: int, floor_material: Any, capability: Any) -> None:
         if floor_material is not None and map_data.segments and segment_id in map_data.segments:
             material = map_data.segments[segment_id].floor_material
             material_direction = map_data.segments[segment_id].floor_material_direction
@@ -2112,9 +2128,9 @@ class DreameVacuumMapDecoder:
                     )
 
     @staticmethod
-    def set_floor_material(map_data: MapData, capability: DreameVacuumDeviceCapability = None) -> None:
+    def set_floor_material(map_data: MapData, capability: Any = None) -> None:
         if map_data.segments:
-            floor_material = {}
+            floor_material: dict[Any, Any] = {}
             for k in map_data.segments.keys():
                 DreameVacuumMapDecoder.set_segment_floor_material(map_data, k, floor_material, capability)
             if floor_material:
