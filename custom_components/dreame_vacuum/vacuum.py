@@ -10,8 +10,12 @@ from __future__ import annotations
 import importlib
 from typing import TYPE_CHECKING, Any, Final
 
-from homeassistant.components.vacuum import StateVacuumEntity
-from homeassistant.components.vacuum.const import VacuumEntityFeature
+# VacuumEntityFeature: import from the public package, not vacuum.const
+# (removed in recent HA). Older HA re-exports it implicitly, hence the ignore.
+from homeassistant.components.vacuum import (  # type: ignore[attr-defined]
+    StateVacuumEntity,
+    VacuumEntityFeature,
+)
 
 try:
     from homeassistant.components.vacuum import Segment  # type: ignore[attr-defined]

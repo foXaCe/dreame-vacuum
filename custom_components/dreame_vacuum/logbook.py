@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from homeassistant.components.logbook.const import (
+from homeassistant.components.logbook import (  # type: ignore[attr-defined]
     LOGBOOK_ENTRY_ICON,
     LOGBOOK_ENTRY_MESSAGE,
     LOGBOOK_ENTRY_NAME,
