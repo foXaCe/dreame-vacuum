@@ -2584,7 +2584,12 @@ class DreameVacuumDeviceCapability:
 
     @property
     def mop_extend(self) -> bool:
-        return bool(self.mop_pad_swing and self._device.status.mop_extend_frequency.value >= 0)
+        # Read the raw auto-switch property: status.mop_extend_frequency checks this
+        # capability back, so going through it would recurse infinitely.
+        return bool(
+            self.mop_pad_swing
+            and self._device.get_auto_switch_property(DreameVacuumAutoSwitchProperty.MOP_EXTEND_FREQUENCY) is not None
+        )
 
 
 class Point:
