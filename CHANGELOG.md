@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.0] - 2026-06-11
+
+### Added
+- `vector_rooms` camera option (enabled by default): rooms are upscaled with
+  smooth bicubic resampling instead of hard pixel blocks, with EN/FR strings.
+
+### Changed
+- Full `mypy --strict` typing across the entire integration (51 files, from
+  roughly 4100 errors down to zero), with shared `TYPE_CHECKING` stubs
+  (`dreame/_device_base.py`, `map_renderer/_base.py`) describing the
+  cross-mixin surface. 851 tests stay green.
+
+### Fixed
+- Pillow 10+ compatibility: `Image.Resampling.BICUBIC` and
+  `Image.Transpose.ROTATE_90/180/270` (rotated maps raised `AttributeError`).
+- `capability.mop_extend` was defined without `@property` (feature detection
+  always truthy), and the capability/status recursion this uncovered.
+- `DreameVacuumWaterTank.MOP_IN_STATION`: code referenced a nonexistent
+  `IN_STATION` enum member.
+- Map restore read `wifi_map` (a bool) instead of `wifi_map_data`.
+- `cleaning_route` reset compared against dict keys instead of values.
+- Missing fallback returns in `combine_group_value` and
+  `combine_mopping_settings`.
+- Dead `go_to_zone.water_volume` attribute (now `water_level`).
+- Import `VacuumEntityFeature` and logbook constants from the public Home
+  Assistant packages (`vacuum.const` no longer exposes them on recent HA,
+  which broke test collection on CI).
+
 ## [6.4.0] - 2026-06-06
 
 ### Added
