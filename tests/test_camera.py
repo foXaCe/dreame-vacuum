@@ -333,17 +333,29 @@ class TestAsyncUpdateSegmentMap:
             await entity._async_update_segment_map()
 
         cache_key, b64, room_to_raw = entity._segment_map_cache
-        assert cache_key == 1000
+        # The structural key is a tuple of (shape, content-hash, segments-signature).
+        assert isinstance(cache_key, tuple)
         assert isinstance(b64, str)
         assert b64
         assert room_to_raw == {5: 10}
 
-    async def test_skips_when_last_updated_unchanged(self) -> None:
+    async def test_skips_when_structure_unchanged(self) -> None:
+        """No rebuild when the pixel data and segment geometry are identical."""
         entity = _bare_camera()
         map_data = _fake_map_data(last_updated=1000)
-        # Pretend the cache already holds this exact frame.
-        entity._segment_map_cache = (1000, "CACHED", {5: 10})
 
+        # First call: populate the cache with the real structural key.
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+        ):
+            await entity._async_update_segment_map()
+
+        structural_key = entity._segment_map_cache[0]
+        assert isinstance(structural_key, tuple)
+
+        # Second call: same map_data (even if last_updated changed) → no rebuild.
+        map_data.last_updated = 9999
         build_spy = MagicMock(wraps=entity._build_segment_map)
         with (
             patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
@@ -352,14 +364,23 @@ class TestAsyncUpdateSegmentMap:
         ):
             await entity._async_update_segment_map()
 
-        # No rebuild, cache untouched.
         build_spy.assert_not_called()
-        assert entity._segment_map_cache == (1000, "CACHED", {5: 10})
+        assert entity._segment_map_cache[0] == structural_key
 
-    async def test_rebuilds_when_last_updated_changes(self) -> None:
+    async def test_rebuilds_when_structure_changes(self) -> None:
+        """Rebuild fires when pixel_type content changes, regardless of timestamp."""
         entity = _bare_camera()
-        entity._segment_map_cache = (1000, "OLD", {5: 10})
-        map_data = _fake_map_data(last_updated=2000, raw_value=11)
+        map_data = _fake_map_data(last_updated=1000, raw_value=10)
+        with (
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+        ):
+            await entity._async_update_segment_map()
+
+        first_key = entity._segment_map_cache[0]
+
+        # Change a pixel — same timestamp, but different pixel_type content.
+        map_data.pixel_type[2, 2] = 11
         with (
             patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
             patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
@@ -367,8 +388,7 @@ class TestAsyncUpdateSegmentMap:
             await entity._async_update_segment_map()
 
         cache_key, b64, room_to_raw = entity._segment_map_cache
-        assert cache_key == 2000
-        assert b64 != "OLD"
+        assert cache_key != first_key
         assert room_to_raw == {5: 11}
 
     async def test_skips_wifi_map(self) -> None:
