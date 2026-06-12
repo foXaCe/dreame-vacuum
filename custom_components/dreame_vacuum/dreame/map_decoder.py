@@ -159,6 +159,12 @@ class DreameVacuumMapDecoder:
         if dims is None or map_data.data is None:
             return None
 
+        limit = dims.width if vertical else dims.height
+        if center < 0 or center >= limit:
+            return None
+        if len(map_data.data) < dims.width * dims.height:
+            return None
+
         for k in range(dims.height if vertical else dims.width):
             pixel_type = map_data.data[(k * dims.width + center) if vertical else (center * dims.width + k)] & 0x3F
             if pixel_type == segment_id:
