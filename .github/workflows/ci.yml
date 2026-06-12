@@ -22,6 +22,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Check version consistency (manifest.json vs pyproject.toml)
+        run: |
+          MANIFEST_VERSION=$(jq -r '.version' custom_components/dreame_vacuum/manifest.json)
+          PYPROJECT_VERSION=$(sed -n 's/^version = "\([^"]*\)"/\1/p' pyproject.toml)
+          if [ "$MANIFEST_VERSION" != "$PYPROJECT_VERSION" ]; then
+            echo "::error::Version mismatch: manifest.json ($MANIFEST_VERSION) != pyproject.toml ($PYPROJECT_VERSION)"
+            exit 1
+          fi
+          echo "Version consistent: $MANIFEST_VERSION"
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:

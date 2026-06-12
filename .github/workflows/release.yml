@@ -29,6 +29,11 @@ jobs:
             echo "::error::Version mismatch: manifest.json ($MANIFEST_VERSION) != tag ($TAG_VERSION)"
             exit 1
           fi
+          PYPROJECT_VERSION=$(sed -n 's/^version = "\([^"]*\)"/\1/p' pyproject.toml)
+          if [ "$MANIFEST_VERSION" != "$PYPROJECT_VERSION" ]; then
+            echo "::error::Version mismatch: manifest.json ($MANIFEST_VERSION) != pyproject.toml ($PYPROJECT_VERSION)"
+            exit 1
+          fi
           echo "Version validated: $MANIFEST_VERSION"
 
       - name: Extract changelog for this version
