@@ -639,7 +639,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         self._image = None
         self._default_map = True
         self._proxy_images: dict[str, dict[str, Any]] = {}
-        # (last_updated, base64_string, room_key_to_raw_pixel_value)
+        # (structural cache key, base64_string, room_key_to_raw_pixel_value)
         # The third element lets Lovelace cards map a room back to its raw
         # pixel_type value (the one stored in the blue channel after remap).
         self._segment_map_cache: tuple[Any, Any, Any] = (None, None, None)
@@ -781,7 +781,11 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         map_data = self._map_data
         if map_data is None or map_data.pixel_type is None or not map_data.segments:
             return
-        cache_key = map_data.last_updated
+        pt = map_data.pixel_type
+        segments_signature = tuple(
+            sorted((int(k), getattr(seg, "x", None), getattr(seg, "y", None)) for k, seg in map_data.segments.items())
+        )
+        cache_key = (pt.shape, hash(pt.tobytes()), segments_signature)
         if self._segment_map_cache[0] == cache_key:
             return
         result = await self.hass.async_add_executor_job(self._build_segment_map, map_data)
