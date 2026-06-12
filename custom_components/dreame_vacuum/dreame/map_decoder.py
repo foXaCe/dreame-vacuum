@@ -90,7 +90,9 @@ class DreameVacuumMapDecoder:
         return c1[1] - c2[1] if c1[1] != c2[1] else c1[0] - c2[0]
 
     @staticmethod
-    def _get_pixel_type(map_data: MapData, pixel: Any, vslam_map: bool = False) -> tuple[int, bool]:
+    def _get_pixel_type(
+        map_data: MapData, pixel: Any, vslam_map: bool = False, hidden_segments: frozenset[int] | None = None
+    ) -> tuple[int, bool]:
         if map_data.frame_map:
             carpet = bool((pixel & 0x03) == 3)
             segment_id = pixel >> 2
@@ -124,7 +126,7 @@ class DreameVacuumMapDecoder:
                 return (
                     (
                         MapPixelType.HIDDEN_WALL.value
-                        if map_data.hidden_segments and segment_id and segment_id in map_data.hidden_segments
+                        if hidden_segments and segment_id and segment_id in hidden_segments
                         else MapPixelType.WALL.value
                     ),
                     carpet,
@@ -155,6 +157,12 @@ class DreameVacuumMapDecoder:
 
         dims = map_data.dimensions
         if dims is None or map_data.data is None:
+            return None
+
+        limit = dims.width if vertical else dims.height
+        if center < 0 or center >= limit:
+            return None
+        if len(map_data.data) < dims.width * dims.height:
             return None
 
         for k in range(dims.height if vertical else dims.width):
@@ -549,6 +557,9 @@ class DreameVacuumMapDecoder:
                                         else:
                                             map_data.pixel_type[x, y] = MapPixelType.NEW_SEGMENT.value
                         else:
+                            hidden_segments_set = (
+                                frozenset(map_data.hidden_segments) if map_data.hidden_segments else None
+                            )
                             for y in range(height):
                                 for x in range(width):
                                     pixel = map_data.data[(width * y) + x]
@@ -560,9 +571,9 @@ class DreameVacuumMapDecoder:
                                         if pixel >> 7:
                                             map_data.pixel_type[x, y] = (
                                                 MapPixelType.HIDDEN_WALL.value
-                                                if map_data.hidden_segments
+                                                if hidden_segments_set
                                                 and segment_id
-                                                and segment_id in map_data.hidden_segments
+                                                and segment_id in hidden_segments_set
                                                 else MapPixelType.WALL.value
                                             )
                                         else:
@@ -1388,6 +1399,7 @@ class DreameVacuumMapDecoder:
             top_offset = int((new_dimensions.top - top) / grid_size)
 
             # Copy new image to buffer at calculated offset
+            hidden_segments = frozenset(current_map_data.hidden_segments) if current_map_data.hidden_segments else None
             for y in range(new_dimensions.height):
                 for x in range(new_dimensions.width):
                     current_index = (new_dimensions.width * y) + x
@@ -1400,6 +1412,7 @@ class DreameVacuumMapDecoder:
                             current_map_data,
                             int(data[new_index]),
                             vslam_map,
+                            hidden_segments=hidden_segments,
                         )
                         if carpet and current_map_data.carpet_pixels is None:
                             current_map_data.carpet_pixels = []
