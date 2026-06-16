@@ -228,3 +228,36 @@ def test_simple_ai_obstacle_uses_own_coordinates():
     assert obstacle.x == 1.5, f"Expected x=1.5, got {obstacle.x}"
     assert obstacle.y == 2.5, f"Expected y=2.5, got {obstacle.y}"
     assert obstacle.type == ObstacleType.OBSTACLE, f"Expected OBSTACLE, got {obstacle.type}"
+
+
+@pytest.mark.skipif(_SKIP_OBSTACLE, reason="py_mini_racer or MapDataPartial not available")
+def test_four_element_ai_obstacle_does_not_crash():
+    """AI obstacle with only 4 elements must NOT crash with IndexError.
+
+    Before the fix, ``id = obstacle[4]`` was read unconditionally even when
+    ``size == 4`` (indices 0-3 only) → IndexError, swallowed by the catch-all,
+    resulting in zero obstacles and a lost map frame.  After the fix, ``id`` is
+    set to ``None`` when ``size < 5``; the ``size >= 7`` guard short-circuits so
+    ``float(None)`` is never evaluated, and the ``else`` branch builds the
+    obstacle normally.
+    """
+    partial = MapDataPartial()
+    partial.map_id = 1
+    partial.frame_id = 1
+    partial.frame_type = MapFrameType.I.value
+    partial.timestamp_ms = 0
+    partial.raw = bytes(32)                        # width=height=0 → pas de décodage pixel
+    # size == 4 : [x, y, type, possibility] — PAS d'index 4
+    partial.data_json = {"ai_obstacle": [[3.0, 4.0, 142, 0.5]]}
+
+    map_data, _ = DreameVacuumMapDecoder.decode_map_data_from_partial(partial, False)
+
+    assert map_data is not None
+    assert map_data.obstacles is not None
+    assert "1" in map_data.obstacles, (
+        "Obstacle not registered — likely obstacle[4] IndexError was swallowed"
+    )
+    obstacle = map_data.obstacles["1"]
+    assert obstacle.x == 3.0
+    assert obstacle.y == 4.0
+    assert obstacle.type == ObstacleType.OBSTACLE

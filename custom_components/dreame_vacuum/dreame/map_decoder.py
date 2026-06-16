@@ -927,7 +927,7 @@ class DreameVacuumMapDecoder:
                     if size >= 4:
                         obstacle_type = int(obstacle[2])
                         if obstacle_type in ObstacleType._value2member_map_:
-                            id = obstacle[4]
+                            id = obstacle[4] if size >= 5 else None
                             obstacle_x: Any = float(obstacle[0])
                             obstacle_y: Any = float(obstacle[1])
                             possibility: int | None = int(float(obstacle[3]) * 100)
