@@ -86,9 +86,7 @@ def test_connected_requires_both_flags(proto: DreameVacuumDreameHomeCloudProtoco
 
 def test_auth_key_returns_constructor_param() -> None:
     """auth_key property returns the auth_key passed at construction."""
-    p = DreameVacuumDreameHomeCloudProtocol(
-        "user@example.com", "secret", auth_key="my-auth-key"
-    )
+    p = DreameVacuumDreameHomeCloudProtocol("user@example.com", "secret", auth_key="my-auth-key")
     assert p.auth_key == "my-auth-key"
 
 
@@ -137,9 +135,7 @@ def test_request_429_raises_rate_limit_error(
 ) -> None:
     """HTTP 429 raises RateLimitError with retry_after from Retry-After header."""
     proto._session = MagicMock()
-    proto._session.post.return_value = _mock_response(
-        429, "", headers={"Retry-After": "30"}
-    )
+    proto._session.post.return_value = _mock_response(429, "", headers={"Retry-After": "30"})
 
     with pytest.raises(RateLimitError) as exc_info:
         proto.request("https://example.com/api", None)
@@ -174,9 +170,7 @@ def test_request_401_relogin_already_attempted(
     proto._session.post.return_value = _mock_response(401, "Unauthorized")
 
     with patch.object(proto, "login", return_value=True) as mock_login:
-        result = proto.request(
-            "https://example.com/api", None, _relogin_attempted=True
-        )
+        result = proto.request("https://example.com/api", None, _relogin_attempted=True)
 
     assert result is None
     mock_login.assert_not_called()
@@ -206,9 +200,7 @@ def test_request_timeout_retries(
     proto._session = MagicMock()
     proto._session.post.side_effect = requests.exceptions.Timeout
 
-    with patch(
-        "custom_components.dreame_vacuum.dreame.protocol.sleep"
-    ) as mock_sleep:
+    with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
         result = proto.request("https://example.com/api", None, retry_count=2)
 
     assert result is None
@@ -284,9 +276,7 @@ def test_request_connection_error_retries(
     proto._session = MagicMock()
     proto._session.post.side_effect = requests.exceptions.ConnectionError("refused")
 
-    with patch(
-        "custom_components.dreame_vacuum.dreame.protocol.sleep"
-    ) as mock_sleep:
+    with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
         result = proto.request("https://example.com/api", None, retry_count=2)
 
     assert result is None
@@ -579,6 +569,7 @@ def test_disconnect_with_mqtt_client_and_threads(
     proto._client_connecting = True
     # Simulate active threads with sentinel-safe real queues (already queue.Queue instances)
     import threading
+
     proto._thread = threading.Thread(target=lambda: None)
     proto._client_thread = threading.Thread(target=lambda: None)
     proto._logged_in = True

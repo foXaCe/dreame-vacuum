@@ -22,7 +22,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import numpy as np
-import pytest
 
 
 def _load_find_segment_at():
@@ -95,6 +94,7 @@ def test_segment_id_contract_constants() -> None:
 # Structural cache key: _async_update_segment_map rebuild behaviour
 # ===========================================================================
 
+
 def _ensure_native_stubs() -> None:
     """Install lightweight stand-ins for native optional deps."""
     if "turbojpeg" not in sys.modules:
@@ -109,7 +109,7 @@ def _ensure_native_stubs() -> None:
 
 _ensure_native_stubs()
 
-from custom_components.dreame_vacuum.camera import DreameVacuumCameraEntity  # noqa: E402
+from custom_components.dreame_vacuum.camera import DreameVacuumCameraEntity
 
 
 def _bare_entity_for_cache_tests(executor_mock: AsyncMock) -> DreameVacuumCameraEntity:

@@ -132,7 +132,7 @@ except ImportError:
 _SKIP_CENTER = not (HAS_MAP_DECODER and HAS_MAP_DATA and HAS_DIMS)
 
 
-def _make_map_4x4(segment_id: int = 7) -> "MapData":
+def _make_map_4x4(segment_id: int = 7) -> MapData:
     """Build a minimal 4x4 MapData with segment_id at (row=1,col=2) and (row=2,col=2)."""
     md = MapData()
     md.dimensions = MapImageDimensions(top=0, left=0, height=4, width=4, grid_size=1)
@@ -213,7 +213,7 @@ def test_simple_ai_obstacle_uses_own_coordinates():
     # 32 bytes > HEADER_SIZE(27) so raw is long enough to read all offsets
     partial.raw = bytes(32)
     # size==5 → branches "size >= 7" is False → else branch
-    # type 142 == ObstacleType.OBSTACLE; id=5 (float(5)<1000); prob 0.9
+    # obstacle_type 142 == ObstacleType.OBSTACLE; id=5 (float(5)<1000); prob 0.9
     partial.data_json = {"ai_obstacle": [[1.5, 2.5, 142, 0.9, 5]]}
 
     result = DreameVacuumMapDecoder.decode_map_data_from_partial(partial, False)
@@ -221,9 +221,7 @@ def test_simple_ai_obstacle_uses_own_coordinates():
 
     assert map_data is not None
     assert map_data.obstacles is not None
-    assert "1" in map_data.obstacles, (
-        "Obstacle not registered — likely x/y UnboundLocalError was swallowed"
-    )
+    assert "1" in map_data.obstacles, "Obstacle not registered — likely x/y UnboundLocalError was swallowed"
     obstacle = map_data.obstacles["1"]
     assert obstacle.x == 1.5, f"Expected x=1.5, got {obstacle.x}"
     assert obstacle.y == 2.5, f"Expected y=2.5, got {obstacle.y}"
@@ -246,7 +244,7 @@ def test_four_element_ai_obstacle_does_not_crash():
     partial.frame_id = 1
     partial.frame_type = MapFrameType.I.value
     partial.timestamp_ms = 0
-    partial.raw = bytes(32)                        # width=height=0 → pas de décodage pixel
+    partial.raw = bytes(32)  # width=height=0 → pas de décodage pixel
     # size == 4 : [x, y, type, possibility] — PAS d'index 4
     partial.data_json = {"ai_obstacle": [[3.0, 4.0, 142, 0.5]]}
 
@@ -254,9 +252,7 @@ def test_four_element_ai_obstacle_does_not_crash():
 
     assert map_data is not None
     assert map_data.obstacles is not None
-    assert "1" in map_data.obstacles, (
-        "Obstacle not registered — likely obstacle[4] IndexError was swallowed"
-    )
+    assert "1" in map_data.obstacles, "Obstacle not registered — likely obstacle[4] IndexError was swallowed"
     obstacle = map_data.obstacles["1"]
     assert obstacle.x == 3.0
     assert obstacle.y == 4.0
