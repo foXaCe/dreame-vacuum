@@ -178,3 +178,53 @@ def test_get_segment_center_nominal_returns_int():
     md = _make_map_4x4()
     result = DreameVacuumMapDecoder._get_segment_center(md, 7, 2, False)
     assert result == 2
+
+
+# ---------------------------------------------------------------------------
+# Regression test for UnboundLocalError x/y in simple AI obstacle branch
+# ---------------------------------------------------------------------------
+
+try:
+    from custom_components.dreame_vacuum.dreame.vacuum_types import MapDataPartial, ObstacleType
+
+    HAS_PARTIAL = True
+except ImportError:
+    HAS_PARTIAL = False
+
+_SKIP_OBSTACLE = not (HAS_MAP_DECODER and HAS_PARTIAL)
+
+
+@pytest.mark.skipif(_SKIP_OBSTACLE, reason="py_mini_racer or MapDataPartial not available")
+def test_simple_ai_obstacle_uses_own_coordinates():
+    """Simple AI obstacle (size==5, id<1000) must use obstacle_x/obstacle_y.
+
+    Before the fix, the ``else`` branch referenced ``x``/``y`` (locals only
+    bound in path/pixel loops).  A frame with width=height=0 skips all pixel
+    loops so ``x``/``y`` are never assigned → UnboundLocalError, swallowed by
+    the catch-all, resulting in zero obstacles.  After the fix the obstacle is
+    registered with the correct coordinates.
+    """
+    partial = MapDataPartial()
+    partial.map_id = 1
+    partial.frame_id = 1
+    partial.frame_type = MapFrameType.I.value  # 73
+    partial.timestamp_ms = 0
+    # Header all-zero → width=0, height=0 at offsets 19/21 (int16-LE)
+    # 32 bytes > HEADER_SIZE(27) so raw is long enough to read all offsets
+    partial.raw = bytes(32)
+    # size==5 → branches "size >= 7" is False → else branch
+    # type 142 == ObstacleType.OBSTACLE; id=5 (float(5)<1000); prob 0.9
+    partial.data_json = {"ai_obstacle": [[1.5, 2.5, 142, 0.9, 5]]}
+
+    result = DreameVacuumMapDecoder.decode_map_data_from_partial(partial, False)
+    map_data, _ = result
+
+    assert map_data is not None
+    assert map_data.obstacles is not None
+    assert "1" in map_data.obstacles, (
+        "Obstacle not registered — likely x/y UnboundLocalError was swallowed"
+    )
+    obstacle = map_data.obstacles["1"]
+    assert obstacle.x == 1.5, f"Expected x=1.5, got {obstacle.x}"
+    assert obstacle.y == 2.5, f"Expected y=2.5, got {obstacle.y}"
+    assert obstacle.type == ObstacleType.OBSTACLE, f"Expected OBSTACLE, got {obstacle.type}"

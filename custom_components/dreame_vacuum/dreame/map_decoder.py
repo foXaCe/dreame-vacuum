@@ -974,8 +974,8 @@ class DreameVacuumMapDecoder:
                                     )
                             else:
                                 map_data.obstacles[str(index)] = Obstacle(
-                                    x,
-                                    y,
+                                    obstacle_x,
+                                    obstacle_y,
                                     ObstacleType(obstacle_type),
                                     possibility,
                                 )
