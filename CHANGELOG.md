@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.1] - 2026-06-16
+
+### Fixed
+- Map decoding crash on AI obstacles: an `UnboundLocalError` discarded the
+  entire map frame whenever a "simple" AI obstacle was present, and silently
+  mis-placed the obstacle (reusing the last path point's coordinates) when it
+  did not crash.
+- Map decoding crash (`IndexError`) on AI obstacles reported with only four
+  fields.
+- Out-of-bounds segment-center lookup on malformed or truncated map payloads no
+  longer discards the whole frame.
+
+### Changed
+- Performance: the camera segment-map cache is now keyed on the actual map
+  structure instead of a timestamp, avoiding a full PNG re-render on every
+  frame during cleaning.
+- Performance: hidden-segment lookups in the map-decoder pixel loops use a set
+  (O(1)) instead of a list (O(n) per pixel).
+- Expanded test coverage: characterization suites for the Dreame and MiHome
+  cloud protocols and for device property routing.
+- CI now enforces version parity between `manifest.json` and `pyproject.toml`.
+- Dependencies: bumped `ruff` (>=0.15.17), pre-commit hooks, and
+  `home-assistant/actions`.
+
 ## [6.5.0] - 2026-06-11
 
 ### Added
