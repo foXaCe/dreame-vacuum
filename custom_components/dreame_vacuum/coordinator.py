@@ -527,20 +527,32 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             if self._has_warning:
                 if f"{DOMAIN}_{self._device.mac}_{NOTIFICATION_ID_WARNING}" not in notifications:
                     if not notify_is_list or NOTIFICATION_ID_WARNING in self._notify:
-                        self.hass.async_create_task(self._async_clear_warning(), name=f"{DOMAIN}_clear_warning")
+                        self._schedule_clear_warning()
                     self._has_warning = self._device.status.has_warning
 
             if self._low_water:
                 if f"{DOMAIN}_{self._device.mac}_{NOTIFICATION_ID_LOW_WATER}" not in notifications:
                     if not notify_is_list or NOTIFICATION_ID_WARNING in self._notify:
-                        self.hass.async_create_task(self._async_clear_warning(), name=f"{DOMAIN}_clear_warning")
+                        self._schedule_clear_warning()
                     self._low_water = self._device.status.low_water
 
             if self._drainage_status:
                 if f"{DOMAIN}_{self._device.mac}_{NOTIFICATION_ID_DRAINAGE_STATUS}" not in notifications:
                     if not notify_is_list or NOTIFICATION_ID_WARNING in self._notify:
-                        self.hass.async_create_task(self._async_clear_warning(), name=f"{DOMAIN}_clear_warning")
+                        self._schedule_clear_warning()
                     self._drainage_status = self._device.status.draining_complete
+
+    def _schedule_clear_warning(self) -> None:
+        """Schedule the warning-clear task on the event loop.
+
+        ``_notification_dismiss_listener`` can run outside the event loop, and
+        ``hass.async_create_task`` is loop-only (HA flags a thread-safety error
+        otherwise). ``call_soon_threadsafe`` hands the task creation back to the
+        loop and is safe to call from any thread.
+        """
+        self.hass.loop.call_soon_threadsafe(
+            lambda: self.hass.async_create_task(self._async_clear_warning(), name=f"{DOMAIN}_clear_warning")
+        )
 
     async def _async_clear_warning(self) -> None:
         """Clear the active device warning off the event loop.

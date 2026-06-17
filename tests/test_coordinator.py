@@ -677,13 +677,19 @@ def test_dismiss_listener_ignores_when_device_gone():
 
 def test_dismiss_listener_clears_warning_off_event_loop():
     """When the warning notification was removed by the user, clear_warning must be
-    scheduled via async_create_task (which awaits the executor job), never run inline."""
+    scheduled on the loop thread-safely (the listener can run off the event loop),
+    never run inline."""
     coord = _bare_coordinator(notify=True)
     coord._has_warning = True
     coord._device.status.has_warning = False
     coord.hass.data = {persistent_notification.DOMAIN: {}}  # warning id absent
     coord._notification_dismiss_listener(persistent_notification.UpdateType.REMOVED, None)
-    # A clear-warning task was scheduled.
+    # The clear-warning task was scheduled thread-safely (not via a direct
+    # async_create_task, which is loop-only and would trip HA's thread guard).
+    assert coord.hass.loop.call_soon_threadsafe.call_count == 1
+    coord.hass.async_create_task.assert_not_called()
+    # Running the scheduled callback creates the named task on the loop.
+    coord.hass.loop.call_soon_threadsafe.call_args.args[0]()
     assert coord.hass.async_create_task.call_count == 1
     assert coord.hass.async_create_task.call_args.kwargs["name"] == f"{DOMAIN}_clear_warning"
     # has_warning was refreshed from the device.
@@ -704,7 +710,7 @@ def test_dismiss_listener_clears_low_water():
     coord._device.status.low_water = False
     coord.hass.data = {persistent_notification.DOMAIN: {}}
     coord._notification_dismiss_listener(persistent_notification.UpdateType.REMOVED, None)
-    assert coord.hass.async_create_task.call_count == 1
+    assert coord.hass.loop.call_soon_threadsafe.call_count == 1
     assert coord._low_water is False
 
 
@@ -714,7 +720,7 @@ def test_dismiss_listener_clears_drainage_status():
     coord._device.status.draining_complete = False
     coord.hass.data = {persistent_notification.DOMAIN: {}}
     coord._notification_dismiss_listener(persistent_notification.UpdateType.REMOVED, None)
-    assert coord.hass.async_create_task.call_count == 1
+    assert coord.hass.loop.call_soon_threadsafe.call_count == 1
     assert coord._drainage_status is False
 
 

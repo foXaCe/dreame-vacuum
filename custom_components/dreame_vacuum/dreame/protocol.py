@@ -622,7 +622,17 @@ class DreameVacuumDreameHomeCloudProtocol:
             or not isinstance(api_response["data"], dict)
         ):
             if api_response and not api_response.get("success"):
-                _LOGGER.error("Failed to execute api call: %s", api_response)
+                code = api_response.get("code")
+                # Le cloud Dreame renvoie des messages d'erreur en chinois : on traduit les
+                # cas transitoires connus et on évite un log ERROR alarmant pour ceux-ci.
+                if code == 80001:
+                    _LOGGER.warning(
+                        "Échec de l'appel API (code %s) : appareil probablement hors ligne, "
+                        "délai d'envoi de la commande dépassé",
+                        code,
+                    )
+                else:
+                    _LOGGER.error("Échec de l'appel API (code %s) : %s", code, api_response.get("msg") or api_response)
             elif api_response:
                 _LOGGER.debug("Api call returned no result data: %s", api_response)
             return None
