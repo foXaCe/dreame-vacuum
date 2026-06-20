@@ -1,0 +1,24 @@
+# Normalize line endings to LF on checkin
+* text=auto eol=lf
+
+# Python
+*.py text diff=python
+
+# Keep these files LF
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+
+# Large base64 blobs shipped on purpose — keep out of language stats and
+# collapse them in diffs (they are not hand-edited source).
+custom_components/dreame_vacuum/dreame/_resources_data.py linguist-generated=true
+custom_components/dreame_vacuum/dreame/_notification_images.py linguist-generated=true

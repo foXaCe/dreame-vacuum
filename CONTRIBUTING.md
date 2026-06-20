@@ -67,4 +67,11 @@ pre-commit run --all-files
 4. Push : \`git push origin feature/ma-fonctionnalite\`
 5. Ouvrez une Pull Request
 
+## Gestion des dépendances
+
+Les mises à jour de dépendances sont gérées automatiquement par **Renovate**
+(et non Dependabot). Les PR sont ouvertes par `@renovate[bot]` ; le
+[dashboard Renovate](https://github.com/foXaCe/dreame-vacuum/issues?q=is%3Aissue+is%3Aopen+author%3Aapp%2Frenovate) liste
+toutes les mises à jour en attente.
+
 Merci ! 🎉

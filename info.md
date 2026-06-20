@@ -14,17 +14,17 @@ Complete app replacement with Home Assistant for Dreame robot vacuums.
 
 ## Features
 
-- [Supported devices](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/supported_devices.md)
-- [Auto generated device entities](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/entities.md)
-- [Live and multi floor map support](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/map.md)
-- [Map obstacle photos](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/map.md#obstacle-photos)
-- [Cleaning and cruising history maps](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/map.md#cleaning-and-cruising-history-maps)
-- [Cloud and local map backup/recovery](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/map.md#backup-and-recovery)
-- [Saved WiFi maps](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/map.md#wifi-map)
-- [Customized room cleaning entities](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/room_entities.md)
-- [Services for device and map with examples](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/services.md)
-- [Persistent notifications and error reporting](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/notifications.md)
-- [Events for automations](https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/events.md)
+- [Supported devices](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/supported_devices.md)
+- [Auto generated device entities](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/entities.md)
+- [Live and multi floor map support](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/map.md)
+- [Map obstacle photos](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/map.md#obstacle-photos)
+- [Cleaning and cruising history maps](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/map.md#cleaning-and-cruising-history-maps)
+- [Cloud and local map backup/recovery](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/map.md#backup-and-recovery)
+- [Saved WiFi maps](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/map.md#wifi-map)
+- [Customized room cleaning entities](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/room_entities.md)
+- [Services for device and map with examples](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/services.md)
+- [Persistent notifications and error reporting](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/notifications.md)
+- [Events for automations](https://github.com/foXaCe/dreame-vacuum/blob/main/docs/events.md)
 - Dreamehome account support
 - Movahome account support
 
@@ -36,7 +36,7 @@ Complete app replacement with Home Assistant for Dreame robot vacuums.
 
     TODO
 
-    <a href="https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/map.md" target="_blank">About map feature</a>
+    <a href="https://github.com/foXaCe/dreame-vacuum/blob/main/docs/map.md" target="_blank">About map feature</a>
 
 - Enter required credentials according to the selected configuration type.
   > Please make sure that the devices are at same subnet for both configuration types. <a href="https://python-miio.readthedocs.io/en/latest/troubleshooting.html#discover-devices-across-subnets" target="_blank">python-miio article about this issue.</a>
@@ -44,10 +44,10 @@ Complete app replacement with Home Assistant for Dreame robot vacuums.
 
     TODO
 
-    <a href="https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/notifications.md" target="_blank">About notifications feature</a><br><a href="https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/map.md#color-schemes" target="_blank">About map color schemes</a>
+    <a href="https://github.com/foXaCe/dreame-vacuum/blob/main/docs/notifications.md" target="_blank">About notifications feature</a><br><a href="https://github.com/foXaCe/dreame-vacuum/blob/main/docs/map.md#color-schemes" target="_blank">About map color schemes</a>
 - Navigate to device page for disabling or enabling entities that you want to use.
 
-    <a href="https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/entities.md" target="_blank">About entities</a>
+    <a href="https://github.com/foXaCe/dreame-vacuum/blob/main/docs/entities.md" target="_blank">About entities</a>
 
 
 ## How To Use

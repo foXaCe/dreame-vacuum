@@ -1,0 +1,106 @@
+name: Bug report
+description: Report a problem with the Dreame Vacuum integration
+labels: ["bug"]
+assignees: ["foXaCe"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+        This form is for **bugs only**. For questions or setup help, please use the
+        [Discussions](https://github.com/foXaCe/dreame-vacuum/discussions) tab.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have updated the integration to the latest version available.
+          required: true
+        - label: I have searched the existing issues and discussions and found no duplicate.
+          required: true
+        - label: I have restarted Home Assistant after updating.
+          required: true
+
+  - type: textarea
+    id: problem
+    validations:
+      required: true
+    attributes:
+      label: The problem
+      description: Describe the issue you are experiencing, and what you expected to happen.
+
+  - type: input
+    id: integration-version
+    validations:
+      required: true
+    attributes:
+      label: Integration version
+      placeholder: e.g. 6.5.2
+
+  - type: input
+    id: ha-version
+    validations:
+      required: true
+    attributes:
+      label: Home Assistant version
+      placeholder: e.g. 2026.6.0
+      description: Settings → System → Repairs → ⋮ → System information.
+
+  - type: dropdown
+    id: install-type
+    validations:
+      required: true
+    attributes:
+      label: Installation type
+      options:
+        - Home Assistant OS
+        - Home Assistant Container
+        - Home Assistant Supervised
+        - Home Assistant Core
+
+  - type: input
+    id: vacuum-model
+    validations:
+      required: true
+    attributes:
+      label: Vacuum model
+      placeholder: e.g. dreame.vacuum.p2028
+      description: Visible in the device diagnostics or the Dreame/Mi Home app.
+
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+      placeholder: e.g. 1156
+
+  - type: dropdown
+    id: map-support
+    validations:
+      required: true
+    attributes:
+      label: Map configuration
+      options:
+        - With map support
+        - Without map support
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Home Assistant logs
+      description: Settings → System → Logs, filtered on `dreame_vacuum`.
+      render: shell
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics dump
+      description: >
+        Settings → Devices & Services → Dreame Vacuum → ⋮ → Download diagnostics.
+        Please remove any sensitive tokens before attaching.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional information

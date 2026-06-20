@@ -371,9 +371,9 @@ Recovery maps can be displayed and downloaded via related `Saved or Current Map`
 
 `http://local.homeassistant/api/camera_recovery_map_proxy/camera.vacuum_map_1?token=5df93cfcf8ecc23fa17b233ca938cc52f41e2b17a46ca291865be3f9ba64d89b&index=2&file=1`
 
-<a href="https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/services.md#dreame_vacuumvacuum_restore_map" target="_blank">**How to restore the map**</a>
+<a href="https://github.com/foXaCe/dreame-vacuum/blob/main/docs/services.md#dreame_vacuumvacuum_restore_map" target="_blank">**How to restore the map**</a>
 
-<a href="https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/services.md#dreame_vacuumvacuum_backup_map" target="_blank">**How to trigger backup to the cloud (Only on supported devices)**</a>
+<a href="https://github.com/foXaCe/dreame-vacuum/blob/main/docs/services.md#dreame_vacuumvacuum_backup_map" target="_blank">**How to trigger backup to the cloud (Only on supported devices)**</a>
 
 #### Map Recovery Card
 
@@ -459,7 +459,7 @@ styles:
 
 ### WiFi Map
 
-Saved WiFi maps can be displayed using <a href="https://github.com/foXaCe/dreame-vacuum/blob/dev/docs/entities.md#camera" target="_blank">`Saved WiFi Map` camera entities</a> (disabled by default) or alternatively via related `Saved or Current Map` entity camera proxy.
+Saved WiFi maps can be displayed using <a href="https://github.com/foXaCe/dreame-vacuum/blob/main/docs/entities.md#camera" target="_blank">`Saved WiFi Map` camera entities</a> (disabled by default) or alternatively via related `Saved or Current Map` entity camera proxy.
 
 > WiFi maps for all saved maps may not be available on the device.
 
