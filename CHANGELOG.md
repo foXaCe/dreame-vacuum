@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.3] - 2026-06-20
+
+### Added
+- Characterization test suites for the MiHome/MiIO cloud & device protocols and for device property routing / dirty-data discard (internal coverage; no user-facing behaviour change).
+
+### Changed
+- Development tooling & CI: adopt `prek` (Rust drop-in for pre-commit) as the hook runner; repository bootstrap (health files, issue forms, Renovate, CodeQL); extend the Lint job to cover `tests/`; bandit (`B106`) and codespell config fixes; dependency updates (checkout, codeql-action).
+
 ## [6.5.2] - 2026-06-16
 
 ### Fixed
