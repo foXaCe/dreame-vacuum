@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/foXaCe/dreame-vacuum/discussions
+    about: For questions, setup help and general discussion, please use Discussions.
+  - name: Home Assistant Community
+    url: https://community.home-assistant.io/t/custom-component-dreame-vacuum/473026
+    about: For general Home Assistant questions, use the community forum thread.
