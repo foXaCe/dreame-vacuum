@@ -51,6 +51,11 @@
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "automerge": true,
       "platformAutomerge": true
+    },
+    {
+      "description": "Never auto-merge language runtime version bumps (python, node) — always review",
+      "matchDepNames": ["python", "node"],
+      "automerge": false
     }
   ]
 }
