@@ -18,9 +18,10 @@ git clone https://github.com/foXaCe/dreame-vacuum.git
 cd dreame-vacuum
 \`\`\`
 
-2. Installez les hooks pre-commit :
+2. Installez le runner de hooks **prek** (drop-in Rust de pre-commit) et activez-le :
 \`\`\`bash
-pre-commit install
+pipx install prek   # ou : uv tool install prek / brew install j178/prek/prek
+prek install
 \`\`\`
 
 ## Outils de qualité de code
@@ -44,13 +45,13 @@ ruff check custom_components/dreame_vacuum --fix
 ruff format custom_components/dreame_vacuum
 \`\`\`
 
-### Pre-commit
+### Pre-commit (via prek)
 
-Les hooks pre-commit s'exécutent automatiquement à chaque commit.
+Les hooks définis dans `.pre-commit-config.yaml` s'exécutent automatiquement à chaque commit, via [prek](https://github.com/j178/prek) — un drop-in Rust de `pre-commit`, ~10× plus rapide (même fichier de config). La version Python historique reste compatible (`pipx install pre-commit`) si vous préférez.
 
 **Exécuter manuellement :**
 \`\`\`bash
-pre-commit run --all-files
+prek run --all-files
 \`\`\`
 
 ## Standards de code
