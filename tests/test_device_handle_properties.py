@@ -17,6 +17,7 @@ from unittest.mock import MagicMock
 # Native-extension stubs (turbojpeg / py_mini_racer)
 # ---------------------------------------------------------------------------
 
+
 def _ensure_native_stubs() -> None:
     """Install lightweight stand-ins for optional C-extension dependencies."""
     if "turbojpeg" not in sys.modules:
