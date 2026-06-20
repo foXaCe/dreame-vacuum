@@ -12,13 +12,16 @@
   "labels": ["dependencies"],
   "assignees": ["foXaCe"],
   "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
   "prConcurrentLimit": 10,
   "prHourlyLimit": 4,
   "lockFileMaintenance": {
     "enabled": true
   },
   "vulnerabilityAlerts": {
-    "labels": ["security", "dependencies"]
+    "labels": ["security", "dependencies"],
+    "minimumReleaseAge": null
   },
   "packageRules": [
     {
