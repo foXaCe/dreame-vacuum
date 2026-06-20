@@ -48,9 +48,7 @@ def device_proto() -> DreameVacuumDeviceProtocol:
 # ---------------------------------------------------------------------------
 
 
-def _mock_response(
-    status_code: int, text: str, headers: dict | None = None
-) -> MagicMock:
+def _mock_response(status_code: int, text: str, headers: dict | None = None) -> MagicMock:
     resp = MagicMock()
     resp.status_code = status_code
     resp.text = text
@@ -62,9 +60,7 @@ def _make_encrypted_response(ssecurity: str, nonce: str, payload: dict) -> str:
     """Return a base64 string that decrypt_rc4(signed_nonce(nonce), text) yields payload JSON."""
     import hashlib
 
-    hash_object = hashlib.sha256(
-        base64.b64decode(ssecurity) + base64.b64decode(nonce)
-    )
+    hash_object = hashlib.sha256(base64.b64decode(ssecurity) + base64.b64decode(nonce))
     signed_nonce = base64.b64encode(hash_object.digest()).decode("utf-8")
     r = ARC4.new(base64.b64decode(signed_nonce))
     r.encrypt(bytes(1024))
@@ -225,9 +221,7 @@ def test_mihome_generate_signature_deterministic() -> None:
     signed_nonce = "tNfoaeifqEL840oNVDy1wWxcSezI23TbtXCTt8FH1Rs="
     nonce = "bm9uY2U="  # base64('nonce')
     params = {"data": "testdata"}
-    result = DreameVacuumMiHomeCloudProtocol.generate_signature(
-        url, signed_nonce, nonce, params
-    )
+    result = DreameVacuumMiHomeCloudProtocol.generate_signature(url, signed_nonce, nonce, params)
     assert result == "rUvM5mf+PJ3s7wCocHeSFtCkDB6CjjcoPjDxrOmW350="
 
 
@@ -293,17 +287,13 @@ def test_mihome_check_login_auth_err_false(
 def test_mihome_check_login_invalid_signature_false(
     mihome: DreameVacuumMiHomeCloudProtocol,
 ) -> None:
-    assert (
-        mihome.check_login({"code": 0, "message": "invalid signature"}) is False
-    )
+    assert mihome.check_login({"code": 0, "message": "invalid signature"}) is False
 
 
 def test_mihome_check_login_servicetoken_expired_false(
     mihome: DreameVacuumMiHomeCloudProtocol,
 ) -> None:
-    assert (
-        mihome.check_login({"code": 0, "message": "SERVICETOKEN_EXPIRED"}) is False
-    )
+    assert mihome.check_login({"code": 0, "message": "SERVICETOKEN_EXPIRED"}) is False
 
 
 def test_mihome_check_login_ok_true(
@@ -342,15 +332,11 @@ def test_mihome_request_200_valid_json(
 ) -> None:
     """HTTP 200 with properly encrypted response returns parsed dict and _connected=True."""
     fixed_nonce = "dGVzdA=="  # base64('test')
-    encrypted_text = _make_encrypted_response(
-        mihome._ssecurity, fixed_nonce, {"result": 42}
-    )
+    encrypted_text = _make_encrypted_response(mihome._ssecurity, fixed_nonce, {"result": 42})
     mihome._session = MagicMock()
     mihome._session.post.return_value = _mock_response(200, encrypted_text)
 
-    with patch.object(
-        DreameVacuumMiHomeCloudProtocol, "generate_nonce", return_value=fixed_nonce
-    ):
+    with patch.object(DreameVacuumMiHomeCloudProtocol, "generate_nonce", return_value=fixed_nonce):
         result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"})
 
     assert result == {"result": 42}
@@ -397,12 +383,8 @@ def test_mihome_request_timeout_retries(
     mihome._session = MagicMock()
     mihome._session.post.side_effect = requests.exceptions.Timeout
 
-    with patch(
-        "custom_components.dreame_vacuum.dreame.protocol.sleep"
-    ) as mock_sleep:
-        result = mihome.request(
-            "https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=2
-        )
+    with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
+        result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=2)
 
     assert result is None
     assert mihome._session.post.call_count == 3
@@ -414,9 +396,7 @@ def test_mihome_request_429_raises_rate_limit_error(
 ) -> None:
     """HTTP 429 raises RateLimitError with retry_after from header."""
     mihome._session = MagicMock()
-    mihome._session.post.return_value = _mock_response(
-        429, "", headers={"Retry-After": "45"}
-    )
+    mihome._session.post.return_value = _mock_response(429, "", headers={"Retry-After": "45"})
 
     with pytest.raises(RateLimitError) as exc_info:
         mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"})
@@ -460,12 +440,8 @@ def test_mihome_request_connection_error_retries(
     mihome._session = MagicMock()
     mihome._session.post.side_effect = requests.exceptions.ConnectionError("refused")
 
-    with patch(
-        "custom_components.dreame_vacuum.dreame.protocol.sleep"
-    ) as mock_sleep:
-        result = mihome.request(
-            "https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=2
-        )
+    with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
+        result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=2)
 
     assert result is None
     assert mihome._session.post.call_count == 3
@@ -477,15 +453,11 @@ def test_mihome_request_cookies_include_service_token(
 ) -> None:
     """request() sends serviceToken and yetAnotherServiceToken cookies."""
     fixed_nonce = "dGVzdA=="
-    encrypted_text = _make_encrypted_response(
-        mihome._ssecurity, fixed_nonce, {"ok": 1}
-    )
+    encrypted_text = _make_encrypted_response(mihome._ssecurity, fixed_nonce, {"ok": 1})
     mihome._session = MagicMock()
     mihome._session.post.return_value = _mock_response(200, encrypted_text)
 
-    with patch.object(
-        DreameVacuumMiHomeCloudProtocol, "generate_nonce", return_value=fixed_nonce
-    ):
+    with patch.object(DreameVacuumMiHomeCloudProtocol, "generate_nonce", return_value=fixed_nonce):
         mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"})
 
     call_kwargs = mihome._session.post.call_args
@@ -647,11 +619,11 @@ def test_mihome_request_retry_count_none_normalized(
     encrypted_text = _make_encrypted_response(mihome._ssecurity, fixed_nonce, {"ok": 1})
     mihome._session.post.return_value = _mock_response(200, encrypted_text)
 
-    with patch.object(
-        DreameVacuumMiHomeCloudProtocol, "generate_nonce", return_value=fixed_nonce
-    ):
+    with patch.object(DreameVacuumMiHomeCloudProtocol, "generate_nonce", return_value=fixed_nonce):
         result = mihome.request(
-            "https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=None  # type: ignore[arg-type]
+            "https://de.api.io.mi.com/app/v2/test",
+            {"data": "x"},
+            retry_count=None,  # type: ignore[arg-type]
         )
 
     assert result == {"ok": 1}
@@ -667,9 +639,7 @@ def test_mihome_request_timeout_with_connected_logs_warning(
     mihome._connected = True
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep"):
-        result = mihome.request(
-            "https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=1
-        )
+        result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=1)
 
     assert result is None
     assert mihome._session.post.call_count == 2
@@ -684,9 +654,7 @@ def test_mihome_request_connection_error_with_connected_logs_warning(
     mihome._connected = True
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep"):
-        result = mihome.request(
-            "https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=1
-        )
+        result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=1)
 
     assert result is None
 
@@ -699,9 +667,7 @@ def test_mihome_request_generic_exception_with_connected(
     mihome._session.post.side_effect = RuntimeError("boom")
     mihome._connected = True
 
-    result = mihome.request(
-        "https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=1
-    )
+    result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=1)
 
     assert result is None
 
@@ -713,9 +679,7 @@ def test_mihome_request_200_decrypt_returns_empty_bytes(
     mihome._session = MagicMock()
     mihome._session.post.return_value = _mock_response(200, "anythingbase64")
 
-    with patch.object(
-        DreameVacuumMiHomeCloudProtocol, "decrypt_rc4", return_value=b""
-    ):
+    with patch.object(DreameVacuumMiHomeCloudProtocol, "decrypt_rc4", return_value=b""):
         result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"})
 
     assert result is None
