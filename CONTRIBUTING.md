@@ -71,7 +71,7 @@ pre-commit run --all-files
 
 Les mises à jour de dépendances sont gérées automatiquement par **Renovate**
 (et non Dependabot). Les PR sont ouvertes par `@renovate[bot]` ; le
-[dashboard Renovate](../../issues?q=is%3Aissue+author%3Aapp%2Frenovate) liste
+[dashboard Renovate](https://github.com/foXaCe/dreame-vacuum/issues?q=is%3Aissue+is%3Aopen+author%3Aapp%2Frenovate) liste
 toutes les mises à jour en attente.
 
 Merci ! 🎉
