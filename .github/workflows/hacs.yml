@@ -21,6 +21,6 @@ jobs:
         uses: actions/checkout@v7
 
       - name: HACS Action
-        uses: hacs/action@d556e736723344f83838d08488c983a15381059a  # v22.5.0
+        uses: hacs/action@d556e736723344f83838d08488c983a15381059a  # 22.5.0
         with:
           category: integration
