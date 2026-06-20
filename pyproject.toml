@@ -107,6 +107,7 @@ exclude_dirs = [".venv", "venv", ".git", "__pycache__"]
 skips = [
     "B101",  # assert_used (common in tests and HA)
     "B105",  # hardcoded_password_string (false positive - placeholders)
+    "B106",  # hardcoded_password_funcarg (false positive - test fixtures)
     "B110",  # try_except_pass (intentional for robustness)
     "B304",  # insecure cipher ARC4 (required by Dreame protocol)
     "B305",  # insecure cipher mode ECB (required by Dreame map decryption)
