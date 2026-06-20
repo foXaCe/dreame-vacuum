@@ -1,0 +1,53 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":dependencyDashboard",
+    ":enableVulnerabilityAlertsWithLabel(security)",
+    ":timezone(Europe/Paris)",
+    "group:monorepos",
+    "group:recommended"
+  ],
+  "labels": ["dependencies"],
+  "assignees": ["foXaCe"],
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 4,
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "vulnerabilityAlerts": {
+    "labels": ["security", "dependencies"]
+  },
+  "packageRules": [
+    {
+      "description": "Label Python dependency updates",
+      "matchManagers": ["pip_requirements", "pep621", "pip-compile"],
+      "addLabels": ["python"]
+    },
+    {
+      "description": "Label GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "addLabels": ["github-actions"]
+    },
+    {
+      "description": "Group lint & format tools (pip + pre-commit)",
+      "matchPackageNames": ["ruff", "mypy", "bandit", "codespell"],
+      "groupName": "lint & format tools"
+    },
+    {
+      "description": "Automerge low-risk updates once CI is green",
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+    {
+      "description": "Automerge GitHub Actions minor/patch/digest",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "automerge": true,
+      "platformAutomerge": true
+    }
+  ]
+}
