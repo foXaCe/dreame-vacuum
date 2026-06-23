@@ -1,0 +1,90 @@
+---
+name: Security audit
+
+# Active CVE surveillance, complementary to Renovate `vulnerabilityAlerts`:
+# Renovate opens PRs that FIX vulnerabilities; this workflow turns the badge
+# red (and blocks PRs) when one EXISTS.
+#
+# Adapted to this repo (Python HA integration, deps declared in manifest.json
+# with `>=` ranges, no committed lockfile):
+#   - pip-audit resolves the manifest requirements and audits the closure.
+#   - osv-scanner / lockfile-freshness are omitted: there is no lockfile and the
+#     `>=`-only manifest gives no concrete version for those tools to scan.
+#   - npm audit is omitted: no JavaScript in this integration.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"  # daily — CVEs do not wait for the weekly Renovate run
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pip-audit:
+    name: pip-audit (manifest requirements)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install pip-audit
+        run: python -m pip install pip-audit
+
+      - name: Audit integration requirements (manifest.json)
+        run: |
+          jq -r '.requirements[]' custom_components/dreame_vacuum/manifest.json > manifest_reqs.txt
+          echo "=== Requirements under audit ==="
+          cat manifest_reqs.txt
+          pip-audit --strict --requirement manifest_reqs.txt
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # full history so secrets in old commits are caught
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

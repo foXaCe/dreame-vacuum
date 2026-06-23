@@ -1,11 +1,7 @@
 # Pre-commit hooks for Dreame Vacuum integration
-# See https://pre-commit.com for more information
-
-ci:
-  autoupdate_schedule: weekly
-  autoupdate_commit_msg: "build: pre-commit autoupdate"
-  autofix_commit_msg: "style: pre-commit auto-fix"
-  autofix_prs: true
+# Run locally with prek (https://github.com/j178/prek), a Rust drop-in for
+# pre-commit. Hook `rev:` bumps are handled by Renovate; CI enforces the hooks
+# via the "Pre-commit (prek)" job in ci.yml.
 
 repos:
   # Ruff - Fast Python linter and formatter
