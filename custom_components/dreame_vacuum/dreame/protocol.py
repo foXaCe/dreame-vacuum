@@ -1794,4 +1794,3 @@ class DreameVacuumProtocol:
         if self.cloud:
             return bool(self.cloud.dreame_cloud)
         return False
-

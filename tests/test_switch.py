@@ -119,6 +119,7 @@ def make_coordinator(hass) -> tuple[MagicMock, MagicMock]:
     device.status = _make_status()
     device.capability = _make_capability()
     device.data = {p.value: 0 for p in DreameVacuumProperty}
+    device.pending_properties = set()
     device.action_mapping = {}
     device.auto_switch_data = {p.name: 0 for p in DreameVacuumAutoSwitchProperty}
     device.ai_data = {}
@@ -352,6 +353,7 @@ def _device_without_setter(hass):
             "action_mapping",
             "auto_switch_data",
             "ai_data",
+            "pending_properties",
             "get_property",
             "set_property",
         ]
@@ -363,6 +365,7 @@ def _device_without_setter(hass):
     device.status = MagicMock(spec=[])  # no status.<key> attributes
     device.capability = _make_capability()
     device.data = {p.value: 0 for p in DreameVacuumProperty}
+    device.pending_properties = set()
     device.action_mapping = {}
     device.auto_switch_data = {}
     device.ai_data = {}
