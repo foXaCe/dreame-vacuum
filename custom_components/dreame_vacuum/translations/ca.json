@@ -1398,15 +1398,15 @@
       "title": "Consumable depleted on {device_name}"
     },
     "segments_changed": {
-      "title": "Els segments del mapa han canviat a {device_name}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Segments del mapa modificats",
-            "description": "Les habitacions del mapa han canviat (s'ha afegit, eliminat o renumerat una habitació). Les automatitzacions i scripts basats en segments que fan referència a identificadors d'habitació podrien deixar d'apuntar a les habitacions correctes. Reviseu-los i, després, seleccioneu **Envia** per descartar aquest problema."
+            "description": "Les habitacions del mapa han canviat (s'ha afegit, eliminat o renumerat una habitació). Les automatitzacions i scripts basats en segments que fan referència a identificadors d'habitació podrien deixar d'apuntar a les habitacions correctes. Reviseu-los i, després, seleccioneu **Envia** per descartar aquest problema.",
+            "title": "Segments del mapa modificats"
           }
         }
-      }
+      },
+      "title": "Els segments del mapa han canviat a {device_name}"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Còpia de Seguretat de Mapa"
+    },
+    "vacuum_call_action": {
+      "description": "Crida una acció en brut del dispositiu pel seu nom. Només per a ús avançat.",
+      "fields": {
+        "key": {
+          "description": "Nom de l'acció a cridar (tal com l'exposa el dispositiu).",
+          "name": "Acció"
+        },
+        "value": {
+          "description": "Paràmetres opcionals de l'acció.",
+          "name": "Paràmetres"
+        }
+      },
+      "name": "Crida una acció"
     },
     "vacuum_clean_segment": {
       "description": "Inicia l'operació de neteja a les habitacions seleccionades.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Estableix Punts Predefinits"
     },
+    "vacuum_set_property": {
+      "description": "Estableix una propietat en brut del dispositiu pel seu nom. Només per a ús avançat.",
+      "fields": {
+        "key": {
+          "description": "Nom de la propietat a establir (tal com l'exposa el dispositiu).",
+          "name": "Propietat"
+        },
+        "value": {
+          "description": "Valor a establir.",
+          "name": "Valor"
+        }
+      },
+      "name": "Estableix una propietat"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Definir parets virtuals, zones restringides i/o zones sense fregar.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Iniciar drecera"
-    },
-    "vacuum_set_property": {
-      "name": "Estableix una propietat",
-      "description": "Estableix una propietat en brut del dispositiu pel seu nom. Només per a ús avançat.",
-      "fields": {
-        "key": {
-          "name": "Propietat",
-          "description": "Nom de la propietat a establir (tal com l'exposa el dispositiu)."
-        },
-        "value": {
-          "name": "Valor",
-          "description": "Valor a establir."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Crida una acció",
-      "description": "Crida una acció en brut del dispositiu pel seu nom. Només per a ús avançat.",
-      "fields": {
-        "key": {
-          "name": "Acció",
-          "description": "Nom de l'acció a cridar (tal com l'exposa el dispositiu)."
-        },
-        "value": {
-          "name": "Paràmetres",
-          "description": "Paràmetres opcionals de l'acció."
-        }
-      }
     }
   }
 }

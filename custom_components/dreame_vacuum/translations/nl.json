@@ -1398,15 +1398,15 @@
       "title": "Verbruiksartikel verbruikt op {device_name}"
     },
     "segments_changed": {
-      "title": "Kaartsegmenten gewijzigd op {device_name}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Kaartsegmenten gewijzigd",
-            "description": "De kamers op de kaart zijn gewijzigd (een kamer is toegevoegd, verwijderd of hernummerd). Automatiseringen en scripts op basis van segmenten die kamer-ID's gebruiken, richten zich mogelijk niet meer op de juiste kamers. Controleer ze en selecteer daarna **Verzenden** om dit probleem te sluiten."
+            "description": "De kamers op de kaart zijn gewijzigd (een kamer is toegevoegd, verwijderd of hernummerd). Automatiseringen en scripts op basis van segmenten die kamer-ID's gebruiken, richten zich mogelijk niet meer op de juiste kamers. Controleer ze en selecteer daarna **Verzenden** om dit probleem te sluiten.",
+            "title": "Kaartsegmenten gewijzigd"
           }
         }
-      }
+      },
+      "title": "Kaartsegmenten gewijzigd op {device_name}"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Backup Kaart"
+    },
+    "vacuum_call_action": {
+      "description": "Roept een ruwe apparaatactie aan op naam. Alleen voor gevorderd gebruik.",
+      "fields": {
+        "key": {
+          "description": "Naam van de aan te roepen actie (zoals door het apparaat weergegeven).",
+          "name": "Actie"
+        },
+        "value": {
+          "description": "Optionele parameters voor de actie.",
+          "name": "Parameters"
+        }
+      },
+      "name": "Actie aanroepen"
     },
     "vacuum_clean_segment": {
       "description": "Start de schoonmaakoperatie in de geselecteerde kamers.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Vooraf Gedefinieerde Punten Instellen"
     },
+    "vacuum_set_property": {
+      "description": "Stelt een ruwe apparaateigenschap in op naam. Alleen voor gevorderd gebruik.",
+      "fields": {
+        "key": {
+          "description": "Naam van de in te stellen eigenschap (zoals door het apparaat weergegeven).",
+          "name": "Eigenschap"
+        },
+        "value": {
+          "description": "In te stellen waarde.",
+          "name": "Waarde"
+        }
+      },
+      "name": "Eigenschap instellen"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Definieer virtuele muren, beperkte zones en/of no-mop zones.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Snelkoppeling starten"
-    },
-    "vacuum_set_property": {
-      "name": "Eigenschap instellen",
-      "description": "Stelt een ruwe apparaateigenschap in op naam. Alleen voor gevorderd gebruik.",
-      "fields": {
-        "key": {
-          "name": "Eigenschap",
-          "description": "Naam van de in te stellen eigenschap (zoals door het apparaat weergegeven)."
-        },
-        "value": {
-          "name": "Waarde",
-          "description": "In te stellen waarde."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Actie aanroepen",
-      "description": "Roept een ruwe apparaatactie aan op naam. Alleen voor gevorderd gebruik.",
-      "fields": {
-        "key": {
-          "name": "Actie",
-          "description": "Naam van de aan te roepen actie (zoals door het apparaat weergegeven)."
-        },
-        "value": {
-          "name": "Parameters",
-          "description": "Optionele parameters voor de actie."
-        }
-      }
     }
   }
 }

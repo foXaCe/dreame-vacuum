@@ -1398,15 +1398,15 @@
       "title": "Consumable depleted on {device_name}"
     },
     "segments_changed": {
-      "title": "Segmentele hărții s-au schimbat pe {device_name}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Segmentele hărții s-au schimbat",
-            "description": "Camerele de pe hartă s-au schimbat (o cameră a fost adăugată, eliminată sau renumerotată). Automatizările și scripturile bazate pe segmente care fac referire la ID-urile camerelor este posibil să nu mai vizeze camerele corecte. Verificați-le, apoi selectați **Trimite** pentru a închide această problemă."
+            "description": "Camerele de pe hartă s-au schimbat (o cameră a fost adăugată, eliminată sau renumerotată). Automatizările și scripturile bazate pe segmente care fac referire la ID-urile camerelor este posibil să nu mai vizeze camerele corecte. Verificați-le, apoi selectați **Trimite** pentru a închide această problemă.",
+            "title": "Segmentele hărții s-au schimbat"
           }
         }
-      }
+      },
+      "title": "Segmentele hărții s-au schimbat pe {device_name}"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Copie de Rezervă a Hărții"
+    },
+    "vacuum_call_action": {
+      "description": "Apelează o acțiune brută a dispozitivului după nume. Doar pentru utilizare avansată.",
+      "fields": {
+        "key": {
+          "description": "Numele acțiunii de apelat (așa cum este expusă de dispozitiv).",
+          "name": "Acțiune"
+        },
+        "value": {
+          "description": "Parametri opționali ai acțiunii.",
+          "name": "Parametri"
+        }
+      },
+      "name": "Apelează acțiunea"
     },
     "vacuum_clean_segment": {
       "description": "Începe operațiunea de curățare în camerele selectate.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Setează Puncte Predefinite"
     },
+    "vacuum_set_property": {
+      "description": "Setează o proprietate brută a dispozitivului după nume. Doar pentru utilizare avansată.",
+      "fields": {
+        "key": {
+          "description": "Numele proprietății de setat (așa cum este expusă de dispozitiv).",
+          "name": "Proprietate"
+        },
+        "value": {
+          "description": "Valoarea de setat.",
+          "name": "Valoare"
+        }
+      },
+      "name": "Setează proprietatea"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Definește pereți virtuali, zone restricționate și/sau zone fără mop.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Pornește scurtătura"
-    },
-    "vacuum_set_property": {
-      "name": "Setează proprietatea",
-      "description": "Setează o proprietate brută a dispozitivului după nume. Doar pentru utilizare avansată.",
-      "fields": {
-        "key": {
-          "name": "Proprietate",
-          "description": "Numele proprietății de setat (așa cum este expusă de dispozitiv)."
-        },
-        "value": {
-          "name": "Valoare",
-          "description": "Valoarea de setat."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Apelează acțiunea",
-      "description": "Apelează o acțiune brută a dispozitivului după nume. Doar pentru utilizare avansată.",
-      "fields": {
-        "key": {
-          "name": "Acțiune",
-          "description": "Numele acțiunii de apelat (așa cum este expusă de dispozitiv)."
-        },
-        "value": {
-          "name": "Parametri",
-          "description": "Parametri opționali ai acțiunii."
-        }
-      }
     }
   }
 }

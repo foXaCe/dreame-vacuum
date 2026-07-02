@@ -1398,15 +1398,15 @@
       "title": "Consumable depleted on {device_name}"
     },
     "segments_changed": {
-      "title": "Segmenty mapy se změnily na {device_name}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Segmenty mapy se změnily",
-            "description": "Místnosti na mapě se změnily (místnost byla přidána, odebrána nebo přečíslována). Automatizace a skripty založené na segmentech, které odkazují na ID místností, již nemusí mířit na správné místnosti. Zkontrolujte je a poté vyberte **Odeslat** pro zavření tohoto problému."
+            "description": "Místnosti na mapě se změnily (místnost byla přidána, odebrána nebo přečíslována). Automatizace a skripty založené na segmentech, které odkazují na ID místností, již nemusí mířit na správné místnosti. Zkontrolujte je a poté vyberte **Odeslat** pro zavření tohoto problému.",
+            "title": "Segmenty mapy se změnily"
           }
         }
-      }
+      },
+      "title": "Segmenty mapy se změnily na {device_name}"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Zálohovat mapu"
+    },
+    "vacuum_call_action": {
+      "description": "Zavolá surovou akci zařízení podle názvu. Pouze pro pokročilé použití.",
+      "fields": {
+        "key": {
+          "description": "Název akce k zavolání (jak ji zařízení poskytuje).",
+          "name": "Akce"
+        },
+        "value": {
+          "description": "Volitelné parametry akce.",
+          "name": "Parametry"
+        }
+      },
+      "name": "Zavolat akci"
     },
     "vacuum_clean_segment": {
       "description": "Spustit operaci uklízení ve vybraných místnostech.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Nastavit předdefinované body"
     },
+    "vacuum_set_property": {
+      "description": "Nastaví surovou vlastnost zařízení podle názvu. Pouze pro pokročilé použití.",
+      "fields": {
+        "key": {
+          "description": "Název vlastnosti k nastavení (jak ji zařízení poskytuje).",
+          "name": "Vlastnost"
+        },
+        "value": {
+          "description": "Hodnota k nastavení.",
+          "name": "Hodnota"
+        }
+      },
+      "name": "Nastavit vlastnost"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Definovat virtuální stěny, zakázané zóny a/nebo zóny bez mopování.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Spustit zkratku"
-    },
-    "vacuum_set_property": {
-      "name": "Nastavit vlastnost",
-      "description": "Nastaví surovou vlastnost zařízení podle názvu. Pouze pro pokročilé použití.",
-      "fields": {
-        "key": {
-          "name": "Vlastnost",
-          "description": "Název vlastnosti k nastavení (jak ji zařízení poskytuje)."
-        },
-        "value": {
-          "name": "Hodnota",
-          "description": "Hodnota k nastavení."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Zavolat akci",
-      "description": "Zavolá surovou akci zařízení podle názvu. Pouze pro pokročilé použití.",
-      "fields": {
-        "key": {
-          "name": "Akce",
-          "description": "Název akce k zavolání (jak ji zařízení poskytuje)."
-        },
-        "value": {
-          "name": "Parametry",
-          "description": "Volitelné parametry akce."
-        }
-      }
     }
   }
 }

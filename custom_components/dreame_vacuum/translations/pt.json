@@ -1398,15 +1398,15 @@
       "title": "Consumível esgotado em {device_name}"
     },
     "segments_changed": {
-      "title": "Segmentos do mapa alterados em {device_name}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Segmentos do mapa alterados",
-            "description": "As divisões do mapa foram alteradas (uma divisão foi adicionada, removida ou renumerada). As automatizações e scripts baseados em segmentos que referenciam IDs de divisões podem já não apontar para as divisões corretas. Reveja-os e selecione **Submeter** para dispensar este problema."
+            "description": "As divisões do mapa foram alteradas (uma divisão foi adicionada, removida ou renumerada). As automatizações e scripts baseados em segmentos que referenciam IDs de divisões podem já não apontar para as divisões corretas. Reveja-os e selecione **Submeter** para dispensar este problema.",
+            "title": "Segmentos do mapa alterados"
           }
         }
-      }
+      },
+      "title": "Segmentos do mapa alterados em {device_name}"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Mapa de backup"
+    },
+    "vacuum_call_action": {
+      "description": "Chama uma ação bruta do dispositivo pelo nome. Apenas utilização avançada.",
+      "fields": {
+        "key": {
+          "description": "Nome da ação a chamar (tal como exposta pelo dispositivo).",
+          "name": "Ação"
+        },
+        "value": {
+          "description": "Parâmetros opcionais da ação.",
+          "name": "Parâmetros"
+        }
+      },
+      "name": "Chamar ação"
     },
     "vacuum_clean_segment": {
       "description": "Iniciar a operação de limpeza nos quartos selecionados.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Definir pontos pré-definidos"
     },
+    "vacuum_set_property": {
+      "description": "Define uma propriedade bruta do dispositivo pelo nome. Apenas utilização avançada.",
+      "fields": {
+        "key": {
+          "description": "Nome da propriedade a definir (tal como exposta pelo dispositivo).",
+          "name": "Propriedade"
+        },
+        "value": {
+          "description": "Valor a definir.",
+          "name": "Valor"
+        }
+      },
+      "name": "Definir propriedade"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Define paredes virtuais, zonas restritas e/ou zonas sem limpeza.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Iniciar atalho"
-    },
-    "vacuum_set_property": {
-      "name": "Definir propriedade",
-      "description": "Define uma propriedade bruta do dispositivo pelo nome. Apenas utilização avançada.",
-      "fields": {
-        "key": {
-          "name": "Propriedade",
-          "description": "Nome da propriedade a definir (tal como exposta pelo dispositivo)."
-        },
-        "value": {
-          "name": "Valor",
-          "description": "Valor a definir."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Chamar ação",
-      "description": "Chama uma ação bruta do dispositivo pelo nome. Apenas utilização avançada.",
-      "fields": {
-        "key": {
-          "name": "Ação",
-          "description": "Nome da ação a chamar (tal como exposta pelo dispositivo)."
-        },
-        "value": {
-          "name": "Parâmetros",
-          "description": "Parâmetros opcionais da ação."
-        }
-      }
     }
   }
 }

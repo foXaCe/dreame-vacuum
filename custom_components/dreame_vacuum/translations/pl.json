@@ -1398,15 +1398,15 @@
       "title": "Consumable depleted on {device_name}"
     },
     "segments_changed": {
-      "title": "Segmenty mapy zmienione na {device_name}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Zmieniono segmenty mapy",
-            "description": "Pokoje na mapie uległy zmianie (pokój został dodany, usunięty lub przenumerowany). Automatyzacje i skrypty oparte na segmentach, które odwołują się do identyfikatorów pokoi, mogą nie wskazywać już właściwych pokoi. Sprawdź je, a następnie wybierz **Wyślij**, aby zamknąć ten problem."
+            "description": "Pokoje na mapie uległy zmianie (pokój został dodany, usunięty lub przenumerowany). Automatyzacje i skrypty oparte na segmentach, które odwołują się do identyfikatorów pokoi, mogą nie wskazywać już właściwych pokoi. Sprawdź je, a następnie wybierz **Wyślij**, aby zamknąć ten problem.",
+            "title": "Zmieniono segmenty mapy"
           }
         }
-      }
+      },
+      "title": "Segmenty mapy zmienione na {device_name}"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Mapa zapasowa"
+    },
+    "vacuum_call_action": {
+      "description": "Wywołuje surową akcję urządzenia po nazwie. Tylko do zaawansowanego użytku.",
+      "fields": {
+        "key": {
+          "description": "Nazwa akcji do wywołania (tak jak udostępnia ją urządzenie).",
+          "name": "Akcja"
+        },
+        "value": {
+          "description": "Opcjonalne parametry akcji.",
+          "name": "Parametry"
+        }
+      },
+      "name": "Wywołaj akcję"
     },
     "vacuum_clean_segment": {
       "description": "Rozpocznij czyszczenie w wybranych pomieszczeniach.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Ustaw predefiniowane punkty"
     },
+    "vacuum_set_property": {
+      "description": "Ustawia surową właściwość urządzenia po nazwie. Tylko do zaawansowanego użytku.",
+      "fields": {
+        "key": {
+          "description": "Nazwa właściwości do ustawienia (tak jak udostępnia ją urządzenie).",
+          "name": "Właściwość"
+        },
+        "value": {
+          "description": "Wartość do ustawienia.",
+          "name": "Wartość"
+        }
+      },
+      "name": "Ustaw właściwość"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Zdefiniuj wirtualne ściany, strefy ograniczone i/lub strefy bez mopa.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Uruchom skrót"
-    },
-    "vacuum_set_property": {
-      "name": "Ustaw właściwość",
-      "description": "Ustawia surową właściwość urządzenia po nazwie. Tylko do zaawansowanego użytku.",
-      "fields": {
-        "key": {
-          "name": "Właściwość",
-          "description": "Nazwa właściwości do ustawienia (tak jak udostępnia ją urządzenie)."
-        },
-        "value": {
-          "name": "Wartość",
-          "description": "Wartość do ustawienia."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Wywołaj akcję",
-      "description": "Wywołuje surową akcję urządzenia po nazwie. Tylko do zaawansowanego użytku.",
-      "fields": {
-        "key": {
-          "name": "Akcja",
-          "description": "Nazwa akcji do wywołania (tak jak udostępnia ją urządzenie)."
-        },
-        "value": {
-          "name": "Parametry",
-          "description": "Opcjonalne parametry akcji."
-        }
-      }
     }
   }
 }

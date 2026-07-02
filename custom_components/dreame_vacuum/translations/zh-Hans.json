@@ -1398,15 +1398,15 @@
       "title": "Consumable depleted on {device_name}"
     },
     "segments_changed": {
-      "title": "{device_name} 的地图分区已更改",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "地图分区已更改",
-            "description": "地图房间已更改（有房间被添加、删除或重新编号）。引用房间 ID 的基于分区的自动化和脚本可能不再指向正确的房间。请检查后选择**提交**以关闭此问题。"
+            "description": "地图房间已更改（有房间被添加、删除或重新编号）。引用房间 ID 的基于分区的自动化和脚本可能不再指向正确的房间。请检查后选择**提交**以关闭此问题。",
+            "title": "地图分区已更改"
           }
         }
-      }
+      },
+      "title": "{device_name} 的地图分区已更改"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "备份地图"
+    },
+    "vacuum_call_action": {
+      "description": "按名称调用设备的原始动作。仅供高级用户使用。",
+      "fields": {
+        "key": {
+          "description": "要调用的动作名称（以设备公开的名称为准）。",
+          "name": "动作"
+        },
+        "value": {
+          "description": "动作的可选参数。",
+          "name": "参数"
+        }
+      },
+      "name": "调用动作"
     },
     "vacuum_clean_segment": {
       "description": "在指定的房间内开始清洁作业。",
@@ -1845,6 +1859,20 @@
       },
       "name": "设置预设点"
     },
+    "vacuum_set_property": {
+      "description": "按名称设置设备的原始属性。仅供高级用户使用。",
+      "fields": {
+        "key": {
+          "description": "要设置的属性名称（以设备公开的名称为准）。",
+          "name": "属性"
+        },
+        "value": {
+          "description": "要设置的值。",
+          "name": "值"
+        }
+      },
+      "name": "设置属性"
+    },
     "vacuum_set_restricted_zone": {
       "description": " 定义虚拟墙、限制区域和/或禁拖区域。",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "启动快捷方式"
-    },
-    "vacuum_set_property": {
-      "name": "设置属性",
-      "description": "按名称设置设备的原始属性。仅供高级用户使用。",
-      "fields": {
-        "key": {
-          "name": "属性",
-          "description": "要设置的属性名称（以设备公开的名称为准）。"
-        },
-        "value": {
-          "name": "值",
-          "description": "要设置的值。"
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "调用动作",
-      "description": "按名称调用设备的原始动作。仅供高级用户使用。",
-      "fields": {
-        "key": {
-          "name": "动作",
-          "description": "要调用的动作名称（以设备公开的名称为准）。"
-        },
-        "value": {
-          "name": "参数",
-          "description": "动作的可选参数。"
-        }
-      }
     }
   }
 }

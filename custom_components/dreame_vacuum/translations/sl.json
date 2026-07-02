@@ -1398,15 +1398,15 @@
       "title": "Consumable depleted on {device_name}"
     },
     "segments_changed": {
-      "title": "Segmenti zemljevida so se spremenili na {device_name}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Segmenti zemljevida so se spremenili",
-            "description": "Sobe na zemljevidu so se spremenile (soba je bila dodana, odstranjena ali preštevilčena). Avtomatizacije in skripti na osnovi segmentov, ki se sklicujejo na ID-je sob, morda ne ciljajo več pravih sob. Preverite jih in nato izberite **Pošlji**, da zaprete to težavo."
+            "description": "Sobe na zemljevidu so se spremenile (soba je bila dodana, odstranjena ali preštevilčena). Avtomatizacije in skripti na osnovi segmentov, ki se sklicujejo na ID-je sob, morda ne ciljajo več pravih sob. Preverite jih in nato izberite **Pošlji**, da zaprete to težavo.",
+            "title": "Segmenti zemljevida so se spremenili"
           }
         }
-      }
+      },
+      "title": "Segmenti zemljevida so se spremenili na {device_name}"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Varnostna kopija zemljevida"
+    },
+    "vacuum_call_action": {
+      "description": "Pokliče surovo dejanje naprave po imenu. Samo za napredno uporabo.",
+      "fields": {
+        "key": {
+          "description": "Ime dejanja za klic (kot ga izpostavlja naprava).",
+          "name": "Dejanje"
+        },
+        "value": {
+          "description": "Neobvezni parametri dejanja.",
+          "name": "Parametri"
+        }
+      },
+      "name": "Pokliči dejanje"
     },
     "vacuum_clean_segment": {
       "description": "Začnite čiščenje v izbranih sobah.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Nastavi vnaprej določene točke"
     },
+    "vacuum_set_property": {
+      "description": "Nastavi surovo lastnost naprave po imenu. Samo za napredno uporabo.",
+      "fields": {
+        "key": {
+          "description": "Ime lastnosti za nastavitev (kot jo izpostavlja naprava).",
+          "name": "Lastnost"
+        },
+        "value": {
+          "description": "Vrednost za nastavitev.",
+          "name": "Vrednost"
+        }
+      },
+      "name": "Nastavi lastnost"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Določi virtualne stene, omejena območja in/ali območja brez mopiranja.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Zaženi bližnjico"
-    },
-    "vacuum_set_property": {
-      "name": "Nastavi lastnost",
-      "description": "Nastavi surovo lastnost naprave po imenu. Samo za napredno uporabo.",
-      "fields": {
-        "key": {
-          "name": "Lastnost",
-          "description": "Ime lastnosti za nastavitev (kot jo izpostavlja naprava)."
-        },
-        "value": {
-          "name": "Vrednost",
-          "description": "Vrednost za nastavitev."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Pokliči dejanje",
-      "description": "Pokliče surovo dejanje naprave po imenu. Samo za napredno uporabo.",
-      "fields": {
-        "key": {
-          "name": "Dejanje",
-          "description": "Ime dejanja za klic (kot ga izpostavlja naprava)."
-        },
-        "value": {
-          "name": "Parametri",
-          "description": "Neobvezni parametri dejanja."
-        }
-      }
     }
   }
 }

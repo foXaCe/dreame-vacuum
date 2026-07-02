@@ -468,6 +468,9 @@
     "vacuum_backup_map": {
       "service": "mdi:content-save"
     },
+    "vacuum_call_action": {
+      "service": "mdi:play-box-outline"
+    },
     "vacuum_clean_segment": {
       "service": "mdi:floor-plan"
     },
@@ -546,6 +549,9 @@
     "vacuum_set_predefined_points": {
       "service": "mdi:map-marker-multiple"
     },
+    "vacuum_set_property": {
+      "service": "mdi:tune-variant"
+    },
     "vacuum_set_restricted_zone": {
       "service": "mdi:close-box-outline"
     },
@@ -560,12 +566,6 @@
     },
     "vacuum_start_shortcut": {
       "service": "mdi:motion-play-outline"
-    },
-    "vacuum_set_property": {
-      "service": "mdi:tune-variant"
-    },
-    "vacuum_call_action": {
-      "service": "mdi:play-box-outline"
     }
   }
 }

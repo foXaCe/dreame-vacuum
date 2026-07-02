@@ -1398,15 +1398,15 @@
       "title": "Consumable depleted on {device_name}"
     },
     "segments_changed": {
-      "title": "{device_name} 的地圖分區已變更",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "地圖分區已變更",
-            "description": "地圖房間已變更（有房間被新增、移除或重新編號）。引用房間 ID 的分區自動化與腳本可能不再指向正確的房間。請檢查後選擇**提交**以關閉此問題。"
+            "description": "地圖房間已變更（有房間被新增、移除或重新編號）。引用房間 ID 的分區自動化與腳本可能不再指向正確的房間。請檢查後選擇**提交**以關閉此問題。",
+            "title": "地圖分區已變更"
           }
         }
-      }
+      },
+      "title": "{device_name} 的地圖分區已變更"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "备份地图至云端"
+    },
+    "vacuum_call_action": {
+      "description": "依名稱呼叫裝置的原始動作。僅供進階使用者使用。",
+      "fields": {
+        "key": {
+          "description": "要呼叫的動作名稱（以裝置公開的名稱為準）。",
+          "name": "動作"
+        },
+        "value": {
+          "description": "動作的選用參數。",
+          "name": "參數"
+        }
+      },
+      "name": "呼叫動作"
     },
     "vacuum_clean_segment": {
       "description": "对选定房间启动清洁任务",
@@ -1845,6 +1859,20 @@
       },
       "name": "设置预设点"
     },
+    "vacuum_set_property": {
+      "description": "依名稱設定裝置的原始屬性。僅供進階使用者使用。",
+      "fields": {
+        "key": {
+          "description": "要設定的屬性名稱（以裝置公開的名稱為準）。",
+          "name": "屬性"
+        },
+        "value": {
+          "description": "要設定的值。",
+          "name": "值"
+        }
+      },
+      "name": "設定屬性"
+    },
     "vacuum_set_restricted_zone": {
       "description": " 定义虚拟墙、限制区域和/或禁拖区域。",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "执行快捷指令"
-    },
-    "vacuum_set_property": {
-      "name": "設定屬性",
-      "description": "依名稱設定裝置的原始屬性。僅供進階使用者使用。",
-      "fields": {
-        "key": {
-          "name": "屬性",
-          "description": "要設定的屬性名稱（以裝置公開的名稱為準）。"
-        },
-        "value": {
-          "name": "值",
-          "description": "要設定的值。"
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "呼叫動作",
-      "description": "依名稱呼叫裝置的原始動作。僅供進階使用者使用。",
-      "fields": {
-        "key": {
-          "name": "動作",
-          "description": "要呼叫的動作名稱（以裝置公開的名稱為準）。"
-        },
-        "value": {
-          "name": "參數",
-          "description": "動作的選用參數。"
-        }
-      }
     }
   }
 }

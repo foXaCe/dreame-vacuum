@@ -1398,15 +1398,15 @@
       "title": "Consumible agotado en {device_name}"
     },
     "segments_changed": {
-      "title": "Los segmentos del mapa han cambiado en {device_name}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Segmentos del mapa modificados",
-            "description": "Las habitaciones del mapa han cambiado (se añadió, eliminó o renumeró una habitación). Las automatizaciones y scripts basados en segmentos que usan identificadores de habitación podrían dejar de apuntar a las habitaciones correctas. Revíselos y luego seleccione **Enviar** para descartar este problema."
+            "description": "Las habitaciones del mapa han cambiado (se añadió, eliminó o renumeró una habitación). Las automatizaciones y scripts basados en segmentos que usan identificadores de habitación podrían dejar de apuntar a las habitaciones correctas. Revíselos y luego seleccione **Enviar** para descartar este problema.",
+            "title": "Segmentos del mapa modificados"
           }
         }
-      }
+      },
+      "title": "Los segmentos del mapa han cambiado en {device_name}"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Respaldar mapa"
+    },
+    "vacuum_call_action": {
+      "description": "Llama a una acción sin procesar del dispositivo por su nombre. Solo uso avanzado.",
+      "fields": {
+        "key": {
+          "description": "Nombre de la acción a llamar (tal como la expone el dispositivo).",
+          "name": "Acción"
+        },
+        "value": {
+          "description": "Parámetros opcionales de la acción.",
+          "name": "Parámetros"
+        }
+      },
+      "name": "Llamar acción"
     },
     "vacuum_clean_segment": {
       "description": "Iniciar la operación de limpieza en las habitaciones seleccionadas.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Definir puntos predefinidos"
     },
+    "vacuum_set_property": {
+      "description": "Establece una propiedad sin procesar del dispositivo por su nombre. Solo uso avanzado.",
+      "fields": {
+        "key": {
+          "description": "Nombre de la propiedad a establecer (tal como la expone el dispositivo).",
+          "name": "Propiedad"
+        },
+        "value": {
+          "description": "Valor a establecer.",
+          "name": "Valor"
+        }
+      },
+      "name": "Establecer propiedad"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Definir paredes virtuales, zonas restringidas y/o zonas sin mopear.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Iniciar acceso directo"
-    },
-    "vacuum_set_property": {
-      "name": "Establecer propiedad",
-      "description": "Establece una propiedad sin procesar del dispositivo por su nombre. Solo uso avanzado.",
-      "fields": {
-        "key": {
-          "name": "Propiedad",
-          "description": "Nombre de la propiedad a establecer (tal como la expone el dispositivo)."
-        },
-        "value": {
-          "name": "Valor",
-          "description": "Valor a establecer."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Llamar acción",
-      "description": "Llama a una acción sin procesar del dispositivo por su nombre. Solo uso avanzado.",
-      "fields": {
-        "key": {
-          "name": "Acción",
-          "description": "Nombre de la acción a llamar (tal como la expone el dispositivo)."
-        },
-        "value": {
-          "name": "Parámetros",
-          "description": "Parámetros opcionales de la acción."
-        }
-      }
     }
   }
 }

@@ -1398,15 +1398,15 @@
       "title": "Verbrauchsmaterial aufgebraucht auf {device_name}"
     },
     "segments_changed": {
-      "title": "Kartensegmente auf {device_name} geändert",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Kartensegmente geändert",
-            "description": "Die Räume der Karte haben sich geändert (ein Raum wurde hinzugefügt, entfernt oder neu nummeriert). Segmentbasierte Automatisierungen und Skripte, die Raum-IDs referenzieren, treffen möglicherweise nicht mehr die richtigen Räume. Überprüfen Sie diese und wählen Sie dann **Senden**, um dieses Problem zu schließen."
+            "description": "Die Räume der Karte haben sich geändert (ein Raum wurde hinzugefügt, entfernt oder neu nummeriert). Segmentbasierte Automatisierungen und Skripte, die Raum-IDs referenzieren, treffen möglicherweise nicht mehr die richtigen Räume. Überprüfen Sie diese und wählen Sie dann **Senden**, um dieses Problem zu schließen.",
+            "title": "Kartensegmente geändert"
           }
         }
-      }
+      },
+      "title": "Kartensegmente auf {device_name} geändert"
     }
   },
   "options": {
@@ -1478,6 +1478,20 @@
         }
       },
       "name": "Backup-Karte"
+    },
+    "vacuum_call_action": {
+      "description": "Ruft eine rohe Geräteaktion anhand ihres Namens auf. Nur für fortgeschrittene Nutzung.",
+      "fields": {
+        "key": {
+          "description": "Name der aufzurufenden Aktion (wie vom Gerät bereitgestellt).",
+          "name": "Aktion"
+        },
+        "value": {
+          "description": "Optionale Parameter für die Aktion.",
+          "name": "Parameter"
+        }
+      },
+      "name": "Aktion aufrufen"
     },
     "vacuum_clean_segment": {
       "description": "Starte den Reinigungsvorgang in den ausgewählten Räumen.",
@@ -1845,6 +1859,20 @@
       },
       "name": "Vordefinierte Punkte festlegen"
     },
+    "vacuum_set_property": {
+      "description": "Setzt eine rohe Geräteeigenschaft anhand ihres Namens. Nur für fortgeschrittene Nutzung.",
+      "fields": {
+        "key": {
+          "description": "Name der zu setzenden Eigenschaft (wie vom Gerät bereitgestellt).",
+          "name": "Eigenschaft"
+        },
+        "value": {
+          "description": "Zu setzender Wert.",
+          "name": "Wert"
+        }
+      },
+      "name": "Eigenschaft setzen"
+    },
     "vacuum_set_restricted_zone": {
       "description": "Virtuelle Wände, eingeschränkte Bereiche und/oder Nicht-Wischzonen definieren.",
       "fields": {
@@ -1914,34 +1942,6 @@
         }
       },
       "name": "Kurzbefehlsstart"
-    },
-    "vacuum_set_property": {
-      "name": "Eigenschaft setzen",
-      "description": "Setzt eine rohe Geräteeigenschaft anhand ihres Namens. Nur für fortgeschrittene Nutzung.",
-      "fields": {
-        "key": {
-          "name": "Eigenschaft",
-          "description": "Name der zu setzenden Eigenschaft (wie vom Gerät bereitgestellt)."
-        },
-        "value": {
-          "name": "Wert",
-          "description": "Zu setzender Wert."
-        }
-      }
-    },
-    "vacuum_call_action": {
-      "name": "Aktion aufrufen",
-      "description": "Ruft eine rohe Geräteaktion anhand ihres Namens auf. Nur für fortgeschrittene Nutzung.",
-      "fields": {
-        "key": {
-          "name": "Aktion",
-          "description": "Name der aufzurufenden Aktion (wie vom Gerät bereitgestellt)."
-        },
-        "value": {
-          "name": "Parameter",
-          "description": "Optionale Parameter für die Aktion."
-        }
-      }
     }
   }
 }
