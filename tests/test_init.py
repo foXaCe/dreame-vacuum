@@ -86,27 +86,6 @@ async def test_platforms_contains_expected() -> None:
         assert platform in platform_values, f"Missing platform: {platform}"
 
 
-async def test_async_setup_entry_exists() -> None:
-    """Test that async_setup_entry function exists and is callable."""
-    assert callable(async_setup_entry)
-
-
-async def test_async_unload_entry_exists() -> None:
-    """Test that async_unload_entry function exists and is callable."""
-    assert callable(async_unload_entry)
-
-
-async def test_async_migrate_entry_exists() -> None:
-    """Test that async_migrate_entry function exists and is callable."""
-    assert callable(async_migrate_entry)
-
-
-async def test_config_entry_version_is_positive() -> None:
-    """Test that config entry version is a positive integer."""
-    assert isinstance(CONFIG_ENTRY_VERSION, int)
-    assert CONFIG_ENTRY_VERSION > 0
-
-
 # --- async_setup_entry ----------------------------------------------------------
 
 

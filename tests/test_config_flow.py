@@ -5,7 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from homeassistant.config_entries import SOURCE_USER, ConfigFlow
+from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import (
     CONF_HOST,
     CONF_NAME,
@@ -114,58 +114,6 @@ def _cloud_entry_data(include_password: bool = True) -> dict:
     if include_password:
         data[CONF_PASSWORD] = "password"
     return data
-
-
-async def test_config_flow_is_subclass() -> None:
-    """Test that config flow is a ConfigFlow subclass."""
-    assert issubclass(DreameVacuumFlowHandler, ConfigFlow)
-
-
-async def test_config_flow_version() -> None:
-    """Test that config flow has version set."""
-    assert hasattr(DreameVacuumFlowHandler, "VERSION")
-    assert DreameVacuumFlowHandler.VERSION >= 1
-
-
-async def test_options_flow_handler_exists() -> None:
-    """Test that options flow handler is defined."""
-    assert DreameVacuumOptionsFlowHandler is not None
-
-
-async def test_config_flow_has_domain() -> None:
-    """Test that config flow uses correct domain."""
-    # DreameVacuumFlowHandler.DOMAIN is set by HA when registered
-    assert DOMAIN == "dreame_vacuum"
-
-
-async def test_config_flow_has_user_step() -> None:
-    """Test that config flow has async_step_user method."""
-    assert hasattr(DreameVacuumFlowHandler, "async_step_user")
-    assert callable(DreameVacuumFlowHandler.async_step_user)
-
-
-async def test_config_flow_has_reauth_step() -> None:
-    """Test that config flow has async_step_reauth method."""
-    assert hasattr(DreameVacuumFlowHandler, "async_step_reauth")
-    assert callable(DreameVacuumFlowHandler.async_step_reauth)
-
-
-async def test_config_flow_has_reconfigure_step() -> None:
-    """Test that config flow has async_step_reconfigure method."""
-    assert hasattr(DreameVacuumFlowHandler, "async_step_reconfigure")
-    assert callable(DreameVacuumFlowHandler.async_step_reconfigure)
-
-
-async def test_options_flow_has_init_step() -> None:
-    """Test that options flow has async_step_init method."""
-    assert hasattr(DreameVacuumOptionsFlowHandler, "async_step_init")
-    assert callable(DreameVacuumOptionsFlowHandler.async_step_init)
-
-
-async def test_config_flow_minor_version() -> None:
-    """Test that config flow has MINOR_VERSION set."""
-    assert hasattr(DreameVacuumFlowHandler, "MINOR_VERSION")
-    assert DreameVacuumFlowHandler.MINOR_VERSION >= 0
 
 
 async def test_user_step_initialises_flow_handler() -> None:
