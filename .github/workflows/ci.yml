@@ -159,7 +159,7 @@ jobs:
         run: python -m pip install prek
 
       - name: Cache prek hooks
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/prek
           key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
