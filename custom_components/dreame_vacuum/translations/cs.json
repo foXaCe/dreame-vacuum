@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Spustit zkratku"
+    },
+    "vacuum_set_property": {
+      "name": "Nastavit vlastnost",
+      "description": "Nastaví surovou vlastnost zařízení podle názvu. Pouze pro pokročilé použití.",
+      "fields": {
+        "key": {
+          "name": "Vlastnost",
+          "description": "Název vlastnosti k nastavení (jak ji zařízení poskytuje)."
+        },
+        "value": {
+          "name": "Hodnota",
+          "description": "Hodnota k nastavení."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Zavolat akci",
+      "description": "Zavolá surovou akci zařízení podle názvu. Pouze pro pokročilé použití.",
+      "fields": {
+        "key": {
+          "name": "Akce",
+          "description": "Název akce k zavolání (jak ji zařízení poskytuje)."
+        },
+        "value": {
+          "name": "Parametry",
+          "description": "Volitelné parametry akce."
+        }
+      }
     }
   }
 }

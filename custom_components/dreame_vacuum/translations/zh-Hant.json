@@ -1914,6 +1914,34 @@
         }
       },
       "name": "执行快捷指令"
+    },
+    "vacuum_set_property": {
+      "name": "設定屬性",
+      "description": "依名稱設定裝置的原始屬性。僅供進階使用者使用。",
+      "fields": {
+        "key": {
+          "name": "屬性",
+          "description": "要設定的屬性名稱（以裝置公開的名稱為準）。"
+        },
+        "value": {
+          "name": "值",
+          "description": "要設定的值。"
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "呼叫動作",
+      "description": "依名稱呼叫裝置的原始動作。僅供進階使用者使用。",
+      "fields": {
+        "key": {
+          "name": "動作",
+          "description": "要呼叫的動作名稱（以裝置公開的名稱為準）。"
+        },
+        "value": {
+          "name": "參數",
+          "description": "動作的選用參數。"
+        }
+      }
     }
   }
 }

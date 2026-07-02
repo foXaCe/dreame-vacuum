@@ -1914,6 +1914,34 @@
         }
       },
       "name": "바로가기 시작"
+    },
+    "vacuum_set_property": {
+      "name": "속성 설정",
+      "description": "이름으로 장치의 원시 속성을 설정합니다. 고급 사용자 전용.",
+      "fields": {
+        "key": {
+          "name": "속성",
+          "description": "설정할 속성의 이름(장치가 노출하는 대로)."
+        },
+        "value": {
+          "name": "값",
+          "description": "설정할 값."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "동작 호출",
+      "description": "이름으로 장치의 원시 동작을 호출합니다. 고급 사용자 전용.",
+      "fields": {
+        "key": {
+          "name": "동작",
+          "description": "호출할 동작의 이름(장치가 노출하는 대로)."
+        },
+        "value": {
+          "name": "매개변수",
+          "description": "동작의 선택적 매개변수."
+        }
+      }
     }
   }
 }

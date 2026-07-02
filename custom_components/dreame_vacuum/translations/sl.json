@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Zaženi bližnjico"
+    },
+    "vacuum_set_property": {
+      "name": "Nastavi lastnost",
+      "description": "Nastavi surovo lastnost naprave po imenu. Samo za napredno uporabo.",
+      "fields": {
+        "key": {
+          "name": "Lastnost",
+          "description": "Ime lastnosti za nastavitev (kot jo izpostavlja naprava)."
+        },
+        "value": {
+          "name": "Vrednost",
+          "description": "Vrednost za nastavitev."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Pokliči dejanje",
+      "description": "Pokliče surovo dejanje naprave po imenu. Samo za napredno uporabo.",
+      "fields": {
+        "key": {
+          "name": "Dejanje",
+          "description": "Ime dejanja za klic (kot ga izpostavlja naprava)."
+        },
+        "value": {
+          "name": "Parametri",
+          "description": "Neobvezni parametri dejanja."
+        }
+      }
     }
   }
 }

@@ -850,22 +850,13 @@ async def test_async_setup_entry_creates_entities(hass):
         for ent in entities:
             ent.hass = hass
 
-    # Provide a current platform so async_register_entity_service works.
-    platform = MagicMock()
-    from homeassistant.helpers import entity_platform
-
-    token = entity_platform.current_platform.set(platform)
-    try:
-        await async_setup_entry(hass, entry, _add)
-    finally:
-        entity_platform.current_platform.reset(token)
+    await async_setup_entry(hass, entry, _add)
 
     # Plain selects were created.
     assert any(isinstance(e, DreameVacuumSelectEntity) for e in added)
     # Per-segment selects were created via the listener.
     assert any(isinstance(e, DreameVacuumSegmentSelectEntity) for e in added)
-    # The four navigation services are registered.
-    assert platform.async_register_entity_service.call_count == 4
+    # Navigation services are registered from async_setup (tests/test_services.py).
     coordinator.async_add_listener.assert_called_once()
 
 

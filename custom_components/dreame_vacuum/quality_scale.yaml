@@ -1,12 +1,10 @@
 rules:
   # Bronze
   action-setup:
-    status: todo
+    status: done
     comment: >-
-      Entity services are still registered from the platform setup via
-      platform.async_register_entity_service. Migration to
-      service.async_register_platform_entity_service called from async_setup
-      (HA 2025.9+) is tracked.
+      All 39 entity services are registered once from async_setup via
+      service.async_register_platform_entity_service (services.py).
   appropriate-polling:
     status: done
     comment: >-

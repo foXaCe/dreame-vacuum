@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Iniciar atalho"
+    },
+    "vacuum_set_property": {
+      "name": "Definir propriedade",
+      "description": "Define uma propriedade bruta do dispositivo pelo nome. Apenas utilização avançada.",
+      "fields": {
+        "key": {
+          "name": "Propriedade",
+          "description": "Nome da propriedade a definir (tal como exposta pelo dispositivo)."
+        },
+        "value": {
+          "name": "Valor",
+          "description": "Valor a definir."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Chamar ação",
+      "description": "Chama uma ação bruta do dispositivo pelo nome. Apenas utilização avançada.",
+      "fields": {
+        "key": {
+          "name": "Ação",
+          "description": "Nome da ação a chamar (tal como exposta pelo dispositivo)."
+        },
+        "value": {
+          "name": "Parâmetros",
+          "description": "Parâmetros opcionais da ação."
+        }
+      }
     }
   }
 }

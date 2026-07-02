@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Gyorsparancs indítása"
+    },
+    "vacuum_set_property": {
+      "name": "Tulajdonság beállítása",
+      "description": "Nyers eszköztulajdonság beállítása név alapján. Csak haladó használatra.",
+      "fields": {
+        "key": {
+          "name": "Tulajdonság",
+          "description": "A beállítandó tulajdonság neve (ahogy az eszköz közzéteszi)."
+        },
+        "value": {
+          "name": "Érték",
+          "description": "A beállítandó érték."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Művelet meghívása",
+      "description": "Nyers eszközművelet meghívása név alapján. Csak haladó használatra.",
+      "fields": {
+        "key": {
+          "name": "Művelet",
+          "description": "A meghívandó művelet neve (ahogy az eszköz közzéteszi)."
+        },
+        "value": {
+          "name": "Paraméterek",
+          "description": "A művelet opcionális paraméterei."
+        }
+      }
     }
   }
 }

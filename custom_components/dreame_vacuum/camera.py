@@ -30,7 +30,7 @@ from homeassistant.components.camera import (
 )
 from homeassistant.const import CONTENT_TYPE_MULTIPART, STATE_UNAVAILABLE, EntityCategory
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_platform, entity_registry
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.http import HomeAssistantView
 
@@ -426,9 +426,6 @@ async def async_setup_entry(
             square,
             hass.config.language,
         )
-        platform = entity_platform.current_platform.get()
-        assert platform is not None
-        platform.async_register_entity_service("update", {}, DreameVacuumCameraEntity.async_update.__name__)
         entry.async_on_unload(coordinator.async_add_listener(update_map_cameras))
         update_map_cameras()
 

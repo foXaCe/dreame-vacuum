@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Kurzbefehlsstart"
+    },
+    "vacuum_set_property": {
+      "name": "Eigenschaft setzen",
+      "description": "Setzt eine rohe Geräteeigenschaft anhand ihres Namens. Nur für fortgeschrittene Nutzung.",
+      "fields": {
+        "key": {
+          "name": "Eigenschaft",
+          "description": "Name der zu setzenden Eigenschaft (wie vom Gerät bereitgestellt)."
+        },
+        "value": {
+          "name": "Wert",
+          "description": "Zu setzender Wert."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Aktion aufrufen",
+      "description": "Ruft eine rohe Geräteaktion anhand ihres Namens auf. Nur für fortgeschrittene Nutzung.",
+      "fields": {
+        "key": {
+          "name": "Aktion",
+          "description": "Name der aufzurufenden Aktion (wie vom Gerät bereitgestellt)."
+        },
+        "value": {
+          "name": "Parameter",
+          "description": "Optionale Parameter für die Aktion."
+        }
+      }
     }
   }
 }

@@ -1862,6 +1862,34 @@
           "description": "If the option should cycle from the first to the last."
         }
       }
+    },
+    "vacuum_set_property": {
+      "name": "Set property",
+      "description": "Set a raw device property by name. Advanced use only.",
+      "fields": {
+        "key": {
+          "name": "Property",
+          "description": "Name of the property to set (as exposed by the device)."
+        },
+        "value": {
+          "name": "Value",
+          "description": "Value to set."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Call action",
+      "description": "Call a raw device action by name. Advanced use only.",
+      "fields": {
+        "key": {
+          "name": "Action",
+          "description": "Name of the action to call (as exposed by the device)."
+        },
+        "value": {
+          "name": "Parameters",
+          "description": "Optional parameters for the action."
+        }
+      }
     }
   },
   "exceptions": {

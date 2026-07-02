@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Snelkoppeling starten"
+    },
+    "vacuum_set_property": {
+      "name": "Eigenschap instellen",
+      "description": "Stelt een ruwe apparaateigenschap in op naam. Alleen voor gevorderd gebruik.",
+      "fields": {
+        "key": {
+          "name": "Eigenschap",
+          "description": "Naam van de in te stellen eigenschap (zoals door het apparaat weergegeven)."
+        },
+        "value": {
+          "name": "Waarde",
+          "description": "In te stellen waarde."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Actie aanroepen",
+      "description": "Roept een ruwe apparaatactie aan op naam. Alleen voor gevorderd gebruik.",
+      "fields": {
+        "key": {
+          "name": "Actie",
+          "description": "Naam van de aan te roepen actie (zoals door het apparaat weergegeven)."
+        },
+        "value": {
+          "name": "Parameters",
+          "description": "Optionele parameters voor de actie."
+        }
+      }
     }
   }
 }

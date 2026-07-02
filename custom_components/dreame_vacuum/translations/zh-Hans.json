@@ -1914,6 +1914,34 @@
         }
       },
       "name": "启动快捷方式"
+    },
+    "vacuum_set_property": {
+      "name": "设置属性",
+      "description": "按名称设置设备的原始属性。仅供高级用户使用。",
+      "fields": {
+        "key": {
+          "name": "属性",
+          "description": "要设置的属性名称（以设备公开的名称为准）。"
+        },
+        "value": {
+          "name": "值",
+          "description": "要设置的值。"
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "调用动作",
+      "description": "按名称调用设备的原始动作。仅供高级用户使用。",
+      "fields": {
+        "key": {
+          "name": "动作",
+          "description": "要调用的动作名称（以设备公开的名称为准）。"
+        },
+        "value": {
+          "name": "参数",
+          "description": "动作的可选参数。"
+        }
+      }
     }
   }
 }

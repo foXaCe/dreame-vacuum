@@ -1170,10 +1170,7 @@ class TestAsyncSetupEntry:
     async def test_creates_cameras_and_registers_views(self) -> None:
         hass, entry, async_add_entities, coordinator = _setup_entry_mocks()
 
-        platform = MagicMock()
-        with patch.object(cam.entity_platform, "current_platform") as current_platform:
-            current_platform.get.return_value = platform
-            await async_setup_entry(hass, entry, async_add_entities)
+        await async_setup_entry(hass, entry, async_add_entities)
 
         # The two base map cameras are added (generator consumed by add_entities).
         assert async_add_entities.call_count >= 1
@@ -1185,17 +1182,12 @@ class TestAsyncSetupEntry:
         assert hass.http.register_view.call_count == 7
         assert hass.data[_VIEWS_REGISTERED_KEY] is True
 
-        # The update entity-service is registered too.
-        platform.async_register_entity_service.assert_called_once()
         coordinator.async_add_listener.assert_called_once()
 
     async def test_views_not_reregistered_when_flag_set(self) -> None:
         hass, entry, async_add_entities, _ = _setup_entry_mocks(views_already_registered=True)
 
-        platform = MagicMock()
-        with patch.object(cam.entity_platform, "current_platform") as current_platform:
-            current_platform.get.return_value = platform
-            await async_setup_entry(hass, entry, async_add_entities)
+        await async_setup_entry(hass, entry, async_add_entities)
 
         # Idempotent: views already registered -> register_view is never called.
         hass.http.register_view.assert_not_called()

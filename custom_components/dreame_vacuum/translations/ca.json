@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Iniciar drecera"
+    },
+    "vacuum_set_property": {
+      "name": "Estableix una propietat",
+      "description": "Estableix una propietat en brut del dispositiu pel seu nom. Només per a ús avançat.",
+      "fields": {
+        "key": {
+          "name": "Propietat",
+          "description": "Nom de la propietat a establir (tal com l'exposa el dispositiu)."
+        },
+        "value": {
+          "name": "Valor",
+          "description": "Valor a establir."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Crida una acció",
+      "description": "Crida una acció en brut del dispositiu pel seu nom. Només per a ús avançat.",
+      "fields": {
+        "key": {
+          "name": "Acció",
+          "description": "Nom de l'acció a cridar (tal com l'exposa el dispositiu)."
+        },
+        "value": {
+          "name": "Paràmetres",
+          "description": "Paràmetres opcionals de l'acció."
+        }
+      }
     }
   }
 }

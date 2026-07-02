@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Iniciar acceso directo"
+    },
+    "vacuum_set_property": {
+      "name": "Establecer propiedad",
+      "description": "Establece una propiedad sin procesar del dispositivo por su nombre. Solo uso avanzado.",
+      "fields": {
+        "key": {
+          "name": "Propiedad",
+          "description": "Nombre de la propiedad a establecer (tal como la expone el dispositivo)."
+        },
+        "value": {
+          "name": "Valor",
+          "description": "Valor a establecer."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Llamar acción",
+      "description": "Llama a una acción sin procesar del dispositivo por su nombre. Solo uso avanzado.",
+      "fields": {
+        "key": {
+          "name": "Acción",
+          "description": "Nombre de la acción a llamar (tal como la expone el dispositivo)."
+        },
+        "value": {
+          "name": "Parámetros",
+          "description": "Parámetros opcionales de la acción."
+        }
+      }
     }
   }
 }

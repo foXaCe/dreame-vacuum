@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Démarrer le raccourci"
+    },
+    "vacuum_set_property": {
+      "name": "Définir une propriété",
+      "description": "Définit une propriété brute de l'appareil par son nom. Usage avancé uniquement.",
+      "fields": {
+        "key": {
+          "name": "Propriété",
+          "description": "Nom de la propriété à définir (telle qu'exposée par l'appareil)."
+        },
+        "value": {
+          "name": "Valeur",
+          "description": "Valeur à définir."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Appeler une action",
+      "description": "Appelle une action brute de l'appareil par son nom. Usage avancé uniquement.",
+      "fields": {
+        "key": {
+          "name": "Action",
+          "description": "Nom de l'action à appeler (telle qu'exposée par l'appareil)."
+        },
+        "value": {
+          "name": "Paramètres",
+          "description": "Paramètres optionnels de l'action."
+        }
+      }
     }
   }
 }

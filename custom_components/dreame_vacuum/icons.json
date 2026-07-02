@@ -560,6 +560,12 @@
     },
     "vacuum_start_shortcut": {
       "service": "mdi:motion-play-outline"
+    },
+    "vacuum_set_property": {
+      "service": "mdi:tune-variant"
+    },
+    "vacuum_call_action": {
+      "service": "mdi:play-box-outline"
     }
   }
 }

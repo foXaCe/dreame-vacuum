@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Pornește scurtătura"
+    },
+    "vacuum_set_property": {
+      "name": "Setează proprietatea",
+      "description": "Setează o proprietate brută a dispozitivului după nume. Doar pentru utilizare avansată.",
+      "fields": {
+        "key": {
+          "name": "Proprietate",
+          "description": "Numele proprietății de setat (așa cum este expusă de dispozitiv)."
+        },
+        "value": {
+          "name": "Valoare",
+          "description": "Valoarea de setat."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Apelează acțiunea",
+      "description": "Apelează o acțiune brută a dispozitivului după nume. Doar pentru utilizare avansată.",
+      "fields": {
+        "key": {
+          "name": "Acțiune",
+          "description": "Numele acțiunii de apelat (așa cum este expusă de dispozitiv)."
+        },
+        "value": {
+          "name": "Parametri",
+          "description": "Parametri opționali ai acțiunii."
+        }
+      }
     }
   }
 }

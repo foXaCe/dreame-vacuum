@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Avvia scorciatoia"
+    },
+    "vacuum_set_property": {
+      "name": "Imposta proprietà",
+      "description": "Imposta una proprietà grezza del dispositivo tramite il nome. Solo per uso avanzato.",
+      "fields": {
+        "key": {
+          "name": "Proprietà",
+          "description": "Nome della proprietà da impostare (come esposta dal dispositivo)."
+        },
+        "value": {
+          "name": "Valore",
+          "description": "Valore da impostare."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Chiama azione",
+      "description": "Chiama un'azione grezza del dispositivo tramite il nome. Solo per uso avanzato.",
+      "fields": {
+        "key": {
+          "name": "Azione",
+          "description": "Nome dell'azione da chiamare (come esposta dal dispositivo)."
+        },
+        "value": {
+          "name": "Parametri",
+          "description": "Parametri opzionali dell'azione."
+        }
+      }
     }
   }
 }

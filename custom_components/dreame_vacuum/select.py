@@ -19,9 +19,8 @@ from homeassistant.components.select import (
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_platform, entity_registry
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity import async_generate_entity_id
-import voluptuous as vol
 
 PARALLEL_UPDATES = 1
 
@@ -31,11 +30,6 @@ if TYPE_CHECKING:
 
 from .const import (
     DOMAIN,
-    INPUT_CYCLE,
-    SERVICE_SELECT_FIRST,
-    SERVICE_SELECT_LAST,
-    SERVICE_SELECT_NEXT,
-    SERVICE_SELECT_PREVIOUS,
     UNIT_AREA,
     UNIT_TIMES,
     DreameVacuumConfigEntry,
@@ -773,21 +767,6 @@ async def async_setup_entry(
         for description in SELECTS
         if description.exists_fn(description, coordinator.device)
     )
-    platform = entity_platform.current_platform.get()
-    assert platform is not None
-    platform.async_register_entity_service(
-        SERVICE_SELECT_NEXT,
-        {vol.Optional(INPUT_CYCLE, default=True): bool},
-        DreameVacuumSelectEntity.async_next.__name__,
-    )
-    platform.async_register_entity_service(
-        SERVICE_SELECT_PREVIOUS,
-        {vol.Optional(INPUT_CYCLE, default=True): bool},
-        DreameVacuumSelectEntity.async_previous.__name__,
-    )
-    platform.async_register_entity_service(SERVICE_SELECT_FIRST, {}, DreameVacuumSelectEntity.async_first.__name__)
-    platform.async_register_entity_service(SERVICE_SELECT_LAST, {}, DreameVacuumSelectEntity.async_last.__name__)
-
     update_segment_selects = partial(async_update_segment_selects, coordinator, {}, async_add_entities)
     entry.async_on_unload(coordinator.async_add_listener(update_segment_selects))
     update_segment_selects()

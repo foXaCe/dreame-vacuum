@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Starta genväg"
+    },
+    "vacuum_set_property": {
+      "name": "Ställ in egenskap",
+      "description": "Ställer in en rå enhetsegenskap via namn. Endast för avancerad användning.",
+      "fields": {
+        "key": {
+          "name": "Egenskap",
+          "description": "Namn på egenskapen som ska ställas in (som enheten exponerar den)."
+        },
+        "value": {
+          "name": "Värde",
+          "description": "Värde att ställa in."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Anropa åtgärd",
+      "description": "Anropar en rå enhetsåtgärd via namn. Endast för avancerad användning.",
+      "fields": {
+        "key": {
+          "name": "Åtgärd",
+          "description": "Namn på åtgärden som ska anropas (som enheten exponerar den)."
+        },
+        "value": {
+          "name": "Parametrar",
+          "description": "Valfria parametrar för åtgärden."
+        }
+      }
     }
   }
 }

@@ -16,13 +16,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers.typing import ConfigType
 
 from .const import CONFIG_ENTRY_VERSION, DOMAIN, DreameVacuumConfigEntry, DreameVacuumRuntimeData
 from .coordinator import DreameVacuumDataUpdateCoordinator
 
 # Apply patch for python-miio Python 3.13 compatibility
 from .dreame.miio_patch import apply_miio_patch
+from .services import async_register_services
 
 apply_miio_patch()
 
@@ -39,6 +41,14 @@ PLATFORMS = (
     Platform.CAMERA,
     Platform.TIME,
 )
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the integration's entity services (quality scale: action-setup)."""
+    async_register_services(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: DreameVacuumConfigEntry) -> bool:

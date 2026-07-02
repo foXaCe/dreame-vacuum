@@ -1914,6 +1914,34 @@
         }
       },
       "name": "Uruchom skrót"
+    },
+    "vacuum_set_property": {
+      "name": "Ustaw właściwość",
+      "description": "Ustawia surową właściwość urządzenia po nazwie. Tylko do zaawansowanego użytku.",
+      "fields": {
+        "key": {
+          "name": "Właściwość",
+          "description": "Nazwa właściwości do ustawienia (tak jak udostępnia ją urządzenie)."
+        },
+        "value": {
+          "name": "Wartość",
+          "description": "Wartość do ustawienia."
+        }
+      }
+    },
+    "vacuum_call_action": {
+      "name": "Wywołaj akcję",
+      "description": "Wywołuje surową akcję urządzenia po nazwie. Tylko do zaawansowanego użytku.",
+      "fields": {
+        "key": {
+          "name": "Akcja",
+          "description": "Nazwa akcji do wywołania (tak jak udostępnia ją urządzenie)."
+        },
+        "value": {
+          "name": "Parametry",
+          "description": "Opcjonalne parametry akcji."
+        }
+      }
     }
   }
 }
