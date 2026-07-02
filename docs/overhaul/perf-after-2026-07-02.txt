@@ -12,3 +12,8 @@ import time:      2747 |     490091 |     homeassistant.components.persistent_no
 import time:       868 |     878622 |   custom_components.dreame_vacuum.coordinator
 import time:       387 |    1288602 | custom_components.dreame_vacuum
 importtime best-of-3 après: 1201630 µs (baseline: 1251837 µs)
+
+--- Re-mesure état final (après action-setup + paho V2), 2026-07-02 10:24 ---
+Setup of domain dreame_vacuum took 0.00-0.01 seconds (2 boots)
+importtime best-of-3 : 1168963 µs (baseline 1251837 µs → −6.6 %)
+services.py import isolé : +24 µs
