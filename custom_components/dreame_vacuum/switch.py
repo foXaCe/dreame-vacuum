@@ -522,9 +522,7 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
         key="camera_light_brightness_auto",
         icon_fn=lambda value, device: "mdi:brightness-percent" if not value else "mdi:brightness-auto",
         value_fn=lambda value, device: bool(device.status.camera_light_brightness == 101),
-        exists_fn=lambda description, device: (
-            device.capability.camera_streaming and device.capability.fill_light
-        ),
+        exists_fn=lambda description, device: device.capability.camera_streaming and device.capability.fill_light,
         format_fn=lambda value, device: 101 if value else 40,
         entity_category=EntityCategory.CONFIG,
     ),

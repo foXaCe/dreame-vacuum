@@ -621,6 +621,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
     @property
     def device(self) -> DreameVacuumDevice:
+        """Return the underlying Dreame vacuum device."""
         assert self._device is not None
         return self._device
 
@@ -638,13 +639,16 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             self._shared_proxy_renderer = None
 
     def set_update_error(self, ex: Any = None) -> None:
+        """Schedule an update error to be processed on the event loop thread."""
         self.hass.loop.call_soon_threadsafe(self.async_set_update_error, ex)
 
     def set_updated_data(self, data: DreameVacuumDevice | None = None) -> None:
+        """Schedule an updated data push to be processed on the event loop thread."""
         self.hass.loop.call_soon_threadsafe(self.async_set_updated_data, data)
 
     @callback
     def async_set_updated_data(self, data: DreameVacuumDevice | None = None) -> None:
+        """Publish the current device state to listeners and persist changed credentials."""
         # `data` is accepted for Liskov compatibility with
         # DataUpdateCoordinator.async_set_updated_data(self, data) and to absorb
         # the no-arg device push callback; the coordinator is the source of
@@ -694,6 +698,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
     @callback
     def async_set_update_error(self, ex: Any) -> None:
+        """Mark the device unavailable and log the update error."""
         if self._available:
             new_available = self._device is not None and self._device.available
             if self._available and not new_available:

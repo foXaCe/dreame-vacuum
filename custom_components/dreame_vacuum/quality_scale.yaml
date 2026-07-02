@@ -1,0 +1,103 @@
+rules:
+  # Bronze
+  action-setup:
+    status: todo
+    comment: >-
+      Entity services are still registered from the platform setup via
+      platform.async_register_entity_service. Migration to
+      service.async_register_platform_entity_service called from async_setup
+      (HA 2025.9+) is tracked.
+  appropriate-polling:
+    status: done
+    comment: >-
+      Push-dominant (MQTT). The safety poll runs every 300 s and stretches
+      automatically on cloud rate limiting (Retry-After).
+  brands: done
+  common-modules: done
+  config-flow: done
+  config-flow-test-coverage: done
+  dependency-transparency: done
+  docs-actions: done
+  docs-triggers:
+    status: exempt
+    comment: The integration does not provide triggers.
+  docs-conditions:
+    status: exempt
+    comment: The integration does not provide conditions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  entity-event-setup: done
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+
+  # Silver
+  action-exceptions: done
+  config-entry-unloading: done
+  docs-configuration-parameters: done
+  docs-installation-parameters: done
+  entity-unavailable: done
+  integration-owner: done
+  log-when-unavailable: done
+  parallel-updates: done
+  reauthentication-flow: done
+  test-coverage:
+    status: todo
+    comment: >-
+      The Home Assistant layer is at ~95-100% per module; the embedded dreame
+      protocol/map library is significantly below the 95% bar and is being
+      raised incrementally.
+
+  # Gold
+  devices: done
+  diagnostics: done
+  discovery:
+    status: exempt
+    comment: >-
+      Devices are cloud-account based (Dreame/Mova/Mi Home); the device list
+      is retrieved from the cloud during the config flow. There is no local
+      network discovery protocol usable for these vacuums.
+  discovery-update-info:
+    status: exempt
+    comment: No local discovery (see discovery).
+  docs-data-update: done
+  docs-examples: done
+  docs-known-limitations: done
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
+  dynamic-devices:
+    status: exempt
+    comment: >-
+      Each config entry manages exactly one physical vacuum. Dynamic entities
+      (rooms, shortcuts, saved maps) are added and removed at runtime instead.
+  entity-category: done
+  entity-device-class: done
+  entity-disabled-by-default: done
+  entity-translations: done
+  exception-translations: done
+  icon-translations: done
+  reconfiguration-flow: done
+  repair-issues: done
+  stale-devices: done
+
+  # Platinum
+  async-dependency:
+    status: exempt
+    comment: >-
+      The vendor protocol relies on requests (sync HTTP) and paho-mqtt
+      (thread-based). All blocking calls are isolated in executor threads and
+      never touch the event loop; a migration to aiohttp/aiomqtt is tracked
+      but out of scope for now.
+  inject-websession:
+    status: exempt
+    comment: Depends on async-dependency (requests sessions are internal).
+  strict-typing:
+    status: todo
+    comment: >-
+      mypy runs in strict "ratchet" mode on ~34 modules; the remaining vendor
+      library modules are being tightened incrementally.

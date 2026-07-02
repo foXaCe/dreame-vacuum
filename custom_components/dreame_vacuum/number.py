@@ -36,6 +36,7 @@ from .entity import DreameVacuumEntity, DreameVacuumNumberEntityDescription, def
 
 
 def WETNESS_LEVEL_TO_ICON(wetness: int, max_level: int) -> str:
+    """Return the mop wetness icon matching the given level."""
     if wetness:
         if wetness > max_level:
             return "mdi:water-plus"
@@ -140,9 +141,7 @@ NUMBERS: tuple[DreameVacuumNumberEntityDescription, ...] = (
         native_min_value=40,
         native_max_value=100,
         native_step=1,
-        exists_fn=lambda description, device: (
-            device.capability.camera_streaming and device.capability.fill_light
-        ),
+        exists_fn=lambda description, device: device.capability.camera_streaming and device.capability.fill_light,
         native_unit_of_measurement=UNIT_PERCENT,
         entity_category=EntityCategory.CONFIG,
     ),
@@ -234,6 +233,7 @@ def async_update_segment_numbers(
     current: dict[int, list[DreameVacuumSegmentNumberEntity]],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Add or remove per-segment number entities to match the current map segments."""
     new_ids: list[int] = []
     if coordinator.device and coordinator.device.status.map_list:
         for k, v in (coordinator.device.status.map_data_list or {}).items():
@@ -265,6 +265,7 @@ def async_remove_segment_numbers(
     coordinator: DreameVacuumDataUpdateCoordinator,
     current: dict[int, list[DreameVacuumSegmentNumberEntity]],
 ) -> None:
+    """Remove the number entities of a segment that no longer exists."""
     registry = entity_registry.async_get(coordinator.hass)
     entities = current[segment_id]
     for entity in entities:

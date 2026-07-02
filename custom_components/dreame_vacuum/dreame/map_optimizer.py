@@ -33,7 +33,6 @@ class DreameVacuumMapOptimizer:
         """Drop the embedded V8 context so it can be reclaimed on unload."""
         self._js_optimizer = None
 
-
     def _merge_saved_map_data(self, map_data: Any, saved_map_data: Any, original_data: Any = None) -> Any:
         if saved_map_data:
             maxX = map_data.dimensions.left + (map_data.dimensions.width * map_data.dimensions.grid_size)
@@ -236,6 +235,5 @@ class DreameVacuumMapOptimizer:
             _LOGGER.warning("Optimize map failed: %s", traceback.format_exc())
 
             self._merge_saved_map_data(map_data, saved_map_data)
-
 
         return map_data

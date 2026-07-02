@@ -24,6 +24,8 @@ except ImportError:
 
     @dataclass
     class Segment:  # type: ignore[no-redef]
+        """Fallback room segment descriptor for Home Assistant cores lacking it."""
+
         id: str
         name: str
         group: str | None = None
@@ -863,6 +865,7 @@ class DreameVacuum(DreameVacuumEntity, StateVacuumEntity):  # type: ignore[misc]
 
     @property
     def activity(self) -> Any:
+        """Return the current vacuum activity state."""
         if self._activity_class is not None and self._vacuum_state != STATE_UNKNOWN:
             try:
                 return self._activity_class(self._vacuum_state)
@@ -904,6 +907,7 @@ class DreameVacuum(DreameVacuumEntity, StateVacuumEntity):  # type: ignore[misc]
     async def async_clean_zone(
         self, zone: Any, repeats: int = 1, suction_level: str = "", water_volume: str = ""
     ) -> None:
+        """Clean the given zone with the requested settings."""
         await self._try_command(
             "Unable to call clean_zone: %s",
             self.device.clean_zone,

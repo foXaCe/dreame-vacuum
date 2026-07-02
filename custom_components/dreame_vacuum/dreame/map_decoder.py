@@ -316,7 +316,9 @@ class DreameVacuumMapDecoder:
         if data_json is None:
             data_json = {}
 
-        _LOGGER.debug("Map Data Json keys: %s", sorted(data_json.keys()) if isinstance(data_json, dict) else type(data_json))
+        _LOGGER.debug(
+            "Map Data Json keys: %s", sorted(data_json.keys()) if isinstance(data_json, dict) else type(data_json)
+        )
 
         saved_map_data = None
         try:

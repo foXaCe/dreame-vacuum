@@ -799,6 +799,7 @@ def async_update_segment_selects(
     current: dict[int, list[DreameVacuumSegmentSelectEntity]],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Add or remove per-segment select entities to match the current map segments."""
     new_ids: set[int] = set()
     if coordinator.device and coordinator.device.status.map_list:
         for k, v in (coordinator.device.status.map_data_list or {}).items():
@@ -828,6 +829,7 @@ def async_remove_segment_selects(
     coordinator: DreameVacuumDataUpdateCoordinator,
     current: dict[int, list[DreameVacuumSegmentSelectEntity]],
 ) -> None:
+    """Remove the select entities of a segment that no longer exists."""
     registry = entity_registry.async_get(coordinator.hass)
     entities = current[segment_id]
     for entity in entities:
@@ -852,7 +854,8 @@ class DreameVacuumOptionNavigationMixin:
         _attr_options: list[str] | None
         _attr_current_option: str | None
 
-        async def async_select_option(self, option: str) -> None: ...
+        async def async_select_option(self, option: str) -> None:
+            """Select the given option; implemented by the mixed-in SelectEntity."""
 
     async def async_select_index(self, idx: int) -> None:
         """Select new option by index."""
@@ -1125,6 +1128,7 @@ class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameV
 
     @property
     def enabled(self) -> bool:
+        """Return True if the segment select should be enabled by default."""
         if (
             not self.device.status.multi_map
             and self._attr_available

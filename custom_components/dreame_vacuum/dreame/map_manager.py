@@ -498,9 +498,7 @@ class DreameMapVacuumMapManager:
         if url is None:
             # Drop expired entries so the URL cache cannot grow unbounded
             # (map object names change with every map update).
-            self._file_urls = {
-                k: v for k, v in self._file_urls.items() if v[MAP_PARAMETER_EXPIRES_TIME] > now
-            }
+            self._file_urls = {k: v for k, v in self._file_urls.items() if v[MAP_PARAMETER_EXPIRES_TIME] > now}
             response = (
                 self._protocol.cloud.get_interim_file_url(object_name)
                 if interim

@@ -380,6 +380,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_login(self, error: str | None = None) -> ConfigFlowResult:
+        """Dispatch to the login step matching the selected account type."""
         if self.account_type == ACCOUNT_TYPE_MI:
             return await self.async_step_mi(error=error)
         if self.account_type == ACCOUNT_TYPE_DREAME:
@@ -444,6 +445,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
     async def async_step_2fa(
         self, user_input: dict[str, Any] | None = None, errors: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the two-factor authentication verification step."""
         if errors is None:
             errors = {}
         assert self.protocol is not None  # set during the login flow before reaching 2FA
@@ -473,6 +475,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
     async def async_step_captcha(
         self, user_input: dict[str, Any] | None = None, errors: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the captcha verification step."""
         if errors is None:
             errors = {}
         assert self.protocol is not None  # set during the login flow before reaching captcha
@@ -708,6 +711,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             self.device_id = device_info["did"]
 
     def load_devices(self) -> None:
+        """Lazily load the bundled model-to-name mapping."""
         if self.models is None:
             self.models = {}
             device_info = json.loads(zlib.decompress(base64.b64decode(DEVICE_INFO), zlib.MAX_WBITS | 32))
@@ -721,6 +725,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
     @property
     def login_schema(self) -> vol.Schema:
+        """Return the login form schema matching the reauth state and account type."""
         if self.reauth:
             return vol.Schema(
                 {

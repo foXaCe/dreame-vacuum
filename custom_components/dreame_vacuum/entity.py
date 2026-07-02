@@ -439,4 +439,5 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
 
     @property
     def device(self) -> DreameVacuumDevice:
+        """Return the underlying Dreame vacuum device."""
         return self.coordinator.device
