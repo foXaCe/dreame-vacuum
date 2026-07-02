@@ -24,8 +24,17 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import AbortFlow
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import format_mac
+from homeassistant.helpers.selector import (
+    BooleanSelector,
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 import voluptuous as vol
 
 from .const import (
@@ -52,6 +61,27 @@ from .const import (
 )
 from .dreame import DEVICE_INFO, MAP_COLOR_SCHEME_LIST, MAP_ICON_SET_LIST, VERSION, DreameVacuumProtocol
 
+_TEXT = TextSelector()
+_PASSWORD = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+_BOOL = BooleanSelector()
+
+
+def _select(options: list[str]) -> SelectSelector:
+    """Return a dropdown selector over plain string options."""
+    return SelectSelector(SelectSelectorConfig(options=options, mode=SelectSelectorMode.DROPDOWN))
+
+
+def _multi_select(options: dict[str, str]) -> SelectSelector:
+    """Return a multi-select selector from a value -> label mapping."""
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=[SelectOptionDict(value=value, label=label) for value, label in options.items()],
+            multiple=True,
+            mode=SelectSelectorMode.LIST,
+        )
+    )
+
+
 # Account type constants
 # New integrations will use DREAME only, but keep others for backward compatibility
 ACCOUNT_TYPE_DREAME = "dreame"
@@ -77,30 +107,30 @@ class DreameVacuumOptionsFlowHandler(OptionsFlowWithReload):
                 notify = []
 
         notification_labels = get_notification_labels(self.hass.config.language)
-        data_schema = vol.Schema({vol.Required(CONF_NOTIFY, default=notify): cv.multi_select(notification_labels)})
+        data_schema = vol.Schema({vol.Required(CONF_NOTIFY, default=notify): _multi_select(notification_labels)})
         if self.config_entry.data[CONF_USERNAME]:
             data_schema = data_schema.extend(
                 {
-                    vol.Required(CONF_COLOR_SCHEME, default=self.config_entry.options[CONF_COLOR_SCHEME]): vol.In(
+                    vol.Required(CONF_COLOR_SCHEME, default=self.config_entry.options[CONF_COLOR_SCHEME]): _select(
                         list(MAP_COLOR_SCHEME_LIST.keys())
                     ),
                     vol.Required(
                         CONF_ICON_SET,
                         default=self.config_entry.options.get(CONF_ICON_SET, next(iter(MAP_ICON_SET_LIST))),
-                    ): vol.In(list(MAP_ICON_SET_LIST.keys())),
+                    ): _select(list(MAP_ICON_SET_LIST.keys())),
                     vol.Required(
                         CONF_HIDDEN_MAP_OBJECTS,
                         default=self.config_entry.options.get(CONF_HIDDEN_MAP_OBJECTS, []),
-                    ): cv.multi_select(MAP_OBJECTS),
-                    vol.Required(CONF_SQUARE, default=self.config_entry.options.get(CONF_SQUARE, False)): bool,
+                    ): _multi_select(MAP_OBJECTS),
+                    vol.Required(CONF_SQUARE, default=self.config_entry.options.get(CONF_SQUARE, False)): _BOOL,
                     vol.Required(
                         CONF_VECTOR_ROOMS,
                         default=self.config_entry.options.get(CONF_VECTOR_ROOMS, True),
-                    ): bool,
+                    ): _BOOL,
                     vol.Required(
                         CONF_LOW_RESOLUTION,
                         default=self.config_entry.options.get(CONF_LOW_RESOLUTION, False),
-                    ): bool,
+                    ): _BOOL,
                 }
             )
             if self.config_entry.data.get(CONF_ACCOUNT_TYPE, ACCOUNT_TYPE_MI) == ACCOUNT_TYPE_MI:
@@ -109,7 +139,7 @@ class DreameVacuumOptionsFlowHandler(OptionsFlowWithReload):
                         vol.Required(
                             CONF_PREFER_CLOUD,
                             default=self.config_entry.options.get(CONF_PREFER_CLOUD, True),
-                        ): bool,
+                        ): _BOOL,
                     }
                 )
 
@@ -232,7 +262,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id="reconfigure_confirm",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_HOST, default=self.host): str,
+                    vol.Required(CONF_HOST, default=self.host): _TEXT,
                 }
             ),
             errors=errors,
@@ -339,8 +369,8 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id=ACCOUNT_TYPE_LOCAL,
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_HOST, default=self.host): str,
-                    vol.Required(CONF_TOKEN, default=self.token): str,
+                    vol.Required(CONF_HOST, default=self.host): _TEXT,
+                    vol.Required(CONF_TOKEN, default=self.token): _TEXT,
                 }
             ),
             description_placeholders={
@@ -433,7 +463,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id="2fa",
             data_schema=vol.Schema(
                 {
-                    vol.Required("verification_code"): str,
+                    vol.Required("verification_code"): _TEXT,
                 }
             ),
             description_placeholders={"url": self.protocol.cloud.verification_url or ""},
@@ -464,7 +494,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id="captcha",
             data_schema=vol.Schema(
                 {
-                    vol.Required("code"): str,
+                    vol.Required("code"): _TEXT,
                 }
             ),
             description_placeholders={"img": self.protocol.cloud.captcha_img or ""},
@@ -570,7 +600,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="devices",
-            data_schema=vol.Schema({vol.Required("devices"): vol.In(list(self.devices))}),
+            data_schema=vol.Schema({vol.Required("devices"): _select(list(self.devices))}),
             errors={},
         )
 
@@ -610,8 +640,8 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
         notification_labels = get_notification_labels(self.hass.config.language)
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_NAME, default=self.name): str,
-                vol.Required(CONF_NOTIFY, default=list(NOTIFICATION.keys())): cv.multi_select(notification_labels),
+                vol.Required(CONF_NAME, default=self.name): _TEXT,
+                vol.Required(CONF_NOTIFY, default=list(NOTIFICATION.keys())): _multi_select(notification_labels),
             }
         )
 
@@ -635,14 +665,14 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
         if self.account_type != ACCOUNT_TYPE_LOCAL:
             data_schema = data_schema.extend(
                 {
-                    vol.Required(CONF_COLOR_SCHEME, default=default_color_scheme): vol.In(
+                    vol.Required(CONF_COLOR_SCHEME, default=default_color_scheme): _select(
                         list(MAP_COLOR_SCHEME_LIST.keys())
                     ),
-                    vol.Required(CONF_ICON_SET, default=default_icon_set): vol.In(list(MAP_ICON_SET_LIST.keys())),
-                    vol.Required(CONF_HIDDEN_MAP_OBJECTS, default=hidden_map_objects): cv.multi_select(MAP_OBJECTS),
-                    vol.Required(CONF_SQUARE, default=False): bool,
-                    vol.Required(CONF_VECTOR_ROOMS, default=True): bool,
-                    vol.Required(CONF_LOW_RESOLUTION, default=False): bool,
+                    vol.Required(CONF_ICON_SET, default=default_icon_set): _select(list(MAP_ICON_SET_LIST.keys())),
+                    vol.Required(CONF_HIDDEN_MAP_OBJECTS, default=hidden_map_objects): _multi_select(MAP_OBJECTS),
+                    vol.Required(CONF_SQUARE, default=False): _BOOL,
+                    vol.Required(CONF_VECTOR_ROOMS, default=True): _BOOL,
+                    vol.Required(CONF_LOW_RESOLUTION, default=False): _BOOL,
                 }
             )
 
@@ -694,27 +724,27 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
         if self.reauth:
             return vol.Schema(
                 {
-                    vol.Required(CONF_USERNAME, default=self.username): str,
-                    vol.Required(CONF_PASSWORD): str,
+                    vol.Required(CONF_USERNAME, default=self.username): _TEXT,
+                    vol.Required(CONF_PASSWORD): _PASSWORD,
                 }
             )
 
         if self.account_type == ACCOUNT_TYPE_MI:
             return vol.Schema(
                 {
-                    vol.Required(CONF_USERNAME, default=self.username): str,
-                    vol.Required(CONF_PASSWORD): str,
-                    vol.Required(CONF_COUNTRY, default=("de" if self.country == "eu" else self.country)): vol.In(
+                    vol.Required(CONF_USERNAME, default=self.username): _TEXT,
+                    vol.Required(CONF_PASSWORD): _PASSWORD,
+                    vol.Required(CONF_COUNTRY, default=("de" if self.country == "eu" else self.country)): _select(
                         ["de", "cn", "us", "ru", "tw", "sg", "in", "i2"]
                     ),
-                    vol.Optional(CONF_PREFER_CLOUD, default=self.prefer_cloud): bool,
+                    vol.Optional(CONF_PREFER_CLOUD, default=self.prefer_cloud): _BOOL,
                 }
             )
 
         return vol.Schema(
             {
-                vol.Required(CONF_USERNAME, default=self.username): str,
-                vol.Required(CONF_PASSWORD): str,
-                vol.Required(CONF_COUNTRY, default=self.country): vol.In(["eu", "cn", "us", "ru", "sg"]),
+                vol.Required(CONF_USERNAME, default=self.username): _TEXT,
+                vol.Required(CONF_PASSWORD): _PASSWORD,
+                vol.Required(CONF_COUNTRY, default=self.country): _select(["eu", "cn", "us", "ru", "sg"]),
             }
         )

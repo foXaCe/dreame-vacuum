@@ -104,7 +104,8 @@
           "low_resolution": "低分辨率地图",
           "name": "名称",
           "notify": "通知",
-          "square": "方形地图"
+          "square": "方形地图",
+          "vector_rooms": "平滑地圖邊緣"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "對房間和牆壁的斜向邊緣進行抗鋸齒處理，使地圖更乾淨、更精緻。"
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "title": "{device_name} 的地圖分區已變更",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "地圖分區已變更",
+            "description": "地圖房間已變更（有房間被新增、移除或重新編號）。引用房間 ID 的分區自動化與腳本可能不再指向正確的房間。請檢查後選擇**提交**以關閉此問題。"
+          }
+        }
+      }
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "低分辨率地图",
           "notify": "通知",
           "prefer_cloud": "使用云端连接",
-          "square": "方形地图"
+          "square": "方形地图",
+          "vector_rooms": "平滑地圖邊緣"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "對房間和牆壁的斜向邊緣進行抗鋸齒處理，使地圖更乾淨、更精緻。"
         }
       }
     }

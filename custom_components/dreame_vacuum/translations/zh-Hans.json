@@ -104,7 +104,8 @@
           "low_resolution": "低分辨率地图",
           "name": "名称",
           "notify": "通知",
-          "square": "方形地图"
+          "square": "方形地图",
+          "vector_rooms": "平滑地图边缘"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "对房间和墙壁的斜向边缘进行抗锯齿处理，使地图更干净、更精致。"
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "title": "{device_name} 的地图分区已更改",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "地图分区已更改",
+            "description": "地图房间已更改（有房间被添加、删除或重新编号）。引用房间 ID 的基于分区的自动化和脚本可能不再指向正确的房间。请检查后选择**提交**以关闭此问题。"
+          }
+        }
+      }
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "低分辨率地图",
           "notify": "通知",
           "prefer_cloud": "使用云端联机",
-          "square": "方形地图"
+          "square": "方形地图",
+          "vector_rooms": "平滑地图边缘"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "对房间和墙壁的斜向边缘进行抗锯齿处理，使地图更干净、更精致。"
         }
       }
     }

@@ -104,7 +104,8 @@
           "low_resolution": "Mapa de baixa resolução",
           "name": "Nome",
           "notify": "Notificação",
-          "square": "Mapa quadrado"
+          "square": "Mapa quadrado",
+          "vector_rooms": "Suavizar bordas do mapa"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-aliasing das bordas diagonais de cômodos e paredes para um mapa mais limpo e refinado."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "title": "Segmentos do mapa alterados em {device_name}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segmentos do mapa alterados",
+            "description": "Os cômodos do mapa mudaram (um cômodo foi adicionado, removido ou renumerado). Automações e scripts baseados em segmentos que referenciam IDs de cômodos podem não apontar mais para os cômodos corretos. Revise-os e selecione **Enviar** para dispensar este problema."
+          }
+        }
+      }
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Mapa de baixa resolução",
           "notify": "Notificação",
           "prefer_cloud": "Preferir conexão com a nuvem",
-          "square": "Mapa quadrado"
+          "square": "Mapa quadrado",
+          "vector_rooms": "Suavizar bordas do mapa"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-aliasing das bordas diagonais de cômodos e paredes para um mapa mais limpo e refinado."
         }
       }
     }

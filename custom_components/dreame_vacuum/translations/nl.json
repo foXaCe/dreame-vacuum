@@ -104,7 +104,8 @@
           "low_resolution": "Kaart met lage resolutie",
           "name": "Naam",
           "notify": "Notificatie",
-          "square": "Vierkante kaart"
+          "square": "Vierkante kaart",
+          "vector_rooms": "Kaartranden gladmaken"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-aliasing van diagonale kamer- en muurranden voor een strakkere, mooiere kaart."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "Het verbruiksartikel **{consumable}** op **{device_name}** is op en moet worden vervangen. Vervang het en reset de teller via de apparaatinstellingen.",
       "title": "Verbruiksartikel verbruikt op {device_name}"
+    },
+    "segments_changed": {
+      "title": "Kaartsegmenten gewijzigd op {device_name}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Kaartsegmenten gewijzigd",
+            "description": "De kamers op de kaart zijn gewijzigd (een kamer is toegevoegd, verwijderd of hernummerd). Automatiseringen en scripts op basis van segmenten die kamer-ID's gebruiken, richten zich mogelijk niet meer op de juiste kamers. Controleer ze en selecteer daarna **Verzenden** om dit probleem te sluiten."
+          }
+        }
+      }
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Kaart met lage resolutie",
           "notify": "Notificatie",
           "prefer_cloud": "Voorkeur voor cloudverbinding",
-          "square": "Vierkante kaart"
+          "square": "Vierkante kaart",
+          "vector_rooms": "Kaartranden gladmaken"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-aliasing van diagonale kamer- en muurranden voor een strakkere, mooiere kaart."
         }
       }
     }

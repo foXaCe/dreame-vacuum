@@ -104,7 +104,8 @@
           "low_resolution": "저해상도 지도",
           "name": "이름",
           "notify": "알림",
-          "square": "정사각형 지도"
+          "square": "정사각형 지도",
+          "vector_rooms": "지도 가장자리 부드럽게"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "방과 벽의 대각선 가장자리에 안티앨리어싱을 적용하여 더 깔끔하고 고급스러운 지도를 만듭니다."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "title": "{device_name}의 지도 구역이 변경됨",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "지도 구역 변경됨",
+            "description": "지도의 방 구성이 변경되었습니다(방이 추가, 제거 또는 번호가 변경됨). 방 ID를 참조하는 구역 기반 자동화 및 스크립트가 더 이상 올바른 방을 대상으로 하지 않을 수 있습니다. 확인한 후 **제출**을 선택하여 이 문제를 닫으세요."
+          }
+        }
+      }
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "저해상도 지도",
           "notify": "알림",
           "prefer_cloud": "클라우드 연결 선호",
-          "square": "정사각형 지도"
+          "square": "정사각형 지도",
+          "vector_rooms": "지도 가장자리 부드럽게"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "방과 벽의 대각선 가장자리에 안티앨리어싱을 적용하여 더 깔끔하고 고급스러운 지도를 만듭니다."
         }
       }
     }

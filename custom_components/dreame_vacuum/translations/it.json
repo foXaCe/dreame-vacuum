@@ -104,7 +104,8 @@
           "low_resolution": "Mappa a bassa risoluzione",
           "name": "Nome",
           "notify": "Notifica",
-          "square": "Mappa quadrata"
+          "square": "Mappa quadrata",
+          "vector_rooms": "Leviga i bordi della mappa"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Applica l'anti-aliasing ai bordi diagonali di stanze e muri per una mappa più pulita e curata."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "Il materiale di consumo **{consumable}** su **{device_name}** è esaurito e deve essere sostituito. Sostituiscilo e reimposta il contatore dalle impostazioni del dispositivo.",
       "title": "Consumabile esaurito su {device_name}"
+    },
+    "segments_changed": {
+      "title": "Segmenti della mappa modificati su {device_name}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segmenti della mappa modificati",
+            "description": "Le stanze della mappa sono cambiate (una stanza è stata aggiunta, rimossa o rinumerata). Le automazioni e gli script basati sui segmenti che fanno riferimento agli ID delle stanze potrebbero non puntare più alle stanze corrette. Controllale, poi seleziona **Invia** per ignorare questo problema."
+          }
+        }
+      }
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Mappa a bassa risoluzione",
           "notify": "Notifica",
           "prefer_cloud": "Preferisci la connessione cloud",
-          "square": "Mappa quadrata"
+          "square": "Mappa quadrata",
+          "vector_rooms": "Leviga i bordi della mappa"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Applica l'anti-aliasing ai bordi diagonali di stanze e muri per una mappa più pulita e curata."
         }
       }
     }
