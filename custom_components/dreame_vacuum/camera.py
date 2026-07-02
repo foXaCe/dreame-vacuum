@@ -809,8 +809,11 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                         and self._renderer is not None
                         and self._renderer.render_complete
                     ):
+                        map_for_render = await self.hass.async_add_executor_job(
+                            self.device.get_map_for_render, self._map_data
+                        )
                         await self._update_image(
-                            self.device.get_map_for_render(self._map_data),
+                            map_for_render,
                             self.device.status.robot_status,
                             self.device.status.station_status,
                         )
@@ -930,11 +933,10 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         if self.map_index == 0 and not self.map_data_json:
             map_data = await self.hass.async_add_executor_job(self.device.history_map, index, cruising)
             if map_data:
-                map_data = (
-                    self.device.get_map_for_render(map_data)
-                    if cruising or not dirty_map or map_data.cleaning_map_data is None
-                    else map_data.cleaning_map_data
-                )
+                if cruising or not dirty_map or map_data.cleaning_map_data is None:
+                    map_data = await self.hass.async_add_executor_job(self.device.get_map_for_render, map_data)
+                else:
+                    map_data = map_data.cleaning_map_data
                 if data_string:
                     return await self.hass.async_add_executor_job(self._render_data_string, map_data, include_resources)
                 cache_key = "cruising" if cruising else "dirty" if dirty_map else "cleaning"
@@ -965,7 +967,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
             else:
                 map_data = await self.hass.async_add_executor_job(self.device.recovery_map, self._map_id, index)
             if map_data:
-                map_data = self.device.get_map_for_render(map_data)
+                map_data = await self.hass.async_add_executor_job(self.device.get_map_for_render, map_data)
                 if data_string:
                     return await self.hass.async_add_executor_job(self._render_data_string, map_data, include_resources)
                 return await self.hass.async_add_executor_job(
@@ -978,7 +980,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
             if map_data:
                 map_data = map_data.wifi_map_data
                 if map_data:
-                    map_data = self.device.get_map_for_render(map_data)
+                    map_data = await self.hass.async_add_executor_job(self.device.get_map_for_render, map_data)
                     if data_string:
                         return await self.hass.async_add_executor_job(
                             self._render_data_string, map_data, include_resources
