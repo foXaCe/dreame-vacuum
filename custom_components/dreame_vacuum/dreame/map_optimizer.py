@@ -24,8 +24,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class DreameVacuumMapOptimizer:
+    """Post-processes decoded map grids before rendering (V8 port of the app algorithm)."""
+
     def __init__(self) -> None:
         self._js_optimizer: MiniRacer | None = None
+
+    def close(self) -> None:
+        """Drop the embedded V8 context so it can be reclaimed on unload."""
+        self._js_optimizer = None
 
 
     def _merge_saved_map_data(self, map_data: Any, saved_map_data: Any, original_data: Any = None) -> Any:

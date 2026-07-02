@@ -5,20 +5,14 @@ Provides circuit breaker, configurable timeouts, and retry with exponential back
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 import logging
 import random
 import threading
 import time
-from typing import TypeVar
-
-from .exceptions import CircuitOpenError
 
 _LOGGER = logging.getLogger(__name__)
-
-T = TypeVar("T")
 
 
 @dataclass
@@ -70,19 +64,6 @@ class CircuitBreaker:
     def is_closed(self) -> bool:
         return self.state is CircuitState.CLOSED
 
-    def check(self) -> None:
-        """Raise CircuitOpenError if the circuit is open."""
-        with self._lock:
-            if self._state is CircuitState.OPEN:
-                if time.monotonic() - self._last_failure_time >= self.recovery_timeout:
-                    self._state = CircuitState.HALF_OPEN
-                    _LOGGER.debug("Circuit breaker → HALF_OPEN (recovery timeout elapsed)")
-                else:
-                    raise CircuitOpenError(
-                        f"Circuit breaker is open ({self._failure_count} consecutive failures). "
-                        f"Will retry in {self.recovery_timeout - (time.monotonic() - self._last_failure_time):.0f}s."
-                    )
-
     def record_success(self) -> None:
         """Record a successful call."""
         with self._lock:
@@ -111,47 +92,25 @@ class CircuitBreaker:
             self._last_failure_time = 0.0
 
 
-def retry_with_backoff(
-    func: Callable[[], T],
+def backoff_delay(
+    attempt: int,
     *,
-    retry_count: int = 2,
     base_delay: float = 0.5,
     max_delay: float = 10.0,
     jitter: bool = True,
-    exceptions: tuple[type[BaseException], ...] = (Exception,),
-) -> T:
-    """Retry a callable with exponential backoff.
+) -> float:
+    """Return the exponential backoff delay for a 1-based retry attempt.
 
     Args:
-        func: Zero-argument callable to retry.
-        retry_count: Maximum number of retries (0 = no retry, just one attempt).
+        attempt: 1-based retry attempt number.
         base_delay: Initial delay in seconds.
         max_delay: Maximum delay in seconds.
-        jitter: Add random jitter to delay.
-        exceptions: Exception types to catch and retry on.
+        jitter: Randomize the delay (50%-150%) to avoid thundering herds.
 
     Returns:
-        The return value of func on success.
-
-    Raises:
-        The last exception if all attempts fail.
+        Delay in seconds to sleep before the given attempt.
     """
-    last_exc: BaseException | None = None
-    for attempt in range(retry_count + 1):
-        try:
-            return func()
-        except exceptions as exc:
-            last_exc = exc
-            if attempt < retry_count:
-                delay = min(base_delay * (2**attempt), max_delay)
-                if jitter:
-                    delay *= 0.5 + random.random()
-                _LOGGER.debug(
-                    "Retry %d/%d after %.1fs (error: %s)",
-                    attempt + 1,
-                    retry_count,
-                    delay,
-                    exc,
-                )
-                time.sleep(delay)
-    raise last_exc  # type: ignore[misc]
+    delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
+    if jitter:
+        delay *= 0.5 + random.random()
+    return delay

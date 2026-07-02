@@ -43,7 +43,7 @@ apply_miio_patch()
 from miio.miioprotocol import MiIOProtocol
 
 from .exceptions import DeviceException, RateLimitError
-from .resilience import CircuitBreaker, CircuitState, TimeoutConfig
+from .resilience import CircuitBreaker, CircuitState, TimeoutConfig, backoff_delay
 
 DREAME_STRINGS: Final = "H4sICAAAAAAEAGNsb3VkX3N0cmluZ3MuanNvbgCFU9tuGjEQ/RUUKaiVysIuiKWKeKAgBK2qbbikIVWFBtvLuvFla5sQ+vUd26Q0fek+2HPmPsc7364Srl1CDQPJEsdIdfXuKu1m/RzvxegkNuPrUi4/1fn16ieqJsFxu5RgXKUla2dJmrxvvOFfKq3YTYMXy0Y6SHpJetNYEhCs3U06nbc+KRl0dt18kO+yrN/P8/6OUNIbpGU3p4MSetkO0g50O1AOUujTspVi0AewnDQeZh/F5msq7rPpkcw2z8Xj9PZeLrLbWT1ap9OHO1UVxWQ/xIBO+FCwDtzBoiDBOmbWnKK844pOtASuENRG18y4E4pIwZx6lQBXaiOH82LZtATtQxCiuTeg3NadEKKTYaVhtto6/chU8xXy5hqsPWpDmwfLjAIZYpov2gBCJiBEH5RD3I7st+DgqrYOZ8iGJnRi1sbkl9J/MHuuOSq2PBr3XHvBMeX7DROfU/teWjhlnNUjT0VEkamLhYIDH8meOGEoCG7dXebtqtTRUKzG8wi0I14KcxuQ9uwf8N5HS02ZCN0RHN9eWsJqLaKlfyqm6FhLCS8dlVz4UH95As9v5WM9c3hVWEIb/3J75iah0Uns2v6DJ7HYCElFtPY0jPZMuYtpIQgC76AN/wUucrgKHLbCXzHWyjEEq1gc6lpwEhzbP2zwrrd4bM/t6KMSGujaiKgorE3pK23cOamfoOU3Lok0fEb812KlSZb0/r9Y338DqLVvecIDAAA="
 
@@ -80,14 +80,13 @@ class DreameVacuumDeviceProtocol(MiIOProtocol):
         self._queue.put((callback, command, parameters, retry_count))
 
     def set_credentials(self, ip: str, token: str) -> None:
-        if self.ip != ip or self.token != token:
+        if token is None or token == "":
+            token = 32 * "0"
+        token_bytes = bytes.fromhex(token)
+        if self.ip != ip or self.token != token_bytes:
             self.ip = ip
             self.port = 54321
-            self.token = token
-
-            if token is None or token == "":
-                token = 32 * "0"
-            self.token = bytes.fromhex(token)
+            self.token = token_bytes
             self._discovered = False
 
     @property
@@ -782,14 +781,14 @@ class DreameVacuumDreameHomeCloudProtocol:
                         data,
                     )
                 if retries <= retry_count:
-                    sleep(min(0.5 * (2 ** (retries - 1)), 10.0))
+                    sleep(backoff_delay(retries))
             except requests.exceptions.ConnectionError as ex:
                 retries = retries + 1
                 response = None
                 if self._connected:
                     _LOGGER.warning("Connection error: %s", ex)
                 if retries <= retry_count:
-                    sleep(min(0.5 * (2 ** (retries - 1)), 10.0))
+                    sleep(backoff_delay(retries))
             except Exception as ex:
                 retries = retries + 1
                 response = None
@@ -818,7 +817,7 @@ class DreameVacuumDreameHomeCloudProtocol:
                     return self.request(url, data, retry_count, _relogin_attempted=True)
             else:
                 _LOGGER.warning("API call failed (HTTP %s)", response.status_code)
-                _LOGGER.debug("API call failure body: %s", response.text)
+                _LOGGER.debug("API call failure body (%d bytes): %.200s", len(response.text), response.text)
 
         self._circuit_breaker.record_failure()
         return None
@@ -1454,14 +1453,14 @@ class DreameVacuumMiHomeCloudProtocol:
                 if self._connected:
                     _LOGGER.warning("Request timed out (timeout=%ss): %s", self._timeout_config.mi_home_request, url)
                 if retries <= retry_count:
-                    sleep(min(0.5 * (2 ** (retries - 1)), 10.0))
+                    sleep(backoff_delay(retries))
             except requests.exceptions.ConnectionError as ex:
                 retries = retries + 1
                 response = None
                 if self._connected:
                     _LOGGER.warning("Connection error: %s %s", url, ex)
                 if retries <= retry_count:
-                    sleep(min(0.5 * (2 ** (retries - 1)), 10.0))
+                    sleep(backoff_delay(retries))
             except Exception as ex:
                 retries = retries + 1
                 response = None
@@ -1485,7 +1484,7 @@ class DreameVacuumMiHomeCloudProtocol:
                 _LOGGER.warning("Rate limited (HTTP 429), retry after %.0fs", retry_after)
                 raise RateLimitError(retry_after=retry_after)
             _LOGGER.warning("API call failed (HTTP %s)", response.status_code)
-            _LOGGER.debug("API call failure body: %s", response.text)
+            _LOGGER.debug("API call failure body (%d bytes): %.200s", len(response.text), response.text)
 
         self._circuit_breaker.record_failure()
         return None

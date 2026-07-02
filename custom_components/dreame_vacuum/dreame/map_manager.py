@@ -321,8 +321,10 @@ class DreameMapVacuumMapManager:
                 MAP_REQUEST_PARAMETER_FRAME_TYPE: MapFrameType.P.name,
             }
         )
+        # Release the key whatever the outcome; keeping it on failure would
+        # block any future retry of this exact map_id/frame_id pair.
+        self._request_queue.pop(key, None)
         if result and result[MAP_PARAMETER_CODE] == 0:
-            del self._request_queue[key]
             object_name = None
             raw_map_data = None
             timestamp = None
@@ -494,6 +496,11 @@ class DreameMapVacuumMapManager:
                 url = f"{object[MAP_PARAMETER_URL]}&current={now!s}"
 
         if url is None:
+            # Drop expired entries so the URL cache cannot grow unbounded
+            # (map object names change with every map update).
+            self._file_urls = {
+                k: v for k, v in self._file_urls.items() if v[MAP_PARAMETER_EXPIRES_TIME] > now
+            }
             response = (
                 self._protocol.cloud.get_interim_file_url(object_name)
                 if interim
@@ -1107,6 +1114,8 @@ class DreameMapVacuumMapManager:
         self.schedule_update(-1)
         if self.editor is not None:
             self.editor.cancel_pending()
+        if self.optimizer is not None:
+            self.optimizer.close()
         self._update_callback = None
         self._change_callback = None
         self._error_callback = None
@@ -1343,7 +1352,7 @@ class DreameMapVacuumMapManager:
                                     raw_map = response.decode()
                             except Exception as ex:
                                 _LOGGER.warning("Get Saved Map Object failed: %s", ex)
-                                return
+                                continue
 
                         if raw_map:
                             try:
@@ -1355,7 +1364,7 @@ class DreameMapVacuumMapManager:
                                 )
                             except Exception:
                                 _LOGGER.error("Parse saved map failed: %s", traceback.format_exc())
-                                return
+                                continue
 
                             if saved_map_data is not None:
                                 name = v.get(MAP_PARAMETER_NAME)

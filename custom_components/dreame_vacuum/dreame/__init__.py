@@ -15,13 +15,10 @@ VERSION = "v2.0.0b20"
 # Using explicit re-exports to satisfy linters while maintaining public API
 from .device import DreameVacuumDevice as DreameVacuumDevice
 from .exceptions import (
-    AuthenticationError as AuthenticationError,
-    CircuitOpenError as CircuitOpenError,
     DeviceConnectionError as DeviceConnectionError,
     DeviceException as DeviceException,
     DeviceUpdateFailedException as DeviceUpdateFailedException,
     InvalidActionException as InvalidActionException,
-    InvalidResponseError as InvalidResponseError,
     InvalidValueException as InvalidValueException,
     RateLimitError as RateLimitError,
 )
@@ -74,13 +71,10 @@ def __dir__() -> list[str]:
         "VERSION",
         "DreameVacuumDevice",
         "DreameVacuumProtocol",
-        "AuthenticationError",
-        "CircuitOpenError",
         "DeviceConnectionError",
         "DeviceException",
         "DeviceUpdateFailedException",
         "InvalidActionException",
-        "InvalidResponseError",
         "InvalidValueException",
         "RateLimitError",
     ]

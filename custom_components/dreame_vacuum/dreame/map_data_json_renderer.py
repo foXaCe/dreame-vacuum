@@ -601,7 +601,9 @@ class DreameVacuumMapDataJsonRenderer:
                 layers[MAP_DATA_JSON_PARAMETER_COMPRESSED_PIXELS] = compressed_pixels[3:]
                 layers[MAP_DATA_JSON_PARAMETER_PIXELS] = []
 
-        map_data_json[MAP_DATA_JSON_PARAMETER_LAYERS].extend(self._layers[MapRendererLayer.IMAGE])
+        image_layers = self._layers.get(MapRendererLayer.IMAGE)
+        if image_layers:
+            map_data_json[MAP_DATA_JSON_PARAMETER_LAYERS].extend(image_layers)
 
         self._map_data = map_data
         self._map_data_json = map_data_json
