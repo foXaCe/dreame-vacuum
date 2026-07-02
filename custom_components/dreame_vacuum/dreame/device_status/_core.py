@@ -7,7 +7,6 @@ and attributes from raw device property values.
 """
 
 from datetime import datetime
-import logging
 import time
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -201,8 +200,6 @@ from ..vacuum_types import (
     Segment,
 )
 
-_LOGGER = logging.getLogger(__name__)
-
 _BOOLEAN_PROPERTIES = frozenset(
     [
         DreameVacuumProperty.TIGHT_MOPPING,
@@ -360,8 +357,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.SUCTION_LEVEL)
         if value is not None and value in DreameVacuumSuctionLevel._value2member_map_:
             return DreameVacuumSuctionLevel(value)
-        if value is not None:
-            pass
         return DreameVacuumSuctionLevel.UNKNOWN
 
     @property
@@ -393,8 +388,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.WATER_VOLUME)
         if value is not None and value in DreameVacuumWaterVolume._value2member_map_:
             return DreameVacuumWaterVolume(value)
-        if value is not None:
-            pass
         return DreameVacuumWaterVolume.UNKNOWN
 
     @property
@@ -430,8 +423,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             if value == DreameVacuumStatus.CHARGING.value and not self.charging:
                 return DreameVacuumStatus.IDLE
             return DreameVacuumStatus(value)
-        if value is not None:
-            pass
         return DreameVacuumStatus.UNKNOWN
 
     @property
@@ -450,8 +441,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
                 if value == DreameVacuumTaskStatus.ZONE_CLEANING_PAUSED.value:
                     return DreameVacuumTaskStatus.CRUISING_POINT_PAUSED
             return DreameVacuumTaskStatus(value)
-        if value is not None:
-            pass
         return DreameVacuumTaskStatus.UNKNOWN
 
     @property
@@ -473,8 +462,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
 
             if value in DreameVacuumWaterTank._value2member_map_:
                 return DreameVacuumWaterTank(value)
-        if value is not None:
-            pass
         return DreameVacuumWaterTank.UNKNOWN
 
     @property
@@ -497,8 +484,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             if value is DreameVacuumChargingStatus.CHARGING and self.battery_level == 100:
                 return DreameVacuumChargingStatus.CHARGING_COMPLETED
             return value
-        if value is not None:
-            pass
         return DreameVacuumChargingStatus.UNKNOWN
 
     @property
@@ -512,8 +497,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.AUTO_EMPTY_STATUS)
         if value is not None and value in DreameVacuumAutoEmptyStatus._value2member_map_:
             return DreameVacuumAutoEmptyStatus(value)
-        if value is not None:
-            pass
         return DreameVacuumAutoEmptyStatus.UNKNOWN
 
     @property
@@ -527,8 +510,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.RELOCATION_STATUS)
         if value is not None and value in DreameVacuumRelocationStatus._value2member_map_:
             return DreameVacuumRelocationStatus(value)
-        if value is not None:
-            pass
         return DreameVacuumRelocationStatus.UNKNOWN
 
     @property
@@ -542,8 +523,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.SELF_WASH_BASE_STATUS)
         if value is not None and value in DreameVacuumSelfWashBaseStatus._value2member_map_:
             return DreameVacuumSelfWashBaseStatus(value)
-        if value is not None:
-            pass
         return DreameVacuumSelfWashBaseStatus.UNKNOWN
 
     @property
@@ -556,8 +535,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.DUST_COLLECTION)
         if value is not None and value in DreameVacuumDustCollection._value2member_map_:
             return DreameVacuumDustCollection(value)
-        if value is not None:
-            pass
         return DreameVacuumDustCollection.UNKNOWN
 
     @property
@@ -571,8 +548,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.CARPET_SENSITIVITY)
         if value is not None and value in DreameVacuumCarpetSensitivity._value2member_map_:
             return DreameVacuumCarpetSensitivity(value)
-        if value is not None:
-            pass
         return DreameVacuumCarpetSensitivity.UNKNOWN
 
     @property
@@ -596,8 +571,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
 
         if value is not None and value in DreameVacuumCarpetCleaning._value2member_map_:
             return DreameVacuumCarpetCleaning(value)
-        if value is not None:
-            pass
         return DreameVacuumCarpetCleaning.UNKNOWN
 
     @property
@@ -648,8 +621,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
                         return DreameVacuumState.CHARGING_COMPLETED
             return vacuum_state
 
-        if value is not None:
-            pass
         return DreameVacuumState.UNKNOWN
 
     @property
@@ -718,8 +689,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             value = 0
         if value is not None and value in DreameVacuumWiderCornerCoverage._value2member_map_:
             return DreameVacuumWiderCornerCoverage(value)
-        if value is not None:
-            pass
         return DreameVacuumWiderCornerCoverage.UNKNOWN
 
     @property
@@ -856,8 +825,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
                 value = 0
             if value is not None and value in DreameVacuumCleanGenius._value2member_map_:
                 return DreameVacuumCleanGenius(value)
-            if value is not None:
-                pass
         return DreameVacuumCleanGenius.UNKNOWN
 
     @property
@@ -876,8 +843,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
                 value = 0
             if value is not None and value in DreameVacuumCleanGeniusMode._value2member_map_:
                 return DreameVacuumCleanGeniusMode(value)
-            if value is not None:
-                pass
         return DreameVacuumCleanGeniusMode.UNKNOWN
 
     @property
@@ -896,8 +861,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
                 value = 0
             if value is not None and value in DreameVacuumWaterTemperature._value2member_map_:
                 return DreameVacuumWaterTemperature(value)
-            if value is not None:
-                pass
         return DreameVacuumWaterTemperature.UNKNOWN
 
     @property
@@ -918,8 +881,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
                 value = 1
             if value is not None and value in DreameVacuumWashingMode._value2member_map_:
                 return DreameVacuumWashingMode(value)
-            if value is not None:
-                pass
         return DreameVacuumWashingMode.UNKNOWN
 
     @property
@@ -980,8 +941,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.LOW_WATER_WARNING)
         if value is not None and value in DreameVacuumLowWaterWarning._value2member_map_:
             return DreameVacuumLowWaterWarning(value)
-        if value is not None:
-            pass
         return DreameVacuumLowWaterWarning.UNKNOWN
 
     @property
@@ -1000,8 +959,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.VOICE_ASSISTANT_LANGUAGE)
         if value is not None and value in DreameVacuumVoiceAssistantLanguage._value2member_map_:
             return DreameVacuumVoiceAssistantLanguage(value)
-        if value is not None:
-            pass
         return DreameVacuumVoiceAssistantLanguage.DEFAULT
 
     @property
@@ -1017,8 +974,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             if self.state == DreameVacuumState.AUTO_WATER_DRAINING or self.state == DreameVacuumState.DRAINING:
                 return DreameVacuumDrainageStatus.DRAINING
             return DreameVacuumDrainageStatus(value)
-        if value is not None:
-            pass
         return DreameVacuumDrainageStatus.UNKNOWN
 
     @property
@@ -1032,8 +987,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.TASK_TYPE)
         if value is not None and value in DreameVacuumTaskType._value2member_map_:
             return DreameVacuumTaskType(value)
-        if value is not None:
-            pass
         return DreameVacuumTaskType.UNKNOWN
 
     @property
@@ -1058,8 +1011,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             ):
                 return DreameVacuumErrorCode.NO_ERROR
             return DreameVacuumErrorCode(value)
-        if value is not None:
-            pass
         return DreameVacuumErrorCode.UNKNOWN
 
     @property
@@ -2082,8 +2033,6 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         value = self._get_property(DreameVacuumProperty.STATION_DRAINAGE_STATUS)
         if value is not None and value in DreameVacuumStationDrainageStatus._value2member_map_:
             return DreameVacuumStationDrainageStatus(value)
-        if value is not None:
-            pass
         return DreameVacuumStationDrainageStatus.UNKNOWN
 
     @property

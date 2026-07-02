@@ -240,7 +240,13 @@ async def async_setup_entry(
 
     platform = entity_platform.current_platform.get()
     assert platform is not None
+    _async_register_services(platform)
 
+    async_add_entities([DreameVacuum(coordinator)])
+
+
+def _async_register_services(platform: entity_platform.EntityPlatform) -> None:
+    """Register the custom entity services of the vacuum platform."""
     platform.async_register_entity_service(
         SERVICE_REQUEST_MAP,
         {},
@@ -699,8 +705,6 @@ async def async_setup_entry(
         {vol.Required(INPUT_KEY): cv.string, vol.Optional(INPUT_VALUE): cv.string},
         DreameVacuum.async_call_action.__name__,
     )
-
-    async_add_entities([DreameVacuum(coordinator)])
 
 
 class DreameVacuum(DreameVacuumEntity, StateVacuumEntity):  # type: ignore[misc]

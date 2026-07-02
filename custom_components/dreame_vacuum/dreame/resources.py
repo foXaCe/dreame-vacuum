@@ -192,26 +192,6 @@ def __getattr__(name: str) -> Any:
     return value
 
 
-def clear_cache() -> None:
-    """Clear the resource attribute cache to free memory."""
-    global _loaded_attrs
-    cache_size = len(_loaded_attrs)
-    _loaded_attrs.clear()
-    _LOGGER.info("Cleared %d cached resources from memory", cache_size)
-
-
-def get_cache_stats() -> dict[str, object]:
-    """Return statistics about the resource cache."""
-    loaded_any = _notification_module is not None or _resources_module is not None
-    return {
-        "notification_module_loaded": _notification_module is not None,
-        "resources_module_loaded": _resources_module is not None,
-        "cached_attributes": len(_loaded_attrs),
-        "available_attributes": len(__all__),
-        "cache_hit_rate": (f"{len(_loaded_attrs) / len(__all__) * 100:.1f}%" if loaded_any else "0%"),
-    }
-
-
 def __dir__() -> list[str]:
     """Return list of available attributes."""
     return __all__

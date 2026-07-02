@@ -1566,7 +1566,6 @@ ERROR_CODE_TO_IMAGE_INDEX: Final = {
     DreameVacuumErrorCode.NO_MOP_IN_STATION: 69,
     DreameVacuumErrorCode.DUST_BAG_FULL: 102,
     DreameVacuumErrorCode.DIRTY_TANK_NOT_INSTALLED: 76,
-    DreameVacuumErrorCode.CLEAN_TANK_LEVEL: 105,
     DreameVacuumErrorCode.STATION_DISCONNECTED: 117,
     DreameVacuumErrorCode.SELF_TEST_FAILED: 999,
     DreameVacuumErrorCode.WASHBOARD_NOT_WORKING: 111,

@@ -128,12 +128,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         return True
 
     if config_entry.version < CONFIG_ENTRY_VERSION:
-        # Future migrations go here
-        # Example:
-        # if config_entry.version == 1:
-        #     new_data = {**config_entry.data, "new_field": "default_value"}
-        #     hass.config_entries.async_update_entry(config_entry, data=new_data, version=2)
-
         hass.config_entries.async_update_entry(config_entry, version=CONFIG_ENTRY_VERSION)
 
     _LOGGER.info("Migration to version %s successful", CONFIG_ENTRY_VERSION)

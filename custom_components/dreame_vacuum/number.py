@@ -142,7 +142,7 @@ NUMBERS: tuple[DreameVacuumNumberEntityDescription, ...] = (
         native_step=1,
         exists_fn=lambda description, device: (
             device.capability.camera_streaming and device.capability.fill_light
-        ),  # and default_exists_fn(description, device),
+        ),
         native_unit_of_measurement=UNIT_PERCENT,
         entity_category=EntityCategory.CONFIG,
     ),

@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Device info module for Dreame vacuum integration.
 
 Contains DreameVacuumDeviceInfo data class for network, firmware
 and hardware information.
 """
+
+from __future__ import annotations
 
 from typing import Any, cast
 
