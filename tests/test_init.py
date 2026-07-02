@@ -14,7 +14,6 @@ from custom_components.dreame_vacuum import (
     async_migrate_entry,
     async_setup_entry,
     async_unload_entry,
-    update_listener,
 )
 from custom_components.dreame_vacuum.const import DOMAIN
 
@@ -121,8 +120,8 @@ async def test_setup_entry_success(hass: MagicMock, entry: MagicMock, coordinato
     coordinator.async_config_entry_first_refresh.assert_awaited_once()
     assert entry.runtime_data.coordinator is coordinator
     hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(entry, PLATFORMS)
-    entry.add_update_listener.assert_called_once()
-    entry.async_on_unload.assert_called_once()
+    # Options reload is handled by OptionsFlowWithReload; no manual listener.
+    entry.add_update_listener.assert_not_called()
     coordinator.cleanup.assert_not_called()
 
 
@@ -245,16 +244,3 @@ async def test_migrate_entry_older_version_updates(hass: MagicMock) -> None:
 
     assert await async_migrate_entry(hass, config_entry) is True
     hass.config_entries.async_update_entry.assert_called_once_with(config_entry, version=CONFIG_ENTRY_VERSION)
-
-
-# --- update_listener ------------------------------------------------------------
-
-
-async def test_update_listener_reloads_entry(hass: MagicMock) -> None:
-    """The options-update listener reloads the config entry."""
-    config_entry = MagicMock()
-    config_entry.entry_id = "abc"
-
-    await update_listener(hass, config_entry)
-
-    hass.config_entries.async_reload.assert_awaited_once_with("abc")

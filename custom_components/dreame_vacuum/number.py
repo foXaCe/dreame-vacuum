@@ -224,7 +224,7 @@ async def async_setup_entry(
     )
 
     update_segment_numbers = partial(async_update_segment_numbers, coordinator, {}, async_add_entities)
-    coordinator.async_add_listener(update_segment_numbers)
+    entry.async_on_unload(coordinator.async_add_listener(update_segment_numbers))
     update_segment_numbers()
 
 

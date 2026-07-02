@@ -427,7 +427,7 @@ async def async_setup_entry(
         platform = entity_platform.current_platform.get()
         assert platform is not None
         platform.async_register_entity_service("update", {}, DreameVacuumCameraEntity.async_update.__name__)
-        coordinator.async_add_listener(update_map_cameras)
+        entry.async_on_unload(coordinator.async_add_listener(update_map_cameras))
         update_map_cameras()
 
         # HTTP views are process-global; register them only once even when

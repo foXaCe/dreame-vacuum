@@ -259,7 +259,7 @@ async def async_setup_entry(
 
     if coordinator.device.capability.shortcuts or coordinator.device.capability.backup_map:
         update_buttons = partial(async_update_buttons, coordinator, {}, {}, async_add_entities)
-        coordinator.async_add_listener(update_buttons)
+        entry.async_on_unload(coordinator.async_add_listener(update_buttons))
         update_buttons()
 
 

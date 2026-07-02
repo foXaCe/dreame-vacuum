@@ -789,7 +789,7 @@ async def async_setup_entry(
     platform.async_register_entity_service(SERVICE_SELECT_LAST, {}, DreameVacuumSelectEntity.async_last.__name__)
 
     update_segment_selects = partial(async_update_segment_selects, coordinator, {}, async_add_entities)
-    coordinator.async_add_listener(update_segment_selects)
+    entry.async_on_unload(coordinator.async_add_listener(update_segment_selects))
     update_segment_selects()
 
 

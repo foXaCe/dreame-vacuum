@@ -13,7 +13,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import (
     CONF_HOST,
@@ -60,20 +60,16 @@ ACCOUNT_TYPE_MI = "mi"  # Keep for backward compatibility with existing configs
 ACCOUNT_TYPE_LOCAL = "local"  # Keep for backward compatibility with existing configs
 
 
-class DreameVacuumOptionsFlowHandler(OptionsFlow):
+class DreameVacuumOptionsFlowHandler(OptionsFlowWithReload):
     """Handle Dreame Vacuum options."""
-
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize Dreame Vacuum options flow."""
-        self._config_entry = config_entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage Dreame Vacuum options."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data={**self._config_entry.options, **user_input})
+            return self.async_create_entry(title="", data={**self.config_entry.options, **user_input})
 
-        notify = self._config_entry.options[CONF_NOTIFY]
+        notify = self.config_entry.options[CONF_NOTIFY]
         if isinstance(notify, bool):
             if notify is True:
                 notify = list(NOTIFICATION.keys())
@@ -82,37 +78,37 @@ class DreameVacuumOptionsFlowHandler(OptionsFlow):
 
         notification_labels = get_notification_labels(self.hass.config.language)
         data_schema = vol.Schema({vol.Required(CONF_NOTIFY, default=notify): cv.multi_select(notification_labels)})
-        if self._config_entry.data[CONF_USERNAME]:
+        if self.config_entry.data[CONF_USERNAME]:
             data_schema = data_schema.extend(
                 {
-                    vol.Required(CONF_COLOR_SCHEME, default=self._config_entry.options[CONF_COLOR_SCHEME]): vol.In(
+                    vol.Required(CONF_COLOR_SCHEME, default=self.config_entry.options[CONF_COLOR_SCHEME]): vol.In(
                         list(MAP_COLOR_SCHEME_LIST.keys())
                     ),
                     vol.Required(
                         CONF_ICON_SET,
-                        default=self._config_entry.options.get(CONF_ICON_SET, next(iter(MAP_ICON_SET_LIST))),
+                        default=self.config_entry.options.get(CONF_ICON_SET, next(iter(MAP_ICON_SET_LIST))),
                     ): vol.In(list(MAP_ICON_SET_LIST.keys())),
                     vol.Required(
                         CONF_HIDDEN_MAP_OBJECTS,
-                        default=self._config_entry.options.get(CONF_HIDDEN_MAP_OBJECTS, []),
+                        default=self.config_entry.options.get(CONF_HIDDEN_MAP_OBJECTS, []),
                     ): cv.multi_select(MAP_OBJECTS),
-                    vol.Required(CONF_SQUARE, default=self._config_entry.options.get(CONF_SQUARE, False)): bool,
+                    vol.Required(CONF_SQUARE, default=self.config_entry.options.get(CONF_SQUARE, False)): bool,
                     vol.Required(
                         CONF_VECTOR_ROOMS,
-                        default=self._config_entry.options.get(CONF_VECTOR_ROOMS, True),
+                        default=self.config_entry.options.get(CONF_VECTOR_ROOMS, True),
                     ): bool,
                     vol.Required(
                         CONF_LOW_RESOLUTION,
-                        default=self._config_entry.options.get(CONF_LOW_RESOLUTION, False),
+                        default=self.config_entry.options.get(CONF_LOW_RESOLUTION, False),
                     ): bool,
                 }
             )
-            if self._config_entry.data.get(CONF_ACCOUNT_TYPE, ACCOUNT_TYPE_MI) == ACCOUNT_TYPE_MI:
+            if self.config_entry.data.get(CONF_ACCOUNT_TYPE, ACCOUNT_TYPE_MI) == ACCOUNT_TYPE_MI:
                 data_schema = data_schema.extend(
                     {
                         vol.Required(
                             CONF_PREFER_CLOUD,
-                            default=self._config_entry.options.get(CONF_PREFER_CLOUD, True),
+                            default=self.config_entry.options.get(CONF_PREFER_CLOUD, True),
                         ): bool,
                     }
                 )
@@ -174,7 +170,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
         config_entry: ConfigEntry,
     ) -> DreameVacuumOptionsFlowHandler:
         """Get the options flow for this handler."""
-        return DreameVacuumOptionsFlowHandler(config_entry)
+        return DreameVacuumOptionsFlowHandler()
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle a flow initialized by the user."""

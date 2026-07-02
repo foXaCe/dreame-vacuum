@@ -90,8 +90,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: DreameVacuumConfigEntry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _LOGGER.debug("Platform setup took %.2f seconds", time_module.time() - t3)
 
-    entry.async_on_unload(entry.add_update_listener(update_listener))
-
     total_time = time_module.time() - setup_start
     _LOGGER.info("Dreame Vacuum integration setup completed in %.2f seconds", total_time)
     return True
@@ -140,8 +138,3 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     _LOGGER.info("Migration to version %s successful", CONFIG_ENTRY_VERSION)
     return True
-
-
-async def update_listener(hass: HomeAssistant, config_entry: DreameVacuumConfigEntry) -> None:
-    """Handle options update."""
-    await hass.config_entries.async_reload(config_entry.entry_id)

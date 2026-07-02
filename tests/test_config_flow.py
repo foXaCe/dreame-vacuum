@@ -1214,8 +1214,10 @@ def _options_flow(*, username: str | None, account_type: str = ACCOUNT_TYPE_DREA
         data={CONF_USERNAME: username, CONF_ACCOUNT_TYPE: account_type},
         options=base_options,
     )
-    handler = DreameVacuumOptionsFlowHandler(entry)
+    handler = DreameVacuumOptionsFlowHandler()
+    handler.handler = "test-entry-id"
     handler.hass = _fake_hass()
+    handler.hass.config_entries.async_get_known_entry.return_value = entry
     return handler
 
 
