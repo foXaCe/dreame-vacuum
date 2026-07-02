@@ -104,7 +104,8 @@
           "low_resolution": "Mapa de baixa resolució",
           "name": "Nom",
           "notify": "Notificació",
-          "square": "Mapa quadrat"
+          "square": "Mapa quadrat",
+          "vector_rooms": "Suavitza les vores del mapa"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Antialiàsing de les vores diagonals d'habitacions i parets per a un mapa més net i acurat."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "Les habitacions del mapa han canviat (s'ha afegit, eliminat o renumerat una habitació). Les automatitzacions i scripts basats en segments que fan referència a identificadors d'habitació podrien deixar d'apuntar a les habitacions correctes. Reviseu-los i, després, seleccioneu **Envia** per descartar aquest problema.",
+            "title": "Segments del mapa modificats"
+          }
+        }
+      },
+      "title": "Els segments del mapa han canviat a {device_name}"
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Mapa de baixa resolució",
           "notify": "Notificació",
           "prefer_cloud": "Es prefereix connexió al núvol",
-          "square": "Mapa quadrat"
+          "square": "Mapa quadrat",
+          "vector_rooms": "Suavitza les vores del mapa"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Antialiàsing de les vores diagonals d'habitacions i parets per a un mapa més net i acurat."
         }
       }
     }
@@ -1463,6 +1478,20 @@
         }
       },
       "name": "Còpia de Seguretat de Mapa"
+    },
+    "vacuum_call_action": {
+      "description": "Crida una acció en brut del dispositiu pel seu nom. Només per a ús avançat.",
+      "fields": {
+        "key": {
+          "description": "Nom de l'acció a cridar (tal com l'exposa el dispositiu).",
+          "name": "Acció"
+        },
+        "value": {
+          "description": "Paràmetres opcionals de l'acció.",
+          "name": "Paràmetres"
+        }
+      },
+      "name": "Crida una acció"
     },
     "vacuum_clean_segment": {
       "description": "Inicia l'operació de neteja a les habitacions seleccionades.",
@@ -1829,6 +1858,20 @@
         }
       },
       "name": "Estableix Punts Predefinits"
+    },
+    "vacuum_set_property": {
+      "description": "Estableix una propietat en brut del dispositiu pel seu nom. Només per a ús avançat.",
+      "fields": {
+        "key": {
+          "description": "Nom de la propietat a establir (tal com l'exposa el dispositiu).",
+          "name": "Propietat"
+        },
+        "value": {
+          "description": "Valor a establir.",
+          "name": "Valor"
+        }
+      },
+      "name": "Estableix una propietat"
     },
     "vacuum_set_restricted_zone": {
       "description": "Definir parets virtuals, zones restringides i/o zones sense fregar.",

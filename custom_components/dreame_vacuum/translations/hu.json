@@ -104,7 +104,8 @@
           "low_resolution": "Alacsony felbontású térkép",
           "name": "Név",
           "notify": "Értesítés",
-          "square": "Négyzet alakú térkép"
+          "square": "Négyzet alakú térkép",
+          "vector_rooms": "Térképszélek simítása"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "A szobák és falak átlós széleinek élsimítása a tisztább, igényesebb térképért."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "A térkép szobái megváltoztak (szoba került hozzáadásra, eltávolításra vagy átszámozásra). A szobaazonosítókra hivatkozó, szegmensalapú automatizálások és szkriptek előfordulhat, hogy már nem a megfelelő szobákat célozzák. Ellenőrizze őket, majd válassza a **Küldés** gombot a probléma lezárásához.",
+            "title": "A térképszegmensek megváltoztak"
+          }
+        }
+      },
+      "title": "A térképszegmensek megváltoztak: {device_name}"
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Alacsony felbontású térkép",
           "notify": "Értesítés",
           "prefer_cloud": "Felhőkapcsolatot részesítse előnyben",
-          "square": "Négyzet alakú térkép"
+          "square": "Négyzet alakú térkép",
+          "vector_rooms": "Térképszélek simítása"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "A szobák és falak átlós széleinek élsimítása a tisztább, igényesebb térképért."
         }
       }
     }
@@ -1463,6 +1478,20 @@
         }
       },
       "name": "Térkép biztonsági mentése"
+    },
+    "vacuum_call_action": {
+      "description": "Nyers eszközművelet meghívása név alapján. Csak haladó használatra.",
+      "fields": {
+        "key": {
+          "description": "A meghívandó művelet neve (ahogy az eszköz közzéteszi).",
+          "name": "Művelet"
+        },
+        "value": {
+          "description": "A művelet opcionális paraméterei.",
+          "name": "Paraméterek"
+        }
+      },
+      "name": "Művelet meghívása"
     },
     "vacuum_clean_segment": {
       "description": "Indítsa el a takarítást a kiválasztott szobákban.",
@@ -1829,6 +1858,20 @@
         }
       },
       "name": "Előre meghatározott pontok beállítása"
+    },
+    "vacuum_set_property": {
+      "description": "Nyers eszköztulajdonság beállítása név alapján. Csak haladó használatra.",
+      "fields": {
+        "key": {
+          "description": "A beállítandó tulajdonság neve (ahogy az eszköz közzéteszi).",
+          "name": "Tulajdonság"
+        },
+        "value": {
+          "description": "A beállítandó érték.",
+          "name": "Érték"
+        }
+      },
+      "name": "Tulajdonság beállítása"
     },
     "vacuum_set_restricted_zone": {
       "description": "Virtuális falak, korlátozott zónák és/vagy nem felmosó zónák meghatározása.",

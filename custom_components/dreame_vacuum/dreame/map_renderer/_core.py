@@ -160,6 +160,9 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         self._font_file = None
         self._light_font_file: Any = None
         self._default_map_image: Any = None
+        self._default_map_image_data: bytes | None = None
+        self._disconnected_map_image_data: bytes | None = None
+        self._disconnected_map_image_src: Any = None
         self._obstacle_bottom_left_icon: Any = None
         self._obstacle_top_left_icon: Any = None
         self._obstacle_bottom_right_icon: Any = None
@@ -3899,14 +3902,22 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 ),
                 border=(50, 75, 50, 75),
             )
-        return cast(bytes, self._to_buffer(self._default_map_image))
+        if self._default_map_image_data is None:
+            # Cache the encoded PNG: this property is read from the event
+            # loop, so the encode must not be paid on every access.
+            self._default_map_image_data = cast(bytes, self._to_buffer(self._default_map_image))
+        return self._default_map_image_data
 
     @property
     def disconnected_map_image(self) -> bytes:
         if self._image:
-            return cast(
-                bytes, self._to_buffer(self._image.filter(ImageFilter.GaussianBlur(7 if self._low_resolution else 13)))
-            )
+            if self._disconnected_map_image_src is not self._image or self._disconnected_map_image_data is None:
+                self._disconnected_map_image_src = self._image
+                self._disconnected_map_image_data = cast(
+                    bytes,
+                    self._to_buffer(self._image.filter(ImageFilter.GaussianBlur(7 if self._low_resolution else 13))),
+                )
+            return self._disconnected_map_image_data
         return self.default_map_image
 
     @property

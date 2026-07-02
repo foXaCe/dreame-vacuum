@@ -259,7 +259,7 @@ async def async_setup_entry(
 
     if coordinator.device.capability.shortcuts or coordinator.device.capability.backup_map:
         update_buttons = partial(async_update_buttons, coordinator, {}, {}, async_add_entities)
-        coordinator.async_add_listener(update_buttons)
+        entry.async_on_unload(coordinator.async_add_listener(update_buttons))
         update_buttons()
 
 
@@ -270,6 +270,7 @@ def async_update_buttons(
     current_map: dict[int, list[DreameVacuumMapButtonEntity]],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Add or remove shortcut and map backup button entities to match the device state."""
     new_entities: list[DreameVacuumEntity] = []
     if coordinator.device is None:
         return
@@ -335,6 +336,7 @@ def async_remove_buttons(
     coordinator: DreameVacuumDataUpdateCoordinator,
     current: dict[int, list[Any]],
 ) -> None:
+    """Remove the button entities matching the given id that no longer exist."""
     registry = entity_registry.async_get(coordinator.hass)
     entities = current[button_id]
     for entity in entities:

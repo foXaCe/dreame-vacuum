@@ -19,9 +19,8 @@ from homeassistant.components.select import (
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_platform, entity_registry
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity import async_generate_entity_id
-import voluptuous as vol
 
 PARALLEL_UPDATES = 1
 
@@ -31,11 +30,6 @@ if TYPE_CHECKING:
 
 from .const import (
     DOMAIN,
-    INPUT_CYCLE,
-    SERVICE_SELECT_FIRST,
-    SERVICE_SELECT_LAST,
-    SERVICE_SELECT_NEXT,
-    SERVICE_SELECT_PREVIOUS,
     UNIT_AREA,
     UNIT_TIMES,
     DreameVacuumConfigEntry,
@@ -773,23 +767,8 @@ async def async_setup_entry(
         for description in SELECTS
         if description.exists_fn(description, coordinator.device)
     )
-    platform = entity_platform.current_platform.get()
-    assert platform is not None
-    platform.async_register_entity_service(
-        SERVICE_SELECT_NEXT,
-        {vol.Optional(INPUT_CYCLE, default=True): bool},
-        DreameVacuumSelectEntity.async_next.__name__,
-    )
-    platform.async_register_entity_service(
-        SERVICE_SELECT_PREVIOUS,
-        {vol.Optional(INPUT_CYCLE, default=True): bool},
-        DreameVacuumSelectEntity.async_previous.__name__,
-    )
-    platform.async_register_entity_service(SERVICE_SELECT_FIRST, {}, DreameVacuumSelectEntity.async_first.__name__)
-    platform.async_register_entity_service(SERVICE_SELECT_LAST, {}, DreameVacuumSelectEntity.async_last.__name__)
-
     update_segment_selects = partial(async_update_segment_selects, coordinator, {}, async_add_entities)
-    coordinator.async_add_listener(update_segment_selects)
+    entry.async_on_unload(coordinator.async_add_listener(update_segment_selects))
     update_segment_selects()
 
 
@@ -799,6 +778,7 @@ def async_update_segment_selects(
     current: dict[int, list[DreameVacuumSegmentSelectEntity]],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Add or remove per-segment select entities to match the current map segments."""
     new_ids: set[int] = set()
     if coordinator.device and coordinator.device.status.map_list:
         for k, v in (coordinator.device.status.map_data_list or {}).items():
@@ -828,6 +808,7 @@ def async_remove_segment_selects(
     coordinator: DreameVacuumDataUpdateCoordinator,
     current: dict[int, list[DreameVacuumSegmentSelectEntity]],
 ) -> None:
+    """Remove the select entities of a segment that no longer exists."""
     registry = entity_registry.async_get(coordinator.hass)
     entities = current[segment_id]
     for entity in entities:
@@ -852,7 +833,8 @@ class DreameVacuumOptionNavigationMixin:
         _attr_options: list[str] | None
         _attr_current_option: str | None
 
-        async def async_select_option(self, option: str) -> None: ...
+        async def async_select_option(self, option: str) -> None:
+            """Select the given option; implemented by the mixed-in SelectEntity."""
 
     async def async_select_index(self, idx: int) -> None:
         """Select new option by index."""
@@ -1125,6 +1107,7 @@ class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameV
 
     @property
     def enabled(self) -> bool:
+        """Return True if the segment select should be enabled by default."""
         if (
             not self.device.status.multi_map
             and self._attr_available

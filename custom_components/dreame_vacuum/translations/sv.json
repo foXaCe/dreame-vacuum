@@ -104,7 +104,8 @@
           "low_resolution": "Lågupplöst karta",
           "name": "Namn",
           "notify": "Notifikation",
-          "square": "Fyrkantig karta"
+          "square": "Fyrkantig karta",
+          "vector_rooms": "Jämna ut kartkanter"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Kantutjämning av diagonala rum- och väggkanter för en renare och snyggare karta."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "Rummen på kartan har ändrats (ett rum har lagts till, tagits bort eller numrerats om). Segmentbaserade automationer och skript som refererar till rums-ID:n kanske inte längre träffar rätt rum. Granska dem och välj sedan **Skicka** för att stänga detta problem.",
+            "title": "Kartsegment ändrade"
+          }
+        }
+      },
+      "title": "Kartsegment ändrade på {device_name}"
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Lågupplöst karta",
           "notify": "Notifikation",
           "prefer_cloud": "Föredra molnanslutning",
-          "square": "Fyrkantig karta"
+          "square": "Fyrkantig karta",
+          "vector_rooms": "Jämna ut kartkanter"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Kantutjämning av diagonala rum- och väggkanter för en renare och snyggare karta."
         }
       }
     }
@@ -1463,6 +1478,20 @@
         }
       },
       "name": "Säkerhetskopiera karta"
+    },
+    "vacuum_call_action": {
+      "description": "Anropar en rå enhetsåtgärd via namn. Endast för avancerad användning.",
+      "fields": {
+        "key": {
+          "description": "Namn på åtgärden som ska anropas (som enheten exponerar den).",
+          "name": "Åtgärd"
+        },
+        "value": {
+          "description": "Valfria parametrar för åtgärden.",
+          "name": "Parametrar"
+        }
+      },
+      "name": "Anropa åtgärd"
     },
     "vacuum_clean_segment": {
       "description": "Börja städa i valda rum.",
@@ -1829,6 +1858,20 @@
         }
       },
       "name": "Ställ in fördefinierade punkter"
+    },
+    "vacuum_set_property": {
+      "description": "Ställer in en rå enhetsegenskap via namn. Endast för avancerad användning.",
+      "fields": {
+        "key": {
+          "description": "Namn på egenskapen som ska ställas in (som enheten exponerar den).",
+          "name": "Egenskap"
+        },
+        "value": {
+          "description": "Värde att ställa in.",
+          "name": "Värde"
+        }
+      },
+      "name": "Ställ in egenskap"
     },
     "vacuum_set_restricted_zone": {
       "description": "Definiera virtuella väggar, no-go zoner och/eller no-mop zoner.",

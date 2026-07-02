@@ -1,13 +1,12 @@
 """Tests for Dreame Vacuum exceptions."""
 
+import pytest
+
 from custom_components.dreame_vacuum.dreame.exceptions import (
-    AuthenticationError,
-    CircuitOpenError,
     DeviceConnectionError,
     DeviceException,
     DeviceUpdateFailedException,
     InvalidActionException,
-    InvalidResponseError,
     InvalidValueException,
     RateLimitError,
 )
@@ -16,22 +15,17 @@ from custom_components.dreame_vacuum.dreame.exceptions import (
 def test_exception_hierarchy():
     """Test that all exceptions inherit from the expected base classes."""
     assert issubclass(DeviceUpdateFailedException, DeviceException)
-    assert issubclass(AuthenticationError, DeviceException)
     assert issubclass(DeviceConnectionError, DeviceException)
     assert issubclass(RateLimitError, DeviceException)
-    assert issubclass(InvalidResponseError, DeviceException)
-    assert issubclass(CircuitOpenError, DeviceConnectionError)
     assert issubclass(InvalidValueException, ValueError)
     assert issubclass(InvalidActionException, ValueError)
 
 
 def test_backward_compat_catch():
-    """Test that catching DeviceException still catches all new exceptions."""
-    for exc_cls in (AuthenticationError, DeviceConnectionError, RateLimitError, InvalidResponseError, CircuitOpenError):
-        try:
+    """Catching DeviceException catches every device-level exception."""
+    for exc_cls in (DeviceConnectionError, RateLimitError, DeviceUpdateFailedException):
+        with pytest.raises(DeviceException):
             raise exc_cls("test")
-        except DeviceException:
-            pass  # Expected — backward compatible
 
 
 def test_rate_limit_error_attributes():

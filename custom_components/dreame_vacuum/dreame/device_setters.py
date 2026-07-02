@@ -100,20 +100,6 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
                 )
         return False
 
-    def _update_self_clean_time(self, self_clean_time: int) -> bool:
-        if self.capability.self_wash_base:
-            values = self.split_group_value(
-                self.get_property(DreameVacuumProperty.CLEANING_MODE),
-                self.capability.mop_pad_lifting,
-            )
-            if values and len(values) == 3:
-                values[1] = self_clean_time
-                return self.set_property(
-                    DreameVacuumProperty.CLEANING_MODE,
-                    self.combine_group_value(values),
-                )
-        return False
-
     def _update_water_level(self, water_level: int) -> bool:
         if (
             self.capability.mopping_settings
@@ -922,25 +908,6 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
     def set_ai_detection(self, settings: dict[str, bool] | int) -> dict[str, Any] | None:
         """Send ai detection parameters to the device."""
         if self.capability.ai_detection:
-            # if (self.status.ai_obstacle_detection or self.status.ai_obstacle_image_upload) and (
-            #    self._protocol.cloud and not self.status.ai_policy_accepted
-            # ):
-            #    prop = "prop.s_ai_config"
-            #    response = self._protocol.cloud.get_batch_device_datas([prop])
-            #    if response and prop in response and response[prop]:
-            #        try:
-            #            self.status.ai_policy_accepted = json.loads(response[prop]).get("privacyAuthed")
-            #        except Exception:
-            #            pass
-            #    if not self.status.ai_policy_accepted:
-            #        if self.status.ai_obstacle_detection:
-            #            self.set_ai_property(DreameVacuumAIProperty.AI_OBSTACLE_DETECTION, False)
-            #        if self.status.ai_obstacle_image_upload:
-            #            self.set_ai_property(DreameVacuumAIProperty.AI_OBSTACLE_IMAGE_UPLOAD, False)
-            #        self._property_changed(False)
-            #        raise InvalidActionException(
-            #            "You need to accept privacy policy from the App before enabling AI obstacle detection feature"
-            #        )
             mapping = self.property_mapping[DreameVacuumProperty.AI_DETECTION]
             if isinstance(settings, int):
                 return cast(

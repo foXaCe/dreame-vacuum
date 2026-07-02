@@ -201,7 +201,7 @@ class DreameVacuumMapDecoder:
 
     @staticmethod
     def decode_map_partial(raw_data: Any, iv: Any = None, key: Any = None) -> MapDataPartial | None:
-        _LOGGER.debug("raw_map: %s", raw_data)
+        _LOGGER.debug("raw_map (%d chars): %.64s...", len(raw_data), raw_data)
         raw_map = raw_data.replace("_", "/").replace("-", "+")
 
         if len(raw_map) < 3:
@@ -316,7 +316,9 @@ class DreameVacuumMapDecoder:
         if data_json is None:
             data_json = {}
 
-        _LOGGER.debug("Map Data Json: %s", data_json)
+        _LOGGER.debug(
+            "Map Data Json keys: %s", sorted(data_json.keys()) if isinstance(data_json, dict) else type(data_json)
+        )
 
         saved_map_data = None
         try:

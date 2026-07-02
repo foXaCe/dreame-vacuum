@@ -649,3 +649,36 @@ select_select_next:
       default: true
       selector:
         boolean:
+
+vacuum_set_property:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    key:
+      example: suction_level
+      required: true
+      selector:
+        text:
+    value:
+      example: 2
+      required: false
+      selector:
+        text:
+
+vacuum_call_action:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    key:
+      example: start_auto_empty
+      required: true
+      selector:
+        text:
+    value:
+      required: false
+      selector:
+        text:

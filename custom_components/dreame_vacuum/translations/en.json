@@ -1479,6 +1479,20 @@
       },
       "name": "Backup Map"
     },
+    "vacuum_call_action": {
+      "description": "Call a raw device action by name. Advanced use only.",
+      "fields": {
+        "key": {
+          "description": "Name of the action to call (as exposed by the device).",
+          "name": "Action"
+        },
+        "value": {
+          "description": "Optional parameters for the action.",
+          "name": "Parameters"
+        }
+      },
+      "name": "Call action"
+    },
     "vacuum_clean_segment": {
       "description": "Start the cleaning operation in the selected rooms.",
       "fields": {
@@ -1844,6 +1858,20 @@
         }
       },
       "name": "Set Predefined Points"
+    },
+    "vacuum_set_property": {
+      "description": "Set a raw device property by name. Advanced use only.",
+      "fields": {
+        "key": {
+          "description": "Name of the property to set (as exposed by the device).",
+          "name": "Property"
+        },
+        "value": {
+          "description": "Value to set.",
+          "name": "Value"
+        }
+      },
+      "name": "Set property"
     },
     "vacuum_set_restricted_zone": {
       "description": "Define virtual walls, restricted zones, and/or no mop zones.",

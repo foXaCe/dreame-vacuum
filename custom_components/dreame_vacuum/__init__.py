@@ -16,13 +16,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers.typing import ConfigType
 
 from .const import CONFIG_ENTRY_VERSION, DOMAIN, DreameVacuumConfigEntry, DreameVacuumRuntimeData
 from .coordinator import DreameVacuumDataUpdateCoordinator
 
 # Apply patch for python-miio Python 3.13 compatibility
 from .dreame.miio_patch import apply_miio_patch
+from .services import async_register_services
 
 apply_miio_patch()
 
@@ -39,6 +41,14 @@ PLATFORMS = (
     Platform.CAMERA,
     Platform.TIME,
 )
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the integration's entity services (quality scale: action-setup)."""
+    async_register_services(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: DreameVacuumConfigEntry) -> bool:
@@ -90,8 +100,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: DreameVacuumConfigEntry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _LOGGER.debug("Platform setup took %.2f seconds", time_module.time() - t3)
 
-    entry.async_on_unload(entry.add_update_listener(update_listener))
-
     total_time = time_module.time() - setup_start
     _LOGGER.info("Dreame Vacuum integration setup completed in %.2f seconds", total_time)
     return True
@@ -130,18 +138,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         return True
 
     if config_entry.version < CONFIG_ENTRY_VERSION:
-        # Future migrations go here
-        # Example:
-        # if config_entry.version == 1:
-        #     new_data = {**config_entry.data, "new_field": "default_value"}
-        #     hass.config_entries.async_update_entry(config_entry, data=new_data, version=2)
-
         hass.config_entries.async_update_entry(config_entry, version=CONFIG_ENTRY_VERSION)
 
     _LOGGER.info("Migration to version %s successful", CONFIG_ENTRY_VERSION)
     return True
-
-
-async def update_listener(hass: HomeAssistant, config_entry: DreameVacuumConfigEntry) -> None:
-    """Handle options update."""
-    await hass.config_entries.async_reload(config_entry.entry_id)

@@ -217,7 +217,7 @@ VACUUM_UNRECORDED_ATTRIBUTES = {
     "auto_empty_mode_list",
     "self_clean_frequency_list",
     "carpet_cleaning_list",
-    "carpet_sensivity_list",
+    "carpet_sensitivity_list",
     "voice_assistant_language_list",
     "mop_pad_swing_list",
     "mop_extend_frequency_list",

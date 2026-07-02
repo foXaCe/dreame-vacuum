@@ -14,7 +14,6 @@ import json
 import logging
 import math
 import threading
-from threading import Timer
 import time
 from time import sleep
 import traceback
@@ -71,7 +70,7 @@ class DreameMapVacuumMapManager:
         self._update_callback: Any = None
         self._change_callback: Any = None
         self._error_callback: Any = None
-        self._update_timer: Timer | None = None
+        self._update_timer: threading.Timer | None = None
         self._update_lock: threading.Lock = threading.Lock()
         self._update_interval: float = 10
         self._device_running: bool = False
@@ -322,8 +321,10 @@ class DreameMapVacuumMapManager:
                 MAP_REQUEST_PARAMETER_FRAME_TYPE: MapFrameType.P.name,
             }
         )
+        # Release the key whatever the outcome; keeping it on failure would
+        # block any future retry of this exact map_id/frame_id pair.
+        self._request_queue.pop(key, None)
         if result and result[MAP_PARAMETER_CODE] == 0:
-            del self._request_queue[key]
             object_name = None
             raw_map_data = None
             timestamp = None
@@ -350,20 +351,6 @@ class DreameMapVacuumMapManager:
                 return False
             return True
         return False
-
-    def _request_t_map(self) -> None:
-        result = self._request_map({MAP_REQUEST_PARAMETER_FRAME_TYPE: "T"})
-        if result and result[MAP_PARAMETER_CODE] == 0:
-            self.request_map_list()
-
-    def _request_w_map(self) -> None:
-        try:
-            _LOGGER.debug("Request wifi map from device")
-            mapping = DreameVacuumActionMapping[DreameVacuumAction.WIFI_MAP]
-            self._protocol.action(mapping["siid"], mapping["aiid"], None, 0)
-        except Exception as ex:
-            _LOGGER.warning("Send request map failed: %s", ex)
-        return
 
     def _request_current_map(self, map_request_time: float | None = None) -> bool:
         if self._request_i_map_available or self._protocol.dreame_cloud:
@@ -509,6 +496,9 @@ class DreameMapVacuumMapManager:
                 url = f"{object[MAP_PARAMETER_URL]}&current={now!s}"
 
         if url is None:
+            # Drop expired entries so the URL cache cannot grow unbounded
+            # (map object names change with every map update).
+            self._file_urls = {k: v for k, v in self._file_urls.items() if v[MAP_PARAMETER_EXPIRES_TIME] > now}
             response = (
                 self._protocol.cloud.get_interim_file_url(object_name)
                 if interim
@@ -1122,6 +1112,8 @@ class DreameMapVacuumMapManager:
         self.schedule_update(-1)
         if self.editor is not None:
             self.editor.cancel_pending()
+        if self.optimizer is not None:
+            self.optimizer.close()
         self._update_callback = None
         self._change_callback = None
         self._error_callback = None
@@ -1134,7 +1126,7 @@ class DreameMapVacuumMapManager:
             del self._update_timer
             self._update_timer = None
         if wait >= 0 and not self._disconnected:
-            self._update_timer = Timer(wait, self._update_task)
+            self._update_timer = threading.Timer(wait, self._update_task)
             self._update_timer.start()
 
     def update(self) -> None:
@@ -1358,7 +1350,7 @@ class DreameMapVacuumMapManager:
                                     raw_map = response.decode()
                             except Exception as ex:
                                 _LOGGER.warning("Get Saved Map Object failed: %s", ex)
-                                return
+                                continue
 
                         if raw_map:
                             try:
@@ -1370,7 +1362,7 @@ class DreameMapVacuumMapManager:
                                 )
                             except Exception:
                                 _LOGGER.error("Parse saved map failed: %s", traceback.format_exc())
-                                return
+                                continue
 
                             if saved_map_data is not None:
                                 name = v.get(MAP_PARAMETER_NAME)

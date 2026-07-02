@@ -19,10 +19,6 @@ class InvalidActionException(ValueError):
     """Raised when an invalid or unsupported action is requested."""
 
 
-class AuthenticationError(DeviceException):
-    """Raised on HTTP 401 or login failures."""
-
-
 class DeviceConnectionError(DeviceException):
     """Raised when the failure threshold is reached and the device is unreachable."""
 
@@ -37,11 +33,3 @@ class RateLimitError(DeviceException):
     def __init__(self, message: str = "Rate limited", retry_after: float = 60.0) -> None:
         super().__init__(message)
         self.retry_after = retry_after
-
-
-class InvalidResponseError(DeviceException):
-    """Raised when the API returns invalid or unparsable JSON."""
-
-
-class CircuitOpenError(DeviceConnectionError):
-    """Raised when the circuit breaker is open and requests are rejected."""

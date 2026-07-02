@@ -110,21 +110,17 @@ def test_device_proto_ip_change_resets_discovered(
     assert device_proto._discovered is False
 
 
-def test_device_proto_same_credentials_still_resets_discovered(
+def test_device_proto_same_credentials_keeps_discovered(
     device_proto: DreameVacuumDeviceProtocol,
 ) -> None:
-    """Calling set_credentials with the same ip+token does NOT reset _discovered.
+    """Calling set_credentials with the same ip+token keeps _discovered.
 
-    Guard in set_credentials: ``if self.ip != ip or self.token != token``
-    BUT token has already been converted to bytes, while the incoming argument
-    is a str.  The comparison ``bytes != str`` is always True, so set_credentials
-    ALWAYS resets _discovered even when the values are logically equal.
-    This is the observed behaviour — documented here, not fixed.
+    The guard compares the stored token (bytes) against the hex-decoded
+    incoming token, so logically-equal credentials are a no-op.
     """
     device_proto._discovered = True
     device_proto.set_credentials("192.168.1.100", "a" * 32)
-    # Observed: _discovered is always reset because bytes != str comparison
-    assert device_proto._discovered is False
+    assert device_proto._discovered is True
 
 
 def test_device_proto_connected_reflects_discovered(

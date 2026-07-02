@@ -104,7 +104,8 @@
           "low_resolution": "Карта низкого разрешения",
           "name": "Имя",
           "notify": "Уведомление",
-          "square": "Квадратная карта"
+          "square": "Квадратная карта",
+          "vector_rooms": "Сглаживание краёв карты"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Сглаживание диагональных границ комнат и стен для более аккуратной и качественной карты."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "Комнаты на карте изменились (комната была добавлена, удалена или перенумерована). Автоматизации и скрипты на основе сегментов, использующие идентификаторы комнат, могут больше не указывать на нужные комнаты. Проверьте их, затем нажмите **Отправить**, чтобы закрыть эту проблему.",
+            "title": "Сегменты карты изменены"
+          }
+        }
+      },
+      "title": "Сегменты карты изменены на {device_name}"
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Карта низкого разрешения",
           "notify": "Уведомления",
           "prefer_cloud": "Предпочитать облачное подключение",
-          "square": "Квадратная карта"
+          "square": "Квадратная карта",
+          "vector_rooms": "Сглаживание краёв карты"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Сглаживание диагональных границ комнат и стен для более аккуратной и качественной карты."
         }
       }
     }
@@ -1463,6 +1478,20 @@
         }
       },
       "name": "Резервное копирование карты"
+    },
+    "vacuum_call_action": {
+      "description": "Вызывает низкоуровневое действие устройства по имени. Только для продвинутого использования.",
+      "fields": {
+        "key": {
+          "description": "Имя вызываемого действия (как предоставляется устройством).",
+          "name": "Действие"
+        },
+        "value": {
+          "description": "Необязательные параметры действия.",
+          "name": "Параметры"
+        }
+      },
+      "name": "Вызвать действие"
     },
     "vacuum_clean_segment": {
       "description": "Выполнить уборку в выбранных комнатах.",
@@ -1829,6 +1858,20 @@
         }
       },
       "name": "Установить предопределенные точки"
+    },
+    "vacuum_set_property": {
+      "description": "Устанавливает низкоуровневое свойство устройства по имени. Только для продвинутого использования.",
+      "fields": {
+        "key": {
+          "description": "Имя устанавливаемого свойства (как предоставляется устройством).",
+          "name": "Свойство"
+        },
+        "value": {
+          "description": "Устанавливаемое значение.",
+          "name": "Значение"
+        }
+      },
+      "name": "Установить свойство"
     },
     "vacuum_set_restricted_zone": {
       "description": "Задать виртуальные стены, запретные зоны и/или зоны без швабры.",

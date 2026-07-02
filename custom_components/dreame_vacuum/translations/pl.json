@@ -104,7 +104,8 @@
           "low_resolution": "Mapa w niskiej rozdzielczości",
           "name": "Nazwa",
           "notify": "Powiadomienia",
-          "square": "Kwadratowa mapa"
+          "square": "Kwadratowa mapa",
+          "vector_rooms": "Wygładzanie krawędzi mapy"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Wygładza ukośne krawędzie pokoi i ścian, aby mapa była czystsza i bardziej dopracowana."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "Pokoje na mapie uległy zmianie (pokój został dodany, usunięty lub przenumerowany). Automatyzacje i skrypty oparte na segmentach, które odwołują się do identyfikatorów pokoi, mogą nie wskazywać już właściwych pokoi. Sprawdź je, a następnie wybierz **Wyślij**, aby zamknąć ten problem.",
+            "title": "Zmieniono segmenty mapy"
+          }
+        }
+      },
+      "title": "Segmenty mapy zmienione na {device_name}"
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Mapa w niskiej rozdzielczości",
           "notify": "Powiadomienia",
           "prefer_cloud": "Preferuj połączenie z chmurą",
-          "square": "Kwadratowa mapa"
+          "square": "Kwadratowa mapa",
+          "vector_rooms": "Wygładzanie krawędzi mapy"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Wygładza ukośne krawędzie pokoi i ścian, aby mapa była czystsza i bardziej dopracowana."
         }
       }
     }
@@ -1463,6 +1478,20 @@
         }
       },
       "name": "Mapa zapasowa"
+    },
+    "vacuum_call_action": {
+      "description": "Wywołuje surową akcję urządzenia po nazwie. Tylko do zaawansowanego użytku.",
+      "fields": {
+        "key": {
+          "description": "Nazwa akcji do wywołania (tak jak udostępnia ją urządzenie).",
+          "name": "Akcja"
+        },
+        "value": {
+          "description": "Opcjonalne parametry akcji.",
+          "name": "Parametry"
+        }
+      },
+      "name": "Wywołaj akcję"
     },
     "vacuum_clean_segment": {
       "description": "Rozpocznij czyszczenie w wybranych pomieszczeniach.",
@@ -1829,6 +1858,20 @@
         }
       },
       "name": "Ustaw predefiniowane punkty"
+    },
+    "vacuum_set_property": {
+      "description": "Ustawia surową właściwość urządzenia po nazwie. Tylko do zaawansowanego użytku.",
+      "fields": {
+        "key": {
+          "description": "Nazwa właściwości do ustawienia (tak jak udostępnia ją urządzenie).",
+          "name": "Właściwość"
+        },
+        "value": {
+          "description": "Wartość do ustawienia.",
+          "name": "Wartość"
+        }
+      },
+      "name": "Ustaw właściwość"
     },
     "vacuum_set_restricted_zone": {
       "description": "Zdefiniuj wirtualne ściany, strefy ograniczone i/lub strefy bez mopa.",

@@ -104,7 +104,8 @@
           "low_resolution": "Karte mit niedriger Auflösung",
           "name": "Name",
           "notify": "Benachrichtigung",
-          "square": "Quadratische Karte"
+          "square": "Quadratische Karte",
+          "vector_rooms": "Kartenkanten glätten"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Glättet diagonale Raum- und Wandkanten für eine sauberere, hochwertigere Karte."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "Das Verbrauchsmaterial **{consumable}** auf **{device_name}** ist aufgebraucht und muss ersetzt werden. Bitte ersetzen und den Zähler in den Geräteeinstellungen zurücksetzen.",
       "title": "Verbrauchsmaterial aufgebraucht auf {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "Die Räume der Karte haben sich geändert (ein Raum wurde hinzugefügt, entfernt oder neu nummeriert). Segmentbasierte Automatisierungen und Skripte, die Raum-IDs referenzieren, treffen möglicherweise nicht mehr die richtigen Räume. Überprüfen Sie diese und wählen Sie dann **Senden**, um dieses Problem zu schließen.",
+            "title": "Kartensegmente geändert"
+          }
+        }
+      },
+      "title": "Kartensegmente auf {device_name} geändert"
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Karte mit niedriger Auflösung",
           "notify": "Benachrichtigung",
           "prefer_cloud": "Cloudverbindung bevorzugen",
-          "square": "Quadratische Karte"
+          "square": "Quadratische Karte",
+          "vector_rooms": "Kartenkanten glätten"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Glättet diagonale Raum- und Wandkanten für eine sauberere, hochwertigere Karte."
         }
       }
     }
@@ -1463,6 +1478,20 @@
         }
       },
       "name": "Backup-Karte"
+    },
+    "vacuum_call_action": {
+      "description": "Ruft eine rohe Geräteaktion anhand ihres Namens auf. Nur für fortgeschrittene Nutzung.",
+      "fields": {
+        "key": {
+          "description": "Name der aufzurufenden Aktion (wie vom Gerät bereitgestellt).",
+          "name": "Aktion"
+        },
+        "value": {
+          "description": "Optionale Parameter für die Aktion.",
+          "name": "Parameter"
+        }
+      },
+      "name": "Aktion aufrufen"
     },
     "vacuum_clean_segment": {
       "description": "Starte den Reinigungsvorgang in den ausgewählten Räumen.",
@@ -1829,6 +1858,20 @@
         }
       },
       "name": "Vordefinierte Punkte festlegen"
+    },
+    "vacuum_set_property": {
+      "description": "Setzt eine rohe Geräteeigenschaft anhand ihres Namens. Nur für fortgeschrittene Nutzung.",
+      "fields": {
+        "key": {
+          "description": "Name der zu setzenden Eigenschaft (wie vom Gerät bereitgestellt).",
+          "name": "Eigenschaft"
+        },
+        "value": {
+          "description": "Zu setzender Wert.",
+          "name": "Wert"
+        }
+      },
+      "name": "Eigenschaft setzen"
     },
     "vacuum_set_restricted_zone": {
       "description": "Virtuelle Wände, eingeschränkte Bereiche und/oder Nicht-Wischzonen definieren.",

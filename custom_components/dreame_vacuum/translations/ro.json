@@ -104,7 +104,8 @@
           "low_resolution": "Hartă cu rezoluție scăzută",
           "name": "Nume",
           "notify": "Notificare",
-          "square": "Hartă pătrată"
+          "square": "Hartă pătrată",
+          "vector_rooms": "Netezirea marginilor hărții"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-aliasing pentru marginile diagonale ale camerelor și pereților, pentru o hartă mai curată și mai îngrijită."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "Camerele de pe hartă s-au schimbat (o cameră a fost adăugată, eliminată sau renumerotată). Automatizările și scripturile bazate pe segmente care fac referire la ID-urile camerelor este posibil să nu mai vizeze camerele corecte. Verificați-le, apoi selectați **Trimite** pentru a închide această problemă.",
+            "title": "Segmentele hărții s-au schimbat"
+          }
+        }
+      },
+      "title": "Segmentele hărții s-au schimbat pe {device_name}"
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "Hartă cu rezoluție scăzută",
           "notify": "Notificare",
           "prefer_cloud": "Preferă conexiunea cloud",
-          "square": "Hartă pătrată"
+          "square": "Hartă pătrată",
+          "vector_rooms": "Netezirea marginilor hărții"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "Anti-aliasing pentru marginile diagonale ale camerelor și pereților, pentru o hartă mai curată și mai îngrijită."
         }
       }
     }
@@ -1463,6 +1478,20 @@
         }
       },
       "name": "Copie de Rezervă a Hărții"
+    },
+    "vacuum_call_action": {
+      "description": "Apelează o acțiune brută a dispozitivului după nume. Doar pentru utilizare avansată.",
+      "fields": {
+        "key": {
+          "description": "Numele acțiunii de apelat (așa cum este expusă de dispozitiv).",
+          "name": "Acțiune"
+        },
+        "value": {
+          "description": "Parametri opționali ai acțiunii.",
+          "name": "Parametri"
+        }
+      },
+      "name": "Apelează acțiunea"
     },
     "vacuum_clean_segment": {
       "description": "Începe operațiunea de curățare în camerele selectate.",
@@ -1829,6 +1858,20 @@
         }
       },
       "name": "Setează Puncte Predefinite"
+    },
+    "vacuum_set_property": {
+      "description": "Setează o proprietate brută a dispozitivului după nume. Doar pentru utilizare avansată.",
+      "fields": {
+        "key": {
+          "description": "Numele proprietății de setat (așa cum este expusă de dispozitiv).",
+          "name": "Proprietate"
+        },
+        "value": {
+          "description": "Valoarea de setat.",
+          "name": "Valoare"
+        }
+      },
+      "name": "Setează proprietatea"
     },
     "vacuum_set_restricted_zone": {
       "description": "Definește pereți virtuali, zone restricționate și/sau zone fără mop.",

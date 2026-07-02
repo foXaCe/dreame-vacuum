@@ -2,16 +2,12 @@
 
 import threading
 import time
-from unittest.mock import MagicMock
 
-import pytest
-
-from custom_components.dreame_vacuum.dreame.exceptions import CircuitOpenError
 from custom_components.dreame_vacuum.dreame.resilience import (
     CircuitBreaker,
     CircuitState,
     TimeoutConfig,
-    retry_with_backoff,
+    backoff_delay,
 )
 
 # --- TimeoutConfig ---
@@ -120,22 +116,6 @@ def test_circuit_breaker_reset():
     assert cb.is_closed
 
 
-def test_circuit_breaker_check_raises_when_open():
-    """Test check() raises CircuitOpenError when circuit is open."""
-    cb = CircuitBreaker(failure_threshold=2)
-    cb.record_failure()
-    cb.record_failure()
-
-    with pytest.raises(CircuitOpenError):
-        cb.check()
-
-
-def test_circuit_breaker_check_passes_when_closed():
-    """Test check() does not raise when circuit is closed."""
-    cb = CircuitBreaker()
-    cb.check()  # Should not raise
-
-
 def test_circuit_breaker_thread_safety():
     """Test circuit breaker is safe under concurrent access."""
     cb = CircuitBreaker(failure_threshold=100)
@@ -168,36 +148,28 @@ def test_circuit_breaker_thread_safety():
     assert cb.state in (CircuitState.CLOSED, CircuitState.OPEN, CircuitState.HALF_OPEN)
 
 
-# --- retry_with_backoff ---
+# --- backoff_delay ---
 
 
-def test_retry_with_backoff_succeeds_first_try():
-    """Test retry_with_backoff returns on first success."""
-    func = MagicMock(return_value="ok")
-    result = retry_with_backoff(func, retry_count=2, base_delay=0.01)
-    assert result == "ok"
-    assert func.call_count == 1
+def test_backoff_delay_grows_exponentially_without_jitter():
+    """Delays double each attempt and are capped at max_delay."""
+    assert backoff_delay(1, jitter=False) == 0.5
+    assert backoff_delay(2, jitter=False) == 1.0
+    assert backoff_delay(3, jitter=False) == 2.0
+    assert backoff_delay(10, jitter=False) == 10.0  # capped
 
 
-def test_retry_with_backoff_retries_on_failure():
-    """Test retry_with_backoff retries the specified number of times."""
-    func = MagicMock(side_effect=[ValueError("err"), ValueError("err"), "ok"])
-    result = retry_with_backoff(func, retry_count=2, base_delay=0.01, exceptions=(ValueError,))
-    assert result == "ok"
-    assert func.call_count == 3
+def test_backoff_delay_jitter_stays_in_bounds():
+    """With jitter the delay stays within 50%-150% of the nominal value."""
+    for attempt in (1, 2, 5):
+        nominal = backoff_delay(attempt, jitter=False)
+        for _ in range(50):
+            delay = backoff_delay(attempt)
+            assert nominal * 0.5 <= delay <= nominal * 1.5
 
 
-def test_retry_with_backoff_exhaustion():
-    """Test retry_with_backoff raises last exception after exhaustion."""
-    func = MagicMock(side_effect=ValueError("persistent error"))
-    with pytest.raises(ValueError, match="persistent error"):
-        retry_with_backoff(func, retry_count=2, base_delay=0.01, exceptions=(ValueError,))
-    assert func.call_count == 3  # 1 attempt + 2 retries
-
-
-def test_retry_with_backoff_only_catches_specified():
-    """Test retry_with_backoff does not catch unspecified exceptions."""
-    func = MagicMock(side_effect=TypeError("wrong type"))
-    with pytest.raises(TypeError, match="wrong type"):
-        retry_with_backoff(func, retry_count=2, base_delay=0.01, exceptions=(ValueError,))
-    assert func.call_count == 1  # No retry for TypeError
+def test_backoff_delay_custom_base_and_cap():
+    """base_delay and max_delay parameters drive the progression."""
+    assert backoff_delay(1, base_delay=2.0, max_delay=5.0, jitter=False) == 2.0
+    assert backoff_delay(2, base_delay=2.0, max_delay=5.0, jitter=False) == 4.0
+    assert backoff_delay(3, base_delay=2.0, max_delay=5.0, jitter=False) == 5.0  # capped

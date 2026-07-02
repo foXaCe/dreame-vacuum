@@ -1479,6 +1479,20 @@
       },
       "name": "Carte de sauvegarde"
     },
+    "vacuum_call_action": {
+      "description": "Appelle une action brute de l'appareil par son nom. Usage avancé uniquement.",
+      "fields": {
+        "key": {
+          "description": "Nom de l'action à appeler (telle qu'exposée par l'appareil).",
+          "name": "Action"
+        },
+        "value": {
+          "description": "Paramètres optionnels de l'action.",
+          "name": "Paramètres"
+        }
+      },
+      "name": "Appeler une action"
+    },
     "vacuum_clean_segment": {
       "description": "Démarrez l’opération de nettoyage dans les pièces sélectionnées.",
       "fields": {
@@ -1844,6 +1858,20 @@
         }
       },
       "name": "Définir des points prédéfinis"
+    },
+    "vacuum_set_property": {
+      "description": "Définit une propriété brute de l'appareil par son nom. Usage avancé uniquement.",
+      "fields": {
+        "key": {
+          "description": "Nom de la propriété à définir (telle qu'exposée par l'appareil).",
+          "name": "Propriété"
+        },
+        "value": {
+          "description": "Valeur à définir.",
+          "name": "Valeur"
+        }
+      },
+      "name": "Définir une propriété"
     },
     "vacuum_set_restricted_zone": {
       "description": "Définissez des murs virtuels, des zones restreintes et/ou des zones sans serpillière.",

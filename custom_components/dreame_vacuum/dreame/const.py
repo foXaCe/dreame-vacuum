@@ -1392,25 +1392,25 @@ CUSTOM_MOPPING_ROUTE_TO_NAME: Final = {
     DreameVacuumCustomMoppingRoute.DEEP: ROUTE_DEEP,
 }
 
-CLEANGENIUS_TO_NAME = {
+CLEANGENIUS_TO_NAME: Final = {
     DreameVacuumCleanGenius.OFF: STATE_OFF,
     DreameVacuumCleanGenius.ROUTINE_CLEANING: CLEANGENIUS_ROUTINE_CLEANING,
     DreameVacuumCleanGenius.DEEP_CLEANING: CLEANGENIUS_DEEP_CLEANING,
 }
 
-CLEANGENIUS_MODE_TO_NAME = {
+CLEANGENIUS_MODE_TO_NAME: Final = {
     DreameVacuumCleanGeniusMode.VACUUM_AND_MOP: CLEANGENIUS_MODE_VACUUM_AND_MOP,
     DreameVacuumCleanGeniusMode.MOP_AFTER_VACUUM: CLEANGENIUS_MODE_MOP_AFTER_VACUUM,
 }
 
-WASHING_MODE_TO_NAME = {
+WASHING_MODE_TO_NAME: Final = {
     DreameVacuumWashingMode.LIGHT: WASHING_MODE_LIGHT,
     DreameVacuumWashingMode.STANDARD: WASHING_MODE_STANDARD,
     DreameVacuumWashingMode.DEEP: WASHING_MODE_DEEP,
     DreameVacuumWashingMode.ULTRA_WASHING: WASHING_MODE_ULTRA_WASHING,
 }
 
-WATER_TEMPERATURE_TO_NAME = {
+WATER_TEMPERATURE_TO_NAME: Final = {
     DreameVacuumWaterTemperature.NORMAL: WATER_TEMPERATURE_NORMAL,
     DreameVacuumWaterTemperature.MILD: WATER_TEMPERATURE_MILD,
     DreameVacuumWaterTemperature.WARM: WATER_TEMPERATURE_WARM,
@@ -1423,7 +1423,7 @@ SELF_CLEAN_FREQUENCY_TO_NAME: Final = {
     DreameVacuumSelfCleanFrequency.BY_ROOM: SELF_CLEAN_FREQUENCY_BY_ROOM,
 }
 
-AUTO_EMPTY_MODE_TO_NAME = {
+AUTO_EMPTY_MODE_TO_NAME: Final = {
     DreameVacuumAutoEmptyMode.OFF: STATE_OFF,
     DreameVacuumAutoEmptyMode.STANDARD: AUTO_EMPTY_MODE_STANDARD,
     DreameVacuumAutoEmptyMode.HIGH_FREQUENCY: AUTO_EMPTY_MODE_HIGH_FREQUENCY,
@@ -1566,7 +1566,6 @@ ERROR_CODE_TO_IMAGE_INDEX: Final = {
     DreameVacuumErrorCode.NO_MOP_IN_STATION: 69,
     DreameVacuumErrorCode.DUST_BAG_FULL: 102,
     DreameVacuumErrorCode.DIRTY_TANK_NOT_INSTALLED: 76,
-    DreameVacuumErrorCode.CLEAN_TANK_LEVEL: 105,
     DreameVacuumErrorCode.STATION_DISCONNECTED: 117,
     DreameVacuumErrorCode.SELF_TEST_FAILED: 999,
     DreameVacuumErrorCode.WASHBOARD_NOT_WORKING: 111,

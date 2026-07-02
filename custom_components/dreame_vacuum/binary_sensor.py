@@ -27,7 +27,8 @@ if TYPE_CHECKING:
 
 
 BINARY_SENSORS: tuple[DreameVacuumBinarySensorEntityDescription, ...] = (
-    ## This entity is need for battery icon to be rendered correctly since vacuum entity attr_charging attribute has been deprecated
+    # Needed for the battery icon: the vacuum entity no longer exposes
+    # the deprecated charging attribute.
     DreameVacuumBinarySensorEntityDescription(
         key="charging_state",
         name="Charging state",

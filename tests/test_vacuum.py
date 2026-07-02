@@ -24,7 +24,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.components.vacuum import VacuumEntityFeature
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_platform
 import pytest
 
 from custom_components.dreame_vacuum import vacuum as vacuum_module
@@ -1144,46 +1143,24 @@ def test_suction_level_to_fan_speed_table() -> None:
 
 
 # ---------------------------------------------------------------------------
-# async_setup_entry — service registration + entity creation
+# async_setup_entry — entity creation (services live in services.py now)
 # ---------------------------------------------------------------------------
 
 
-async def test_async_setup_entry_registers_services_and_entity(coordinator: MagicMock) -> None:
-    """Setup registers every entity service and adds a single DreameVacuum.
+async def test_async_setup_entry_adds_single_entity(coordinator: MagicMock) -> None:
+    """Setup adds exactly one DreameVacuum entity.
 
-    ``async_setup_entry`` reads the current platform from a ContextVar and calls
-    ``async_register_entity_service`` once per custom service. We swap in a mock
-    platform, drive setup, and assert on the registrations + the entity added.
+    Entity services are registered once from the integration's async_setup
+    (see tests/test_services.py), not from the platform setup anymore.
     """
     entry = MagicMock()
     entry.runtime_data.coordinator = coordinator
 
-    platform = MagicMock()
     async_add_entities = MagicMock()
     hass = MagicMock()
 
-    token = entity_platform.current_platform.set(platform)
-    try:
-        await async_setup_entry(hass, entry, async_add_entities)
-    finally:
-        entity_platform.current_platform.reset(token)
+    await async_setup_entry(hass, entry, async_add_entities)
 
-    # One registration per service declared in the platform module.
-    assert platform.async_register_entity_service.call_count == 34
-
-    # A handful of the registered service names, to anchor the mapping.
-    registered = {call.args[0] for call in platform.async_register_entity_service.call_args_list}
-    for service in (
-        "vacuum_clean_zone",
-        "vacuum_clean_segment",
-        "vacuum_goto",
-        "vacuum_merge_segments",
-        "vacuum_set_property",
-        "vacuum_call_action",
-    ):
-        assert service in registered
-
-    # Exactly one entity is added, and it is our DreameVacuum.
     async_add_entities.assert_called_once()
     added = async_add_entities.call_args.args[0]
     assert len(added) == 1

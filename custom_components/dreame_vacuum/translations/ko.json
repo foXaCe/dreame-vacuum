@@ -104,7 +104,8 @@
           "low_resolution": "저해상도 지도",
           "name": "이름",
           "notify": "알림",
-          "square": "정사각형 지도"
+          "square": "정사각형 지도",
+          "vector_rooms": "지도 가장자리 부드럽게"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -113,7 +114,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "name": "Display name for this device in Home Assistant.",
           "notify": "Select which notifications to receive from the device.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "방과 벽의 대각선 가장자리에 안티앨리어싱을 적용하여 더 깔끔하고 고급스러운 지도를 만듭니다."
         }
       },
       "reauth_confirm": {
@@ -1394,6 +1396,17 @@
     "consumable_depleted": {
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
+    },
+    "segments_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "지도의 방 구성이 변경되었습니다(방이 추가, 제거 또는 번호가 변경됨). 방 ID를 참조하는 구역 기반 자동화 및 스크립트가 더 이상 올바른 방을 대상으로 하지 않을 수 있습니다. 확인한 후 **제출**을 선택하여 이 문제를 닫으세요.",
+            "title": "지도 구역 변경됨"
+          }
+        }
+      },
+      "title": "{device_name}의 지도 구역이 변경됨"
     }
   },
   "options": {
@@ -1410,7 +1423,8 @@
           "low_resolution": "저해상도 지도",
           "notify": "알림",
           "prefer_cloud": "클라우드 연결 선호",
-          "square": "정사각형 지도"
+          "square": "정사각형 지도",
+          "vector_rooms": "지도 가장자리 부드럽게"
         },
         "data_description": {
           "color_scheme": "Color theme used for the vacuum map.",
@@ -1420,7 +1434,8 @@
           "low_resolution": "Use lower resolution for faster map rendering.",
           "notify": "Select which notifications to receive from the device.",
           "prefer_cloud": "Use cloud connection instead of local when available.",
-          "square": "Display the map as a square instead of its original aspect ratio."
+          "square": "Display the map as a square instead of its original aspect ratio.",
+          "vector_rooms": "방과 벽의 대각선 가장자리에 안티앨리어싱을 적용하여 더 깔끔하고 고급스러운 지도를 만듭니다."
         }
       }
     }
@@ -1463,6 +1478,20 @@
         }
       },
       "name": "지도 백업"
+    },
+    "vacuum_call_action": {
+      "description": "이름으로 장치의 원시 동작을 호출합니다. 고급 사용자 전용.",
+      "fields": {
+        "key": {
+          "description": "호출할 동작의 이름(장치가 노출하는 대로).",
+          "name": "동작"
+        },
+        "value": {
+          "description": "동작의 선택적 매개변수.",
+          "name": "매개변수"
+        }
+      },
+      "name": "동작 호출"
     },
     "vacuum_clean_segment": {
       "description": "선택한 방에서 청소 작업을 시작합니다.",
@@ -1829,6 +1858,20 @@
         }
       },
       "name": "미리 정의된 지점 설정"
+    },
+    "vacuum_set_property": {
+      "description": "이름으로 장치의 원시 속성을 설정합니다. 고급 사용자 전용.",
+      "fields": {
+        "key": {
+          "description": "설정할 속성의 이름(장치가 노출하는 대로).",
+          "name": "속성"
+        },
+        "value": {
+          "description": "설정할 값.",
+          "name": "값"
+        }
+      },
+      "name": "속성 설정"
     },
     "vacuum_set_restricted_zone": {
       "description": "가상 벽, 제한 구역 및/또는 걸레 금지 구역을 정의합니다.",

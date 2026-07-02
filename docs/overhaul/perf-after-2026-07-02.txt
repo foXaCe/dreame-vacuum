@@ -1,0 +1,19 @@
+[32m2026-07-02 09:22:43.773 INFO (MainThread) [homeassistant.setup] Setup of domain dreame_vacuum took 0.00 seconds[0m
+import time:      4183 |     250972 |             dns.resolver
+import time:      2568 |     256348 |           paho.mqtt.client
+import time:      1393 |     356362 |         custom_components.dreame_vacuum.dreame.protocol
+import time:       928 |     386293 |       custom_components.dreame_vacuum.dreame.device
+import time:       311 |     386603 |     custom_components.dreame_vacuum.dreame
+import time:      4084 |     387965 |   homeassistant.config_entries
+import time:      3731 |     424508 |           homeassistant.components.http
+import time:       565 |     426185 |         homeassistant.components.websocket_api.http
+import time:       219 |     487345 |       homeassistant.components.websocket_api
+import time:      2747 |     490091 |     homeassistant.components.persistent_notification
+import time:       868 |     878622 |   custom_components.dreame_vacuum.coordinator
+import time:       387 |    1288602 | custom_components.dreame_vacuum
+importtime best-of-3 après: 1201630 µs (baseline: 1251837 µs)
+
+--- Re-mesure état final (après action-setup + paho V2), 2026-07-02 10:24 ---
+Setup of domain dreame_vacuum took 0.00-0.01 seconds (2 boots)
+importtime best-of-3 : 1168963 µs (baseline 1251837 µs → −6.6 %)
+services.py import isolé : +24 µs

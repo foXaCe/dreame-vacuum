@@ -56,45 +56,6 @@ def _entry_with_device(entry: MagicMock, device: MagicMock | None) -> MagicMock:
     return entry
 
 
-async def test_to_redact_fields() -> None:
-    """Test that all sensitive fields are in TO_REDACT."""
-    expected_redact = {
-        "password",
-        "token",
-        "username",
-        "auth_key",
-        "mac",
-        "did",
-        "uid",
-        "access_token",
-    }
-
-    assert expected_redact.issubset(TO_REDACT)
-
-
-async def test_to_redact_is_set() -> None:
-    """Test that TO_REDACT is a proper set."""
-    assert isinstance(TO_REDACT, (set, frozenset))
-    assert len(TO_REDACT) > 0
-
-
-async def test_async_get_config_entry_diagnostics_exists() -> None:
-    """Test that async_get_config_entry_diagnostics function exists."""
-    assert callable(async_get_config_entry_diagnostics)
-
-
-async def test_to_redact_contains_sensitive_keys() -> None:
-    """Test TO_REDACT contains common sensitive data keys."""
-    sensitive_keys = ["password", "token", "username", "mac"]
-    for key in sensitive_keys:
-        assert key in TO_REDACT, f"Missing sensitive key: {key}"
-
-
-async def test_to_redact_not_empty() -> None:
-    """Test that TO_REDACT has sufficient redaction keys."""
-    assert len(TO_REDACT) >= 5, "TO_REDACT should have at least 5 keys"
-
-
 def test_to_redact_is_stable() -> None:
     """Pin the full redaction set.
 

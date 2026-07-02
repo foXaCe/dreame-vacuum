@@ -11,8 +11,8 @@ custom_components/dreame_vacuum/
 └── dreame/                    # low-level device engine (protocol, maps, status)
 ```
 
-- **Home Assistant layer** (top-level modules): everything HA talks to. It is the
-  part covered by the test suite (~91 %) and the part to touch for HA features.
+- **Home Assistant layer** (top-level modules): everything HA talks to. It is
+  fully covered by the test suite (100 %) and the part to touch for HA features.
 - **`dreame/` engine**: the device library — MiIO/Dreame cloud protocol, MQTT
   push, binary map decoding/rendering, device state. It is large, hardware-shaped,
   and changed only when a real device bug requires it.
@@ -47,7 +47,7 @@ DreameVacuumDataUpdateCoordinator  ──async_set_updated_data──►  Coordi
 | `__init__.py` | `async_setup_entry` / `async_unload_entry` / `async_migrate_entry`; guarantees `coordinator.cleanup()` on setup failure; removes stale devices |
 | `coordinator.py` | `DataUpdateCoordinator`; device lifecycle, push fan-out, notifications, consumable issues, rate-limit backoff |
 | `entity.py` | Base `DreameVacuumEntity`: `available`, `device_info`, `native_value`, `extra_state_attributes`, `_try_command`, set/value/segment resolvers |
-| `config_flow.py` | `ConfigFlow` + `OptionsFlow`: Mi / Dreame / Mova / local login, captcha/2FA, reauth, duplicate guards |
+| `config_flow.py` | `ConfigFlow` + `OptionsFlowWithReload` (modern selectors): Mi / Dreame / Mova / local login, captcha/2FA, reauth, duplicate guards |
 | `vacuum.py` | Main `StateVacuumEntity`; ~30 custom services; map-segment change detection |
 | `sensor/binary_sensor/switch/select/number/button/time/camera.py` | Entity platforms — each `async_setup_entry` instantiates entities from `EntityDescription`s; no business logic |
 | `camera.py` | Map cameras, executor-based rendering, shared proxy renderer, HTTP views |
@@ -66,6 +66,9 @@ DreameVacuumDataUpdateCoordinator  ──async_set_updated_data──►  Coordi
   status model, setters, actions, map operations (split into focused mixins).
 - `map_decoder.py`, `map_manager.py`, `map_editor.py`, `map_optimizer.py`,
   `map_renderer/`, `map_data_json_renderer.py` — binary map decode + render pipeline.
+  The optimizer runs the vendor JS algorithm in an embedded V8 (`py-mini-racer`);
+  it is CPU-bound and, like the PIL/numpy renderer, must only ever be called from
+  an executor thread (camera.py is the orchestrator and upholds this invariant).
 - `vacuum_types.py`, `const.py` — enums, dataclasses and the protocol constant tables.
 
 ## How to extend
@@ -99,10 +102,13 @@ the translations, handled by `repairs.async_create_fix_flow`.
 
 ## Quality & testing
 
-- **Quality scale**: Gold (coordinator, runtime_data, reauth, options, diagnostics,
-  repairs, system_health, recorder, logbook, migration, dynamic entities, tests).
-- **Tests**: `pytest` with `pytest-homeassistant-custom-component`; HA layer ≈ 91 %
-  (most modules 100 %, camera best-effort). Coverage floor ratchets upward only.
+- **Quality scale**: Gold — the per-rule checklist lives in
+  `custom_components/dreame_vacuum/quality_scale.yaml` (honest statuses:
+  documented todos and justified exemptions).
+- **Tests**: `pytest` with `pytest-homeassistant-custom-component`; HA layer at
+  **100 %** (camera and its HTTP views included), engine covered on its critical
+  logic (protocol, manager/optimizer fixes, setters/actions). Global ≈ 46 %,
+  coverage floor (`fail_under = 45`) ratchets upward only.
 - **Typing**: mypy runs as a ratchet — modules in the per-module allow-list in
   `pyproject.toml` are strictly checked; the engine and a few HA modules
   (`vacuum`, `coordinator`, `select`, `camera`) are still deferred (a `self._device`
