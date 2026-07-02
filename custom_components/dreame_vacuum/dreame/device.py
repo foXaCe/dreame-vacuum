@@ -666,9 +666,15 @@ class DreameVacuumDevice(
                 if "aiid" not in mapping and (force_all or not self._ready or prop.value in self.data):
                     property_list.append({"did": str(prop.value), **mapping})
 
+        # Batch size is a device-side limit: the robot rejects get_properties
+        # beyond ~50 keys (100/200 fail), and it answers the cloud bridge
+        # serially, so parallel batches do not speed anything up either
+        # (measured 2026-07-02). The first refresh is therefore bound by
+        # 4 robot round-trips (~1.2 s each) — do not "optimize" this again
+        # without re-measuring on a real device.
         props = property_list.copy()
         results = []
-        batch_size = 50  # Increased from 25 for faster startup (fewer network calls)
+        batch_size = 50
         while props:
             result = self._protocol.get_properties(props[:batch_size])
             if result is None:

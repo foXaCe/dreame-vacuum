@@ -587,3 +587,42 @@ def test_disconnect_with_mqtt_client_and_threads(
     # Sentinels pushed into queues
     assert proto._queue.get_nowait() == []
     assert proto._client_queue.get_nowait() == []
+
+
+class TestSendRequestIdAllocation:
+    """Concurrent send() calls must never share a request id."""
+
+    def test_concurrent_sends_use_unique_ids(self):
+        import threading
+
+        from custom_components.dreame_vacuum.dreame.protocol import (
+            DreameVacuumDreameHomeCloudProtocol,
+        )
+
+        proto = DreameVacuumDreameHomeCloudProtocol.__new__(DreameVacuumDreameHomeCloudProtocol)
+        proto._id = 0
+        proto._id_lock = threading.Lock()
+        proto._did = "123"
+        proto._host = "eu.host"
+        proto._strings = [str(i) for i in range(60)]
+
+        seen_ids = []
+        lock = threading.Lock()
+
+        def fake_api_call(url, params=None, retry_count=2):
+            with lock:
+                seen_ids.append(params["id"])
+                assert params["data"]["id"] == params["id"]
+            return {"data": {"result": []}}
+
+        proto._api_call = fake_api_call
+
+        threads = [threading.Thread(target=proto.send, args=("get_properties", [])) for _ in range(8)]
+        for th in threads:
+            th.start()
+        for th in threads:
+            th.join()
+
+        assert len(seen_ids) == 8
+        assert len(set(seen_ids)) == 8, f"ids dupliqués: {sorted(seen_ids)}"
+        assert sorted(seen_ids) == list(range(1, 9))
