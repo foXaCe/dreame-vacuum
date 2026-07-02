@@ -1,0 +1,13 @@
+[32m2026-07-02 08:00:22.323 INFO (MainThread) [homeassistant.setup] Setup of domain dreame_vacuum took 0.00 seconds[0m
+import time:      2954 |     237482 |             dns.resolver
+import time:      3007 |     242416 |           paho.mqtt.client
+import time:      1239 |     335812 |         custom_components.dreame_vacuum.dreame.protocol
+import time:       895 |     371263 |       custom_components.dreame_vacuum.dreame.device
+import time:       204 |     371466 |     custom_components.dreame_vacuum.dreame
+import time:      3940 |     389259 |   homeassistant.config_entries
+import time:      3715 |     411473 |           homeassistant.components.http
+import time:       516 |     413054 |         homeassistant.components.websocket_api.http
+import time:       213 |     466273 |       homeassistant.components.websocket_api
+import time:      2551 |     468824 |     homeassistant.components.persistent_notification
+import time:       648 |     841800 |   custom_components.dreame_vacuum.coordinator
+import time:       342 |    1251837 | custom_components.dreame_vacuum
