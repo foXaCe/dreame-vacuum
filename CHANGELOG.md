@@ -66,10 +66,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `segments_changed` repair issue) natively translated into the 18
   languages that lagged behind; all 20 languages are at strict key parity
   with `strings.json`.
-- +275 real tests: the Home Assistant layer is now at 100 % coverage
-  (camera included, with all HTTP views), plus targeted engine tests for
-  the map manager, map optimizer (real V8 path) and the device
-  setters/actions mixins. Coverage gate raised to 45 %.
+- +916 real tests (976 → 1 892): the Home Assistant layer is now at
+  100 % coverage (camera included, with all HTTP views), and the embedded
+  engine is covered on its critical logic — map decoder 81 % (synthetic
+  wire-format payloads incl. AES), device status core 63 %, device
+  orchestration 50 %, map editor 50 %, map operations 45 %, map manager
+  and optimizer fixes locked (real V8 path), renderer pipeline with exact
+  RGBA pixel asserts, Valetudo JSON renderer 100 %. Global coverage
+  38.5 % → 66 %; coverage gate raised to 65 %.
 
 ## [6.5.3] - 2026-06-20
 

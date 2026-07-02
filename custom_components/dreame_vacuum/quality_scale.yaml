@@ -45,9 +45,10 @@ rules:
   test-coverage:
     status: todo
     comment: >-
-      The Home Assistant layer is at ~95-100% per module; the embedded dreame
-      protocol/map library is significantly below the 95% bar and is being
-      raised incrementally.
+      The Home Assistant layer is at 100% per module. The embedded dreame
+      engine is covered on its critical logic (decoder 81%, status core 63%,
+      device 50%, editor 50%, map ops 45%, JSON renderer 100%) but several
+      modules are still below the 95% bar (overall 66%, gate at 65%).
 
   # Gold
   devices: done
