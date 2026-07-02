@@ -19,8 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`resilience.backoff_delay`) instead of being duplicated inline.
 - DEBUG logs no longer dump full HTTP bodies or raw map payloads
   (truncated / summarized).
-- `paho-mqtt` is pinned `<3.0` (the callback API v1 in use is removed in
-  paho 3.0; the VERSION2 migration is deliberately deferred).
+- MQTT callbacks migrated to paho `CallbackAPIVersion.VERSION2` (the v1
+  API is removed in paho 3.0); the auth-refused relogin now happens in
+  `on_connect`, where the v2 reason code is precise. `paho-mqtt` stays
+  pinned `<3.0` until 3.0 actually ships and is validated.
+- Entity services are now registered once from the integration's
+  `async_setup` (quality-scale rule `action-setup`); the previously
+  undocumented `vacuum_set_property` / `vacuum_call_action` services are
+  now declared and translated in all 20 languages.
 
 ### Fixed
 - Local protocol `set_credentials` compared `bytes` to `str`, resetting

@@ -289,10 +289,11 @@ class DreameVacuumDreameHomeCloudProtocol:
             self._client_queue.task_done()
 
     @staticmethod
-    def _on_client_connect(client: Any, self: Any, flags: Any, rc: Any) -> None:
+    def _on_client_connect(client: Any, self: Any, connect_flags: Any, reason_code: Any, properties: Any) -> None:
+        """Handle CONNACK (paho callback API v2)."""
         self._client_connecting = False
         self._reconnect_timer_cancel()
-        if rc == 0:
+        if not reason_code.is_failure:
             if not self._client_connected:
                 self._client_connected = True
                 _LOGGER.info("Connected to the device client")
@@ -300,20 +301,26 @@ class DreameVacuumDreameHomeCloudProtocol:
             if self._connected_callback:
                 self._client_queue.put((self._connected_callback, None))
         else:
-            _LOGGER.warning("Device client connection failed: %s", rc)
-            if not self._set_client_key():
+            _LOGGER.warning("Device client connection failed: %s", reason_code)
+            # 135 = "Not authorized": the broker key expired, refresh the
+            # session (relogin) before the automatic reconnect kicks in.
+            if reason_code == 135 and self._key_expire and self.login():
+                self._set_client_key()
+            elif not self._set_client_key():
                 self._client_connected = False
 
     @staticmethod
-    def _on_client_disconnect(client: Any, self: Any, rc: Any) -> None:
-        if rc != 0 and not self._set_client_key():
-            if rc == 5 and self._key_expire:
-                if self.login():
-                    self._set_client_key()
+    def _on_client_disconnect(client: Any, self: Any, disconnect_flags: Any, reason_code: Any, properties: Any) -> None:
+        """Handle disconnection (paho callback API v2).
+
+        Auth-refused reconnects are handled in _on_client_connect (the v3->v5
+        reason-code mapping loses the "refused" detail on the disconnect side).
+        """
+        if reason_code.is_failure and not self._set_client_key():
             if self._client_connected:
                 if not self._client_connecting:
                     self._client_connecting = True
-                    _LOGGER.info("Device Client disconnected (%s) Reconnecting...", rc)
+                    _LOGGER.info("Device Client disconnected (%s) Reconnecting...", reason_code)
                 self._reconnect_timer_cancel()
                 self._reconnect_timer = Timer(10, self._reconnect_timer_task)
                 self._reconnect_timer.start()
@@ -367,19 +374,12 @@ class DreameVacuumDreameHomeCloudProtocol:
                             mqtt_port = int(host_parts[1]) if len(host_parts) > 1 else 8883
                             key = f"{self._strings[53]}{self._uid}{self._strings[54]}{DreameVacuumDreameHomeCloudProtocol.get_random_agent_id()}{self._strings[54]}{mqtt_host}"
                             mqtt_mod: Any = paho.mqtt.client
-                            if paho.mqtt.__version__[0] > "1":
-                                self._client = mqtt_mod.Client(
-                                    mqtt_mod.CallbackAPIVersion.VERSION1,
-                                    key,
-                                    clean_session=True,
-                                    userdata=self,
-                                )
-                            else:
-                                self._client = mqtt_mod.Client(
-                                    key,
-                                    clean_session=True,
-                                    userdata=self,
-                                )
+                            self._client = mqtt_mod.Client(
+                                mqtt_mod.CallbackAPIVersion.VERSION2,
+                                key,
+                                clean_session=True,
+                                userdata=self,
+                            )
                             self._client.on_connect = DreameVacuumDreameHomeCloudProtocol._on_client_connect
                             self._client.on_disconnect = DreameVacuumDreameHomeCloudProtocol._on_client_disconnect
                             self._client.on_message = DreameVacuumDreameHomeCloudProtocol._on_client_message
