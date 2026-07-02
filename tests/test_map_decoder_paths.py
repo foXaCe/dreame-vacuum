@@ -598,7 +598,7 @@ def test_decode_legacy_funiture_info_format():
     assert (f.x, f.y) == (500, 600)
     assert (f.x0, f.y0) == (480, 570)
     assert (f.width, f.height) == (40, 60)
-    assert f.type == FurnitureType.ROUND_COFFEE_TABLE  # type 8 swapped to 25
+    assert f.type == FurnitureType.ROUND_COFFEE_TABLE  # kind 8 swapped to 25
     assert f.size_type == 2
     assert f.angle == 45.0
     assert f.scale == 1.5

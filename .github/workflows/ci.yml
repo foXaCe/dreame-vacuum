@@ -85,7 +85,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          # Keep in sync with Home Assistant's target runtime: on 3.14 pip
+          # resolves an HA build whose sources use 3.14-only syntax, which
+          # mypy (python_version 3.13) cannot parse.
+          python-version: "3.13"
 
       # Reuse the test stack (pytest-homeassistant-custom-component pins a
       # Home Assistant compatible with pillow/numpy) plus mypy. Installing
@@ -112,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.13"]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -132,7 +135,7 @@ jobs:
         run: pytest tests/ -v --cov=custom_components/dreame_vacuum --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.13'
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
