@@ -127,7 +127,7 @@ omit = ["tests/*"]
 
 [tool.coverage.report]
 # Coverage floor — ratchet only upwards as the test suite grows.
-fail_under = 45
+fail_under = 65
 show_missing = true
 
 [tool.mypy]
