@@ -7,9 +7,9 @@ from datetime import datetime
 from functools import cmp_to_key
 import json
 import logging
-from threading import Lock, RLock, Timer
+from threading import Lock, RLock, Thread, Timer
 import time
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 import zlib
 
 if TYPE_CHECKING:
@@ -92,6 +92,53 @@ from .vacuum_types import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Properties that MUST be loaded synchronously on the first refresh:
+# everything DreameVacuumDeviceCapability.load() reads (some flags are
+# absence-based, e.g. MAP_SAVING -> lidar_navigation) plus the primary
+# user-facing state. Everything else can arrive from the background tail
+# of the warm-boot load (entities stay unavailable until their value lands).
+_PRIORITY_BOOT_PROPERTIES: Final = (
+    DreameVacuumProperty.STATE,
+    DreameVacuumProperty.STATUS,
+    DreameVacuumProperty.TASK_STATUS,
+    DreameVacuumProperty.ERROR,
+    DreameVacuumProperty.BATTERY_LEVEL,
+    DreameVacuumProperty.CHARGING_STATUS,
+    DreameVacuumProperty.CLEANING_MODE,
+    DreameVacuumProperty.SUCTION_LEVEL,
+    DreameVacuumProperty.WATER_VOLUME,
+    DreameVacuumProperty.CLEANING_TIME,
+    DreameVacuumProperty.CLEANED_AREA,
+    DreameVacuumProperty.AI_DETECTION,
+    DreameVacuumProperty.AUTO_MOUNT_MOP,
+    DreameVacuumProperty.AUTO_SWITCH_SETTINGS,
+    DreameVacuumProperty.CAMERA_LIGHT_BRIGHTNESS,
+    DreameVacuumProperty.CARPET_CLEANING,
+    DreameVacuumProperty.CARPET_RECOGNITION,
+    DreameVacuumProperty.CRUISE_SCHEDULE,
+    DreameVacuumProperty.CUSTOMIZED_CLEANING,
+    DreameVacuumProperty.DETERGENT_LEFT,
+    DreameVacuumProperty.DND,
+    DreameVacuumProperty.DND_TASK,
+    DreameVacuumProperty.DRAINAGE_STATUS,
+    DreameVacuumProperty.DUST_COLLECTION,
+    DreameVacuumProperty.MAP_BACKUP_STATUS,
+    DreameVacuumProperty.MAP_SAVING,
+    DreameVacuumProperty.MULTI_FLOOR_MAP,
+    DreameVacuumProperty.OBSTACLE_AVOIDANCE,
+    DreameVacuumProperty.OFF_PEAK_CHARGING,
+    DreameVacuumProperty.PET_DETECTIVE,
+    DreameVacuumProperty.SELF_WASH_BASE_STATUS,
+    DreameVacuumProperty.SENSOR_DIRTY_LEFT,
+    DreameVacuumProperty.SHORTCUTS,
+    DreameVacuumProperty.TASK_TYPE,
+    DreameVacuumProperty.TIGHT_MOPPING,
+    DreameVacuumProperty.VOICE_ASSISTANT,
+    DreameVacuumProperty.WETNESS_LEVEL,
+    DreameVacuumProperty.WIFI_MAP,
+)
+_PRIORITY_BOOT_DIDS: Final = frozenset(prop.value for prop in _PRIORITY_BOOT_PROPERTIES)
 
 
 class DreameVacuumDevice(
@@ -185,6 +232,12 @@ class DreameVacuumDevice(
 
         # Startup flags: two-phase loading for faster startup
         self._full_properties_loaded = False
+        # Warm-boot fast path: persisted property inventory (model/firmware
+        # keyed, provided by the coordinator). Deferred properties keep their
+        # entities unavailable until the first value arrives.
+        self._property_inventory: dict[str, Any] | None = None
+        self._pending_properties: set[int] = set()
+        self._inventory_callback: Callable[[dict[str, Any]], None] | None = None
         self._map_initialized = False
         self._deferred_cloud_loaded = False
 
@@ -666,9 +719,15 @@ class DreameVacuumDevice(
                 if "aiid" not in mapping and (force_all or not self._ready or prop.value in self.data):
                     property_list.append({"did": str(prop.value), **mapping})
 
+        # Batch size is a device-side limit: the robot rejects get_properties
+        # beyond ~50 keys (100/200 fail), and it answers the cloud bridge
+        # serially, so parallel batches do not speed anything up either
+        # (measured 2026-07-02). The first refresh is therefore bound by
+        # 4 robot round-trips (~1.2 s each) — do not "optimize" this again
+        # without re-measuring on a real device.
         props = property_list.copy()
         results = []
-        batch_size = 50  # Increased from 25 for faster startup (fewer network calls)
+        batch_size = 50
         while props:
             result = self._protocol.get_properties(props[:batch_size])
             if result is None:
@@ -680,6 +739,108 @@ class DreameVacuumDevice(
             props[:] = props[batch_size:]
 
         return self._handle_properties(results)
+
+    def set_property_inventory(
+        self,
+        inventory: dict[str, Any] | None,
+        callback: Callable[[dict[str, Any]], None] | None = None,
+    ) -> None:
+        """Provide the persisted property inventory and its save callback."""
+        self._property_inventory = inventory
+        self._inventory_callback = callback
+
+    def property_pending(self, prop: DreameVacuumProperty) -> bool:
+        """Return True while a property's first value has not arrived yet."""
+        return prop.value in self._pending_properties
+
+    @property
+    def pending_properties(self) -> set[int]:
+        """Property ids whose first value has not arrived yet."""
+        return self._pending_properties
+
+    def _request_initial_properties(self) -> None:
+        """Load properties for the first refresh.
+
+        With a persisted inventory matching the current model/firmware, only
+        the priority batch (capability inputs + primary state) is fetched
+        synchronously; the remaining present properties load from a
+        background thread while their entities stay unavailable. Without a
+        usable inventory (first setup, firmware change) the full load stays
+        synchronous and the fresh inventory is published for persistence.
+        """
+        inventory = self._property_inventory
+        usable = bool(
+            inventory
+            and self.info is not None
+            and inventory.get("model") == self.info.model
+            and inventory.get("firmware") == self.info.firmware_version
+            and inventory.get("present")
+        )
+        if not usable:
+            self._request_properties(force_all=True)
+            self._full_properties_loaded = True
+            self._publish_inventory()
+            return
+
+        present = set(inventory["present"])
+        priority: list[DreameVacuumProperty] = []
+        deferred: list[DreameVacuumProperty] = []
+        for prop in self._default_properties:
+            mapping = self.property_mapping.get(prop)
+            if mapping is None or "aiid" in mapping:
+                continue
+            if prop.value in _PRIORITY_BOOT_DIDS:
+                priority.append(prop)
+            elif prop.value in present:
+                deferred.append(prop)
+        self._pending_properties = {prop.value for prop in deferred}
+        try:
+            self._request_properties(priority, force_all=True)
+        except Exception:
+            self._pending_properties = set()
+            raise
+        Thread(target=self._load_deferred_properties, args=(deferred,), daemon=True).start()
+
+    def _load_deferred_properties(self, deferred: list[DreameVacuumProperty]) -> None:
+        """Background tail of the warm-boot load (everything after batch 1)."""
+        try:
+            batch_size = 50
+            for i in range(0, len(deferred), batch_size):
+                if self.disconnected:
+                    return
+                batch = deferred[i : i + batch_size]
+                try:
+                    self._request_properties(batch, force_all=True)
+                finally:
+                    self._pending_properties -= {prop.value for prop in batch}
+            self._full_properties_loaded = True
+            self._publish_inventory()
+        except Exception:
+            _LOGGER.warning("Deferred property load failed", exc_info=True)
+        finally:
+            if self._pending_properties:
+                # Never leave entities gated on properties nobody will load;
+                # the regular update cycle takes over from here.
+                self._pending_properties = set()
+                self._property_changed(False)
+
+    def _publish_inventory(self) -> None:
+        """Report the answered-property inventory for persistence."""
+        if self._inventory_callback is None or self.info is None:
+            return
+        mapped = [
+            prop.value
+            for prop in self._default_properties
+            if prop in self.property_mapping and "aiid" not in self.property_mapping[prop]
+        ]
+        self._inventory_callback(
+            {
+                "model": self.info.model,
+                "firmware": self.info.firmware_version,
+                "present": [did for did in mapped if did in self.data],
+                "absent": [did for did in mapped if did not in self.data],
+            }
+        )
 
     def _update_status(self, task_status: DreameVacuumTaskStatus, status: DreameVacuumStatus) -> None:
         """Update status properties on memory for map renderer to update the image before action is sent to the device."""
@@ -1718,11 +1879,9 @@ class DreameVacuumDevice(
             self._dirty_auto_switch_data = {}
             self._dirty_ai_data = {}
 
-            # Load ALL properties in a single pass (eliminates separate capability batch overhead)
             t_props = time.time()
-            self._request_properties(force_all=True)
-            self._full_properties_loaded = True
-            _LOGGER.debug("connect_device: all properties loaded in %.2fs", time.time() - t_props)
+            self._request_initial_properties()
+            _LOGGER.debug("connect_device: initial properties loaded in %.2fs", time.time() - t_props)
             self._last_update_failed = None
 
             # Set up map manager (capabilities are now available from loaded properties)

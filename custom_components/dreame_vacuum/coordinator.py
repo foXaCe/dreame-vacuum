@@ -31,6 +31,7 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import generate_entity_id
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue, async_delete_issue
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -570,6 +571,28 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         if data:
             event_data.update(data)
         self.hass.loop.call_soon_threadsafe(self.hass.bus.async_fire, f"{DOMAIN}_{event_id}", event_data)
+
+    async def _async_setup(self) -> None:
+        """Load the persisted property inventory before the first refresh.
+
+        The inventory (model/firmware keyed) lets the device fetch only the
+        priority property batch synchronously on warm boots; the rest loads
+        in the background while the affected entities stay unavailable.
+        """
+        self._inventory_store: Store[dict[str, Any]] = Store(
+            self.hass, 1, f"{DOMAIN}.{self._entry.entry_id}.property_inventory"
+        )
+        inventory = await self._inventory_store.async_load()
+        if self._device:
+            self._device.set_property_inventory(inventory, self._save_property_inventory)
+
+    def _save_property_inventory(self, inventory: dict[str, Any]) -> None:
+        """Persist the inventory (called from device worker threads)."""
+
+        def _schedule() -> None:
+            self.hass.async_create_task(self._inventory_store.async_save(inventory))
+
+        self.hass.loop.call_soon_threadsafe(_schedule)
 
     async def _async_update_data(self) -> DreameVacuumDevice:
         """Update Dreame Vacuum."""

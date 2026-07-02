@@ -53,7 +53,11 @@ def default_exists_fn(description: Any, device: Any) -> bool:
         (description.action_key is not None and description.action_key in device.action_mapping)
         or description.property_key is None
         or (
-            isinstance(description.property_key, DreameVacuumProperty) and description.property_key.value in device.data
+            isinstance(description.property_key, DreameVacuumProperty)
+            and (
+                description.property_key.value in device.data
+                or description.property_key.value in device.pending_properties
+            )
         )
         or (
             isinstance(description.property_key, DreameVacuumAutoSwitchProperty)
@@ -402,6 +406,12 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
     def available(self) -> bool:
         """Return True if entity is available."""
         if self.device is None or not self.device.device_connected:
+            return False
+
+        prop = getattr(self.entity_description, "property_key", None)
+        if isinstance(prop, DreameVacuumProperty) and prop.value in self.device.pending_properties:
+            # Warm-boot: the entity exists (persisted inventory) but its first
+            # value is still loading in the background.
             return False
 
         if self._computed_available_fn is not None:

@@ -1150,3 +1150,118 @@ class TestConnectedCallback:
         assert d.available is True
         assert scheduled == [(2, True)]
         d._property_changed.assert_called_once_with()
+
+
+# ---------------------------------------------------------------------------
+# Warm-boot initial property load (persisted inventory)
+# ---------------------------------------------------------------------------
+
+
+def _warm_boot_device(inventory, *, model="dreame.vacuum.test", firmware="1.0"):
+    from types import SimpleNamespace
+
+    import custom_components.dreame_vacuum.dreame.device as device_module
+
+    d: DreameVacuumDevice = object.__new__(DreameVacuumDevice)
+    d.info = SimpleNamespace(model=model, firmware_version=firmware)
+    d.disconnected = False
+    d.data = {}
+    d._property_inventory = inventory
+    d._pending_properties = set()
+    d._inventory_callback = MagicMock()
+    d._full_properties_loaded = False
+    d._property_changed = MagicMock()
+    d._request_properties = MagicMock(return_value=True)
+    d._default_properties = list(DreameVacuumPropertyMapping.keys())
+    return d, device_module
+
+
+class TestWarmBootInitialLoad:
+    def test_without_inventory_full_sync_load_and_publish(self) -> None:
+        d, _ = _warm_boot_device(None)
+        d.data = {DreameVacuumProperty.BATTERY_LEVEL.value: 90}
+
+        d._request_initial_properties()
+
+        d._request_properties.assert_called_once_with(force_all=True)
+        assert d._full_properties_loaded is True
+        assert d._pending_properties == set()
+        inv = d._inventory_callback.call_args.args[0]
+        assert inv["model"] == "dreame.vacuum.test"
+        assert DreameVacuumProperty.BATTERY_LEVEL.value in inv["present"]
+        assert DreameVacuumProperty.BATTERY_LEVEL.value not in inv["absent"]
+
+    def test_firmware_mismatch_falls_back_to_full_load(self) -> None:
+        inventory = {"model": "dreame.vacuum.test", "firmware": "0.9", "present": [1], "absent": []}
+        d, _ = _warm_boot_device(inventory)
+
+        d._request_initial_properties()
+
+        d._request_properties.assert_called_once_with(force_all=True)
+
+    def test_matching_inventory_splits_priority_and_defers_rest(self, monkeypatch) -> None:
+        mapped = [p.value for p in DreameVacuumPropertyMapping.keys() if "aiid" not in DreameVacuumPropertyMapping[p]]
+        inventory = {"model": "dreame.vacuum.test", "firmware": "1.0", "present": mapped, "absent": []}
+        d, device_module = _warm_boot_device(inventory)
+
+        started = {}
+
+        class _InlineThread:
+            def __init__(self, target=None, args=(), daemon=None):
+                started["target"], started["args"] = target, args
+
+            def start(self):
+                started["target"](*started["args"])
+
+        monkeypatch.setattr(device_module, "Thread", _InlineThread)
+
+        d._request_initial_properties()
+
+        # Premier appel synchrone : uniquement les propriétés prioritaires.
+        first_call = d._request_properties.call_args_list[0]
+        priority_values = {p.value for p in first_call.args[0]}
+        assert priority_values <= set(device_module._PRIORITY_BOOT_DIDS)
+        assert first_call.kwargs == {"force_all": True}
+
+        # Le différé couvre tout le reste des présents, par lots de <= 50.
+        deferred_calls = d._request_properties.call_args_list[1:]
+        deferred_values = [p.value for c in deferred_calls for p in c.args[0]]
+        expected_deferred = [v for v in mapped if v not in device_module._PRIORITY_BOOT_DIDS]
+        assert sorted(deferred_values) == sorted(expected_deferred)
+        assert all(len(c.args[0]) <= 50 for c in deferred_calls)
+
+        # Fin de chargement : plus rien en attente, inventaire republié.
+        assert d._pending_properties == set()
+        assert d._full_properties_loaded is True
+        d._inventory_callback.assert_called_once()
+
+    def test_deferred_failure_never_leaves_entities_gated(self, monkeypatch) -> None:
+        mapped = [p.value for p in DreameVacuumPropertyMapping.keys() if "aiid" not in DreameVacuumPropertyMapping[p]]
+        inventory = {"model": "dreame.vacuum.test", "firmware": "1.0", "present": mapped, "absent": []}
+        d, device_module = _warm_boot_device(inventory)
+
+        calls = {"n": 0}
+
+        def _req(props=None, force_all=False):
+            calls["n"] += 1
+            if calls["n"] == 2:  # premier lot différé
+                from custom_components.dreame_vacuum.dreame.exceptions import DeviceException
+
+                raise DeviceException("boom")
+            return True
+
+        d._request_properties = MagicMock(side_effect=_req)
+
+        class _InlineThread:
+            def __init__(self, target=None, args=(), daemon=None):
+                self._t, self._a = target, args
+
+            def start(self):
+                self._t(*self._a)
+
+        monkeypatch.setattr(device_module, "Thread", _InlineThread)
+
+        d._request_initial_properties()
+
+        assert d._pending_properties == set()
+        d._property_changed.assert_called_with(False)

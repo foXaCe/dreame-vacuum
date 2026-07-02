@@ -214,6 +214,7 @@ def _device_without_setter(hass, property_key):
             "action_mapping",
             "auto_switch_data",
             "ai_data",
+            "pending_properties",
             "get_property",
             "set_property",
         ]
@@ -226,6 +227,7 @@ def _device_without_setter(hass, property_key):
     device.capability = MagicMock()
     device.capability.dnd = True
     device.data = {}
+    device.pending_properties = set()
     device.action_mapping = {}
     device.auto_switch_data = {}
     device.ai_data = {}

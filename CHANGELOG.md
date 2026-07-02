@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Faster startup on warm boots: the integration now persists the device's
+  answered-property inventory (model/firmware keyed) and only loads the
+  priority batch (capability inputs + primary state) synchronously during
+  the first refresh; the remaining properties load in the background while
+  their entities stay unavailable until the first value arrives — the exact
+  timeline they had before. Measured on the same network window: entry
+  setup 10.7 s → 5.8 s (≈3.5-4 s under normal cloud latency). First setup
+  and firmware changes keep the full synchronous load.
+
+### Fixed
+- Cloud request ids are now allocated atomically: concurrent requests
+  (MQTT push handling, polling, entity commands) could share the same id
+  and the Dreame cloud silently rejected the duplicate (empty result).
+
 ## [6.6.0] - 2026-07-02
 
 ### Changed

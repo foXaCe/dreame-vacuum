@@ -569,6 +569,7 @@ class DreameVacuumDreameHomeCloudProtocol:
 
         with self._id_lock:
             self._id = self._id + 1
+            request_id = self._id
         self._api_call_async(
             lambda api_response: callback(
                 None
@@ -581,10 +582,10 @@ class DreameVacuumDreameHomeCloudProtocol:
             f"{self._strings[37]}{host}/{self._strings[27]}/{self._strings[38]}",
             {
                 "did": str(self._did),
-                "id": self._id,
+                "id": request_id,
                 "data": {
                     "did": str(self._did),
-                    "id": self._id,
+                    "id": request_id,
                     "method": method,
                     "params": parameters,
                 },
@@ -597,22 +598,26 @@ class DreameVacuumDreameHomeCloudProtocol:
         if self._host and len(self._host):
             host = f"-{self._host.split('.')[0]}"
 
+        # Allocate the request id atomically BEFORE building the payload:
+        # concurrent send() calls previously shared the same id (read outside
+        # the lock, incremented afterwards), and the cloud rejects duplicates.
+        with self._id_lock:
+            self._id = self._id + 1
+            request_id = self._id
         api_response = self._api_call(
             f"{self._strings[37]}{host}/{self._strings[27]}/{self._strings[38]}",
             {
                 "did": str(self._did),
-                "id": self._id,
+                "id": request_id,
                 "data": {
                     "did": str(self._did),
-                    "id": self._id,
+                    "id": request_id,
                     "method": method,
                     "params": parameters,
                 },
             },
             retry_count,
         )
-        with self._id_lock:
-            self._id = self._id + 1
         if (
             api_response is None
             or "data" not in api_response
