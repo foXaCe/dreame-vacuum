@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Minimum Home Assistant raised to 2025.8** (hacs.json).
+- Options flow migrated to `OptionsFlowWithReload`: the deprecated
+  constructor pattern and the manual reload update-listener are gone;
+  options changes still reload the entry automatically.
+- Config and options flows now use modern selectors (password-typed
+  credential fields, dropdowns for country/color scheme/icon set/device,
+  proper multi-selects for notifications and hidden map objects).
+- Cloud retry backoff gained jitter and is shared
+  (`resilience.backoff_delay`) instead of being duplicated inline.
+- DEBUG logs no longer dump full HTTP bodies or raw map payloads
+  (truncated / summarized).
+- `paho-mqtt` is pinned `<3.0` (the callback API v1 in use is removed in
+  paho 3.0; the VERSION2 migration is deliberately deferred).
+
+### Fixed
+- Local protocol `set_credentials` compared `bytes` to `str`, resetting
+  the miIO connection on every call even with unchanged credentials.
+- A failed P-frame map request could never be retried (its key stayed in
+  the request queue forever).
+- One corrupted saved map aborted the processing of the whole saved-map
+  list; it is now skipped.
+- The map file-URL cache grew without bound (map object names change on
+  every update); expired entries are now purged.
+- Event-loop hygiene: `get_map_for_render` (V8 map optimizer + deep
+  copies) now always runs in the executor, and the default/disconnected
+  camera images are encoded once and cached instead of re-encoding PNG
+  (and re-blurring) on every access from the loop.
+- Dynamic-entity coordinator listeners (rooms, shortcuts, map buttons,
+  cameras) are now unsubscribed on config entry unload (previously leaked
+  on every reload).
+- The JSON map renderer no longer raises `KeyError` when the first frame
+  arrives without dimensions.
+- `recorder`: fixed the `carpet_sensivity_list` typo that made the
+  exclusion inoperative.
+- The embedded V8 context of the map optimizer is released on unload.
+
+### Removed
+- ~1 500 lines of dead code, chiefly the never-invoked pure-Python
+  fallback of the map optimizer (the MiniRacer JS path is the only
+  production path) plus assorted dead methods, dead exceptions
+  (`AuthenticationError`, `InvalidResponseError`, `CircuitOpenError`),
+  unused constants and stale commented blocks.
+- Obsolete `CI_STATUS.md`; `requirements_dev.txt` merged into
+  `requirements-dev.txt`.
+
+### Added
+- `quality_scale.yaml` with honest per-rule statuses (documented todos
+  and justified exemptions).
+- 7 missing translation keys (map-edge smoothing option and the
+  `segments_changed` repair issue) natively translated into the 18
+  languages that lagged behind; all 20 languages are at strict key parity
+  with `strings.json`.
+- +275 real tests: the Home Assistant layer is now at 100 % coverage
+  (camera included, with all HTTP views), plus targeted engine tests for
+  the map manager, map optimizer (real V8 path) and the device
+  setters/actions mixins. Coverage gate raised to 45 %.
+
 ## [6.5.3] - 2026-06-20
 
 ### Added

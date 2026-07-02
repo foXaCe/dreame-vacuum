@@ -213,7 +213,8 @@ segment_colors:
 
 ## Known limitations
 
-- Cloud polling only (no local push) — data updates every ~10 seconds
+- Updates are pushed by the Dreame cloud over MQTT (`cloud_push`), backed by a
+  periodic safety-net poll — a working cloud connection is required
 - Map rendering is CPU-intensive on first load (cached afterward)
 - The `requests` library is used for some cloud API calls (not fully async yet)
 - Some older Dreame models may not expose all entities
