@@ -88,7 +88,7 @@ jobs:
           # Keep in sync with Home Assistant's target runtime: on 3.14 pip
           # resolves an HA build whose sources use 3.14-only syntax, which
           # mypy (python_version 3.13) cannot parse.
-          python-version: "3.13"
+          python-version: "3.14"
 
       # Reuse the test stack (pytest-homeassistant-custom-component pins a
       # Home Assistant compatible with pillow/numpy) plus mypy. Installing
