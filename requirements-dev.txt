@@ -17,17 +17,16 @@ prek
 
 # Type checking
 mypy>=2.1.0
-types-requests>=2.33.0.20260518
 
 # Runtime libraries (needed for mypy import resolution and local runs).
-# pillow / numpy / requests / pycryptodome / paho-mqtt are left UNPINNED on
+# pillow / numpy / aiohttp / pycryptodome / paho-mqtt are left UNPINNED on
 # purpose: Home Assistant pins them, and adding tighter lower bounds makes the
 # install impossible (e.g. pillow>=12.2.0 conflicts with the Home Assistant
 # pin). Let Home Assistant drive their versions.
 pillow
 numpy
 pybase64
-requests
+aiohttp
 pycryptodome
 python-miio
 mini-racer

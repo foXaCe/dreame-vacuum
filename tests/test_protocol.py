@@ -11,9 +11,12 @@ import queue
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests
 
 from custom_components.dreame_vacuum.dreame.exceptions import RateLimitError
+from custom_components.dreame_vacuum.dreame.http_client import (
+    HttpConnectionError,
+    HttpTimeoutError,
+)
 from custom_components.dreame_vacuum.dreame.protocol import (
     DreameVacuumDreameHomeCloudProtocol,
 )
@@ -101,9 +104,9 @@ def test_auth_key_none_by_default() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _mock_response(status_code: int, text: str, headers: dict | None = None) -> MagicMock:
+def _mock_response(status: int, text: str, headers: dict | None = None) -> MagicMock:
     resp = MagicMock()
-    resp.status_code = status_code
+    resp.status = status
     resp.text = text
     resp.headers = headers or {}
     return resp
@@ -198,7 +201,7 @@ def test_request_timeout_retries(
 ) -> None:
     """Timeout retries: post called retry_count+1 times, sleep called retry_count times."""
     proto._session = MagicMock()
-    proto._session.post.side_effect = requests.exceptions.Timeout
+    proto._session.post.side_effect = HttpTimeoutError
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
         result = proto.request("https://example.com/api", None, retry_count=2)
@@ -274,7 +277,7 @@ def test_request_connection_error_retries(
 ) -> None:
     """ConnectionError retries: post called retry_count+1 times, sleep called retry_count times."""
     proto._session = MagicMock()
-    proto._session.post.side_effect = requests.exceptions.ConnectionError("refused")
+    proto._session.post.side_effect = HttpConnectionError("refused")
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
         result = proto.request("https://example.com/api", None, retry_count=2)
@@ -316,7 +319,7 @@ def test_request_retry_count_negative_normalized(
 ) -> None:
     """retry_count=-1 → normalized to 0, single attempt."""
     proto._session = MagicMock()
-    proto._session.post.side_effect = requests.exceptions.Timeout
+    proto._session.post.side_effect = HttpTimeoutError
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
         result = proto.request("https://example.com/api", None, retry_count=-1)
@@ -426,7 +429,7 @@ def test_request_timeout_with_connected_logs_warning(
 ) -> None:
     """Timeout while _connected=True triggers logging path (coverage for :780 branch)."""
     proto._session = MagicMock()
-    proto._session.post.side_effect = requests.exceptions.Timeout
+    proto._session.post.side_effect = HttpTimeoutError
     proto._connected = True  # triggers the warning branch
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep"):
@@ -441,7 +444,7 @@ def test_request_connection_error_with_connected_logs_warning(
 ) -> None:
     """ConnectionError while _connected=True triggers logging path (coverage for :787 branch)."""
     proto._session = MagicMock()
-    proto._session.post.side_effect = requests.exceptions.ConnectionError("refused")
+    proto._session.post.side_effect = HttpConnectionError("refused")
     proto._connected = True
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep"):

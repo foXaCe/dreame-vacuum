@@ -1,14 +1,13 @@
 """Dreame device protocol.
 
-HTTP I/O is intentionally synchronous (``requests``) because the bundled
-``python-miio`` stack is synchronous as well; every call site in this
-integration already marshals protocol calls through
-``hass.async_add_executor_job`` so the event loop is never blocked.
-
-Moving to ``aiohttp`` would require either forking ``python-miio`` or
-introducing a sync→async wrapper layer across every MiIO command. That
-is tracked as a Platinum-quality prerequisite and deliberately out of
-scope for now; see the project README for context.
+Cloud HTTP I/O now runs on the async-native transport in ``http_client``
+(aiohttp). The protocol layer itself is still driven by dedicated worker
+threads, so it talks to the transport through ``BlockingHttpClient`` — a
+facade running a private event loop that never touches Home Assistant's
+loop. This is step 1 of the incremental async migration; the remaining
+steps (device worker threads → asyncio tasks, paho-mqtt → aiomqtt, the
+synchronous ``python-miio`` local backend) are tracked in
+``docs/overhaul/`` and ARCHITECTURE.md.
 """
 
 from __future__ import annotations
@@ -33,7 +32,6 @@ import zlib
 from Crypto.Cipher import ARC4
 import paho.mqtt
 import paho.mqtt.client
-import requests
 
 # Apply python-miio patch before importing miio to prevent FutureWarning on Python 3.13
 from .miio_patch import apply_miio_patch
@@ -43,6 +41,12 @@ apply_miio_patch()
 from miio.miioprotocol import MiIOProtocol
 
 from .exceptions import DeviceException, RateLimitError
+from .http_client import (
+    BlockingHttpClient,
+    HttpConnectionError,
+    HttpRequestError,
+    HttpTimeoutError,
+)
 from .resilience import CircuitBreaker, CircuitState, TimeoutConfig, backoff_delay
 
 DREAME_STRINGS: Final = "H4sICAAAAAAEAGNsb3VkX3N0cmluZ3MuanNvbgCFU9tuGjEQ/RUUKaiVysIuiKWKeKAgBK2qbbikIVWFBtvLuvFla5sQ+vUd26Q0fek+2HPmPsc7364Srl1CDQPJEsdIdfXuKu1m/RzvxegkNuPrUi4/1fn16ieqJsFxu5RgXKUla2dJmrxvvOFfKq3YTYMXy0Y6SHpJetNYEhCs3U06nbc+KRl0dt18kO+yrN/P8/6OUNIbpGU3p4MSetkO0g50O1AOUujTspVi0AewnDQeZh/F5msq7rPpkcw2z8Xj9PZeLrLbWT1ap9OHO1UVxWQ/xIBO+FCwDtzBoiDBOmbWnKK844pOtASuENRG18y4E4pIwZx6lQBXaiOH82LZtATtQxCiuTeg3NadEKKTYaVhtto6/chU8xXy5hqsPWpDmwfLjAIZYpov2gBCJiBEH5RD3I7st+DgqrYOZ8iGJnRi1sbkl9J/MHuuOSq2PBr3XHvBMeX7DROfU/teWjhlnNUjT0VEkamLhYIDH8meOGEoCG7dXebtqtTRUKzG8wi0I14KcxuQ9uwf8N5HS02ZCN0RHN9eWsJqLaKlfyqm6FhLCS8dlVz4UH95As9v5WM9c3hVWEIb/3J75iah0Uns2v6DJ7HYCElFtPY0jPZMuYtpIQgC76AN/wUucrgKHLbCXzHWyjEEq1gc6lpwEhzbP2zwrrd4bM/t6KMSGujaiKgorE3pK23cOamfoOU3Lok0fEb812KlSZb0/r9Y338DqLVvecIDAAA="
@@ -157,7 +161,7 @@ class DreameVacuumDreameHomeCloudProtocol:
         self._account_type = account_type
         self._country = country
         self._did = did
-        self._session = requests.session()
+        self._session = BlockingHttpClient()
         self._queue: queue.Queue[Any] = queue.Queue()
         self._thread: Thread | None = None
         self._client_queue: queue.Queue[Any] = queue.Queue()
@@ -410,8 +414,7 @@ class DreameVacuumDreameHomeCloudProtocol:
         return None
 
     def login(self) -> bool:
-        self._session.close()
-        self._session = requests.session()
+        self._session.close_session()
 
         if self._strings is None:
             self._strings = json.loads(zlib.decompress(base64.b64decode(DREAME_STRINGS), zlib.MAX_WBITS | 32))
@@ -446,7 +449,7 @@ class DreameVacuumDreameHomeCloudProtocol:
                 data=data,
                 timeout=self._timeout_config.login,
             )
-            if response.status_code == 200:
+            if response.status == 200:
                 data = json.loads(response.text)
                 if self._strings[18] in data:
                     self._key = data.get(self._strings[18])
@@ -466,12 +469,12 @@ class DreameVacuumDreameHomeCloudProtocol:
                         pass
                 self._logged_in = False
                 self._auth_failed = True
-                _LOGGER.error("Login failed (HTTP %s)", response.status_code)
-        except requests.exceptions.Timeout:
+                _LOGGER.error("Login failed (HTTP %s)", response.status)
+        except HttpTimeoutError:
             response = None
             self._logged_in = False
             _LOGGER.warning("Login failed: read timed out (timeout=%ss)", self._timeout_config.login)
-        except requests.exceptions.RequestException as ex:
+        except HttpRequestError as ex:
             response = None
             self._logged_in = False
             _LOGGER.error("Login failed: %s", ex)
@@ -649,11 +652,11 @@ class DreameVacuumDreameHomeCloudProtocol:
         while retries < retry_count + 1:
             try:
                 response = self._session.get(url, timeout=self._timeout_config.file_download)
-            except requests.exceptions.RequestException as ex:
+            except HttpRequestError as ex:
                 response = None
                 _LOGGER.warning("Unable to get file at %s: %s", url, ex)
-            if response is not None and response.status_code == 200:
-                return response.content
+            if response is not None and response.status == 200:
+                return response.body
             retries = retries + 1
         return None
 
@@ -776,7 +779,7 @@ class DreameVacuumDreameHomeCloudProtocol:
                     headers[self._strings[48]] = self._strings[4]
                 response = self._session.post(url, headers=headers, data=data, timeout=self._timeout_config.request)
                 break
-            except requests.exceptions.Timeout:
+            except HttpTimeoutError:
                 retries = retries + 1
                 response = None
                 if self._connected:
@@ -787,7 +790,7 @@ class DreameVacuumDreameHomeCloudProtocol:
                     )
                 if retries <= retry_count:
                     sleep(backoff_delay(retries))
-            except requests.exceptions.ConnectionError as ex:
+            except HttpConnectionError as ex:
                 retries = retries + 1
                 response = None
                 if self._connected:
@@ -801,7 +804,7 @@ class DreameVacuumDreameHomeCloudProtocol:
                     _LOGGER.warning("Error while executing request: %s", ex)
 
         if response is not None:
-            if response.status_code == 200:
+            if response.status == 200:
                 self._circuit_breaker.record_success()
                 self._connected = True
                 try:
@@ -809,11 +812,11 @@ class DreameVacuumDreameHomeCloudProtocol:
                 except json.JSONDecodeError as ex:
                     _LOGGER.warning("Invalid JSON response: %s", ex)
                     return None
-            if response.status_code == 429:
+            if response.status == 429:
                 retry_after = float(response.headers.get("Retry-After", 60))
                 _LOGGER.warning("Rate limited (HTTP 429), retry after %.0fs", retry_after)
                 raise RateLimitError(retry_after=retry_after)
-            if response.status_code == 401 and self._secondary_key and not _relogin_attempted:
+            if response.status == 401 and self._secondary_key and not _relogin_attempted:
                 _LOGGER.warning("API call failed: token expired")
                 if self.login():
                     # Replay the request once with the refreshed token. A
@@ -821,7 +824,7 @@ class DreameVacuumDreameHomeCloudProtocol:
                     # failure, so return its result directly.
                     return self.request(url, data, retry_count, _relogin_attempted=True)
             else:
-                _LOGGER.warning("API call failed (HTTP %s)", response.status_code)
+                _LOGGER.warning("API call failed (HTTP %s)", response.status)
                 _LOGGER.debug("API call failure body (%d bytes): %.200s", len(response.text), response.text)
 
         self._circuit_breaker.record_failure()
@@ -829,7 +832,7 @@ class DreameVacuumDreameHomeCloudProtocol:
 
     def disconnect(self) -> None:
         self._reconnect_timer_cancel()
-        self._session.close()
+        self._session.shutdown()
         self._connected = False
         self._logged_in = False
         self._auth_failed = False
@@ -866,7 +869,7 @@ class DreameVacuumMiHomeCloudProtocol:
         self._password = password
         self._country = country
         self._auth_key = auth_key
-        self._session = requests.session()
+        self._session = BlockingHttpClient()
         self._queue: queue.Queue[Any] = queue.Queue()
         self._thread: Thread | None = None
         self._thread_lock = threading.Lock()
@@ -1002,7 +1005,7 @@ class DreameVacuumMiHomeCloudProtocol:
                 ):
                     return False
                 return True
-        except (requests.exceptions.RequestException, json.JSONDecodeError, ValueError):
+        except (HttpRequestError, json.JSONDecodeError, ValueError):
             pass
         return False
 
@@ -1018,7 +1021,7 @@ class DreameVacuumMiHomeCloudProtocol:
                 timeout=self._timeout_config.login,
             )
             if response is not None:
-                if response.status_code == 200:
+                if response.status == 200:
                     data = self.to_json(response.text)
                     self._sign = data.get("_sign")
                     if data.get("code") == 0:
@@ -1027,7 +1030,7 @@ class DreameVacuumMiHomeCloudProtocol:
                         self._location = data.get("location")
                     return True
                 self._auth_failed = True
-        except requests.exceptions.RequestException as ex:
+        except HttpRequestError as ex:
             _LOGGER.debug("Login step 1 failed: %s", ex)
         return False
 
@@ -1066,7 +1069,7 @@ class DreameVacuumMiHomeCloudProtocol:
                 timeout=self._timeout_config.login,
             )
             if response is not None:
-                if response.status_code == 200:
+                if response.status == 200:
                     data = self.to_json(response.text)
                     location = data.get("location")
                     if location:
@@ -1089,9 +1092,9 @@ class DreameVacuumMiHomeCloudProtocol:
                             response = self._session.get(url)
                             if ick := response.cookies.get("ick"):
                                 self._captcha_ick = ick
-                                self.captcha_img = base64.b64encode(response.content).decode()
+                                self.captcha_img = base64.b64encode(response.body).decode()
                 self._auth_failed = True
-        except requests.exceptions.RequestException as ex:
+        except HttpRequestError as ex:
             _LOGGER.debug("Login step 2 failed: %s", ex)
         return False
 
@@ -1106,22 +1109,21 @@ class DreameVacuumMiHomeCloudProtocol:
                 timeout=self._timeout_config.login,
             )
             if response is not None:
-                if response.status_code == 200 and "serviceToken" in response.cookies:
+                if response.status == 200 and "serviceToken" in response.cookies:
                     self._service_token = response.cookies.get("serviceToken")
                     self._auth_key = f"{self._service_token} {self._ssecurity} {self._userId} {self._client_id}"
                     return True
                 self._auth_failed = True
-        except requests.exceptions.RequestException as ex:
+        except HttpRequestError as ex:
             _LOGGER.debug("Login step 3 failed: %s", ex)
         return False
 
     def login(self) -> bool:
-        self._session.close()
-        self._session = requests.session()
-        self._session.cookies.set("sdkVersion", "3.8.6", domain="mi.com")
-        self._session.cookies.set("sdkVersion", "3.8.6", domain="xiaomi.com")
-        self._session.cookies.set("deviceId", self._client_id, domain="mi.com")
-        self._session.cookies.set("deviceId", self._client_id, domain="xiaomi.com")
+        self._session.close_session()
+        self._session.set_cookie("sdkVersion", "3.8.6", "mi.com")
+        self._session.set_cookie("sdkVersion", "3.8.6", "xiaomi.com")
+        self._session.set_cookie("deviceId", self._client_id, "mi.com")
+        self._session.set_cookie("deviceId", self._client_id, "xiaomi.com")
 
         logged_in = (self._ssecurity and self.check_login()) or (
             self.login_step_1() and self.login_step_2() and self.login_step_3()
@@ -1145,7 +1147,7 @@ class DreameVacuumMiHomeCloudProtocol:
                     self.verification_url.replace(path, "identity/list"),
                     timeout=10,
                 )
-                if response and response.status_code == 200:
+                if response and response.status == 200:
                     identity_session = response.cookies.get("identity_session")
                     if identity_session:
                         flag = self.to_json(response.text).get("flag", 4)
@@ -1169,7 +1171,7 @@ class DreameVacuumMiHomeCloudProtocol:
                             timeout=10,
                         )
 
-                        if response and response.status_code == 200:
+                        if response and response.status == 200:
                             data = self.to_json(response.text)
                             if data.get("code") == 0 and "location" in data:
                                 response = self._session.get(
@@ -1177,7 +1179,7 @@ class DreameVacuumMiHomeCloudProtocol:
                                     allow_redirects=True,
                                     timeout=10,
                                 )
-                                if response and response.status_code == 200:
+                                if response and response.status == 200:
                                     self.verification_url = None
                                     self.captcha_img = None
                                     self._logged_in = self.login_step_1() and self.login_step_3()
@@ -1187,7 +1189,7 @@ class DreameVacuumMiHomeCloudProtocol:
                                         self._connected = True
                                     return True
                             else:
-                                _LOGGER.warning("2FA Verification Failed (HTTP %s)", response.status_code)
+                                _LOGGER.warning("2FA Verification Failed (HTTP %s)", response.status)
             except Exception as ex:
                 raise DeviceException("2FA Verification Failed! %s", ex) from None
         return False
@@ -1203,11 +1205,11 @@ class DreameVacuumMiHomeCloudProtocol:
         while retries < retry_count + 1:
             try:
                 response = self._session.get(url, timeout=self._timeout_config.file_download)
-            except requests.exceptions.RequestException as ex:
+            except HttpRequestError as ex:
                 response = None
                 _LOGGER.warning("Unable to get file at %s: %s", url, ex)
-            if response is not None and response.status_code == 200:
-                return response.content
+            if response is not None and response.status == 200:
+                return response.body
             retries = retries + 1
         return None
 
@@ -1452,14 +1454,14 @@ class DreameVacuumMiHomeCloudProtocol:
                     url, headers=headers, cookies=cookies, data=fields, timeout=self._timeout_config.mi_home_request
                 )
                 break
-            except requests.exceptions.Timeout:
+            except HttpTimeoutError:
                 retries = retries + 1
                 response = None
                 if self._connected:
                     _LOGGER.warning("Request timed out (timeout=%ss): %s", self._timeout_config.mi_home_request, url)
                 if retries <= retry_count:
                     sleep(backoff_delay(retries))
-            except requests.exceptions.ConnectionError as ex:
+            except HttpConnectionError as ex:
                 retries = retries + 1
                 response = None
                 if self._connected:
@@ -1473,7 +1475,7 @@ class DreameVacuumMiHomeCloudProtocol:
                     _LOGGER.warning("Error while executing request: %s %s", url, ex)
 
         if response is not None:
-            if response.status_code == 200:
+            if response.status == 200:
                 self._circuit_breaker.record_success()
                 self._connected = True
                 decoded = self.decrypt_rc4(self.signed_nonce(fields["_nonce"]), response.text)
@@ -1484,11 +1486,11 @@ class DreameVacuumMiHomeCloudProtocol:
                         _LOGGER.warning("Invalid JSON response: %s", ex)
                         return None
                 return None
-            if response.status_code == 429:
+            if response.status == 429:
                 retry_after = float(response.headers.get("Retry-After", 60))
                 _LOGGER.warning("Rate limited (HTTP 429), retry after %.0fs", retry_after)
                 raise RateLimitError(retry_after=retry_after)
-            _LOGGER.warning("API call failed (HTTP %s)", response.status_code)
+            _LOGGER.warning("API call failed (HTTP %s)", response.status)
             _LOGGER.debug("API call failure body (%d bytes): %.200s", len(response.text), response.text)
 
         self._circuit_breaker.record_failure()
@@ -1502,7 +1504,7 @@ class DreameVacuumMiHomeCloudProtocol:
         return base64.b64encode(hash_object.digest()).decode("utf-8")
 
     def disconnect(self) -> None:
-        self._session.close()
+        self._session.shutdown()
         self._connected = False
         self._logged_in = False
         self._auth_failed = False

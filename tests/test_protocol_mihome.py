@@ -13,9 +13,12 @@ from unittest.mock import MagicMock, patch
 
 from Crypto.Cipher import ARC4
 import pytest
-import requests
 
 from custom_components.dreame_vacuum.dreame.exceptions import RateLimitError
+from custom_components.dreame_vacuum.dreame.http_client import (
+    HttpConnectionError,
+    HttpTimeoutError,
+)
 from custom_components.dreame_vacuum.dreame.protocol import (
     DreameVacuumDeviceProtocol,
     DreameVacuumDreameHomeCloudProtocol,
@@ -48,9 +51,9 @@ def device_proto() -> DreameVacuumDeviceProtocol:
 # ---------------------------------------------------------------------------
 
 
-def _mock_response(status_code: int, text: str, headers: dict | None = None) -> MagicMock:
+def _mock_response(status: int, text: str, headers: dict | None = None) -> MagicMock:
     resp = MagicMock()
-    resp.status_code = status_code
+    resp.status = status
     resp.text = text
     resp.headers = headers or {}
     return resp
@@ -377,7 +380,7 @@ def test_mihome_request_timeout_retries(
 ) -> None:
     """Timeout retries: post called retry_count+1 times, sleep called retry_count times."""
     mihome._session = MagicMock()
-    mihome._session.post.side_effect = requests.exceptions.Timeout
+    mihome._session.post.side_effect = HttpTimeoutError
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
         result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=2)
@@ -434,7 +437,7 @@ def test_mihome_request_connection_error_retries(
 ) -> None:
     """ConnectionError retries same as Timeout."""
     mihome._session = MagicMock()
-    mihome._session.post.side_effect = requests.exceptions.ConnectionError("refused")
+    mihome._session.post.side_effect = HttpConnectionError("refused")
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep") as mock_sleep:
         result = mihome.request("https://de.api.io.mi.com/app/v2/test", {"data": "x"}, retry_count=2)
@@ -631,7 +634,7 @@ def test_mihome_request_timeout_with_connected_logs_warning(
 ) -> None:
     """Timeout while _connected=True covers the warning branch (line 1445)."""
     mihome._session = MagicMock()
-    mihome._session.post.side_effect = requests.exceptions.Timeout
+    mihome._session.post.side_effect = HttpTimeoutError
     mihome._connected = True
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep"):
@@ -646,7 +649,7 @@ def test_mihome_request_connection_error_with_connected_logs_warning(
 ) -> None:
     """ConnectionError while _connected=True covers the warning branch (line 1452)."""
     mihome._session = MagicMock()
-    mihome._session.post.side_effect = requests.exceptions.ConnectionError("refused")
+    mihome._session.post.side_effect = HttpConnectionError("refused")
     mihome._connected = True
 
     with patch("custom_components.dreame_vacuum.dreame.protocol.sleep"):

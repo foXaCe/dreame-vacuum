@@ -105,7 +105,7 @@ def _dreame_protocol() -> DreameVacuumDreameHomeCloudProtocol:
 
 def test_b16_replays_once_after_relogin_without_breaker_failure() -> None:
     proto = _dreame_protocol()
-    proto._session.post.side_effect = [MagicMock(status_code=401), MagicMock(status_code=200, text='{"ok": 1}')]
+    proto._session.post.side_effect = [MagicMock(status=401), MagicMock(status=200, text='{"ok": 1}')]
 
     result = proto.request("http://x", "data", retry_count=0)
 
@@ -118,7 +118,7 @@ def test_b16_replays_once_after_relogin_without_breaker_failure() -> None:
 def test_b16_login_failure_records_single_breaker_failure() -> None:
     proto = _dreame_protocol()
     proto.login.return_value = False
-    proto._session.post.side_effect = [MagicMock(status_code=401)]
+    proto._session.post.side_effect = [MagicMock(status=401)]
 
     assert proto.request("http://x", "data", retry_count=0) is None
     assert proto._session.post.call_count == 1  # no replay when login fails
@@ -127,7 +127,7 @@ def test_b16_login_failure_records_single_breaker_failure() -> None:
 
 def test_b16_no_infinite_relogin_loop() -> None:
     proto = _dreame_protocol()
-    proto._session.post.side_effect = [MagicMock(status_code=401), MagicMock(status_code=401)]
+    proto._session.post.side_effect = [MagicMock(status=401), MagicMock(status=401)]
 
     assert proto.request("http://x", "data", retry_count=0) is None
     assert proto.login.call_count == 1  # relogin attempted at most once

@@ -79,6 +79,7 @@ class AsyncHttpClient:
 
     def set_cookie(self, name: str, value: str, domain: str) -> None:
         """Register a cookie applied to the session (survives session resets)."""
+        self._cookies = [(n, v, d) for n, v, d in self._cookies if (n, d) != (name, domain)]
         self._cookies.append((name, value, domain))
         if (session := self._active_session()) is not None:
             session.cookie_jar.update_cookies({name: value}, response_url=_cookie_url(domain))
