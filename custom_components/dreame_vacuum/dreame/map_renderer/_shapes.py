@@ -112,6 +112,53 @@ class _ShapesMixin(_MapRendererState):
             )
         return new_layer
 
+    def render_doors(
+        self,
+        doors: list[Wall],
+        color: tuple[int, ...],
+        layer_size: tuple[int, int],
+        dimensions: MapImageDimensions,
+        width: int,
+        scale: int,
+    ) -> Image.Image:
+        """Draw walls_info door segments as a subtle dashed marker.
+
+        Deliberately dashed rather than solid: a solid, wall-coloured trace
+        redrawing the same segment the pixel wall already occupies is
+        exactly the "additive" render that was reverted before (redundant
+        gray frames -- see docs/dev/wall-lines-render-spike.md). A dashed
+        line in a distinct, sober tint can never read as a duplicated wall
+        outline.
+        """
+        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        draw = ImageDraw.Draw(new_layer, "RGBA")
+        dash_length = 6 * scale
+        gap_length = 5 * scale
+        period = dash_length + gap_length
+        for wall in doors:
+            p = wall.to_img(dimensions)
+            x0, y0 = p.x0 * scale, p.y0 * scale
+            x1, y1 = p.x1 * scale, p.y1 * scale
+            length = math.hypot(x1 - x0, y1 - y0)
+            if length <= 0:
+                continue
+            ux, uy = (x1 - x0) / length, (y1 - y0) / length
+            position = 0.0
+            while position < length:
+                dash_end = min(position + dash_length, length)
+                draw.line(
+                    [
+                        x0 + ux * position,
+                        y0 + uy * position,
+                        x0 + ux * dash_end,
+                        y0 + uy * dash_end,
+                    ],
+                    color,
+                    width=(width * scale),
+                )
+                position += period
+        return new_layer
+
     def render_thresholds(
         self,
         thresholds: list[Wall],

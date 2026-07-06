@@ -3,10 +3,27 @@
 ``DreameVacuumMapDecoder._decode_walls_info`` parses the saved-map
 ``walls_info`` structure (real-world mm segments, grouped by room, with
 doorways flagged ``type == 1``) into two flat ``Wall`` lists on the map
-data — ``wall_lines`` (walls) and ``door_lines`` (doorways). The data is
-decoded and kept on ``MapData`` for a future clean replacement of the
-pixel wall contour; it is not rendered additively (that produced redundant
-gray frames over the existing pixel walls).
+data — ``wall_lines`` (walls) and ``door_lines`` (doorways).
+
+Rendering status (see ``docs/dev/wall-lines-render-spike.md`` for the full
+investigation):
+
+- ``wall_lines``: decoded and kept on ``MapData``, but a full replacement of
+  the pixel wall contour is BLOCKED. On the real reference fixture
+  (r95285-saved, 331x390, 10 rooms) only ~44% of grid WALL cells sit near a
+  wall_lines segment — the rest is a LIDAR-scanned free-form perimeter
+  walls_info never describes — and every wall_lines/door_lines segment is
+  axis-aligned anyway, so the covered part renders pixel-perfect already
+  under the current grid rasterizer. Vectorizing it would be a no-op at
+  best and risks the exact reverted "additive" bug at worst. The renderer
+  never reads ``wall_lines``: rendering is byte-identical whether it is
+  present or not (pinned in ``tests/test_map_renderer.py::
+  TestRenderMapFullPipeline::test_wall_lines_alone_does_not_change_pixel_output``).
+- ``door_lines``: rendered as a subtle dashed marker (``MapRendererLayer.DOOR``,
+  ``_ShapesMixin.render_doors``), independently of the wall_lines question —
+  it is additive information (mostly gaps/openings) the pixel grid cannot
+  express on its own, and it never duplicates or replaces existing wall
+  pixels.
 
 The structure is the one captured live from a Dreame Aqua10 (r95285):
 ``{version_flag, storeys: [{rooms: [{room_id, walls: [{type, beg_pt_x,

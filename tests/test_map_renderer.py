@@ -143,6 +143,62 @@ class TestRenderMapFullPipeline:
         # Segment 2 interior pixel (grid x=15, y=2) -> segment color_index 1.
         assert rgba.getpixel((186, 150)) == MapRendererColorScheme().segment[1][0]
 
+    def test_wall_lines_alone_does_not_change_pixel_output(self) -> None:
+        """wall_lines has no rendering effect today.
+
+        Replacing the pixel wall contour with wall_lines vectors is BLOCKED
+        (see docs/dev/wall-lines-render-spike.md): on the real reference
+        fixture only ~44% of grid wall cells sit near a wall_lines segment,
+        and every wall_lines segment is axis-aligned anyway (zero anti-
+        aliasing to gain where it *is* covered). So wall_lines is decoded
+        and carried on MapData, but the renderer must not act on it: this
+        pins the current byte-identical fallback so it isn't silently
+        broken by a future half-finished attempt.
+        """
+        baseline = _make_small_map_data()
+        png_without = DreameVacuumMapRenderer(low_resolution=True, cache=True).render_map(
+            baseline, robot_status=1, station_status=0
+        )
+
+        with_wall_lines = _make_small_map_data()
+        with_wall_lines.wall_lines = [Wall(0, 100, 900, 100)]
+        png_with = DreameVacuumMapRenderer(low_resolution=True, cache=True).render_map(
+            with_wall_lines, robot_status=1, station_status=0
+        )
+
+        assert png_with == png_without
+
+    def test_door_lines_draw_additive_marker_without_touching_wall_or_segment_pixels(self) -> None:
+        """door_lines (walls_info type 1) draw a distinct, additive marker.
+
+        Unlike wall_lines, door_lines carry information the pixel grid has
+        no way to express on its own, so they are rendered -- but only ever
+        additively, layered after the existing wall pixels/objects, never
+        replacing or duplicating them (that additive-over-wall-pixels
+        pattern is exactly the reverted bug: redundant gray frames).
+        """
+        without_doors = _make_small_map_data()
+        png_without = DreameVacuumMapRenderer(low_resolution=True, cache=True).render_map(
+            without_doors, robot_status=1, station_status=0
+        )
+
+        with_doors = _make_small_map_data()
+        with_doors.door_lines = [Wall(0, 500, 900, 500)]
+        renderer = DreameVacuumMapRenderer(low_resolution=True, cache=True)
+        png_with = renderer.render_map(with_doors, robot_status=1, station_status=0)
+
+        # The door marker is drawn as its own object layer...
+        assert MapRendererLayer.DOOR in renderer._layers
+        # ...and something in the final PNG actually changed as a result.
+        assert png_with != png_without
+
+        img_with = Image.open(io.BytesIO(png_with)).convert("RGBA")
+        # The wall-border and segment pixels asserted in the sibling test
+        # (test_renders_wall_segment_and_outside_colors) are untouched.
+        assert img_with.getpixel((156, 150)) == MapRendererColorScheme().wall
+        assert img_with.getpixel((160, 150)) == MapRendererColorScheme().segment[0][0]
+        assert img_with.getpixel((186, 150)) == MapRendererColorScheme().segment[1][0]
+
     def test_calibration_points_set_after_render(self) -> None:
         map_data = _make_small_map_data()
         renderer = DreameVacuumMapRenderer(low_resolution=True, cache=True)
@@ -615,6 +671,33 @@ class TestShapesMixin:
 
         assert tuple(arr[29, 10]) == (0, 0, 255, 255)
         assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+
+    def test_render_doors_draws_dashed_line(self) -> None:
+        renderer = self._renderer()
+        dims = MapImageDimensions(top=0, left=0, height=50, width=350, grid_size=1)
+        layer_size = (350, 50)
+        wall = Wall(10, 25, 310, 25)
+
+        layer = renderer.render_doors([wall], (0, 128, 255, 255), layer_size, dims, 1, 1)
+        arr = np.array(layer)
+
+        p = wall.to_img(dims)
+        # dash_length=6, gap_length=5, period=11 at scale=1: x=13 falls inside
+        # the first dash (0-6), x=19 falls inside the following gap (6-11).
+        assert tuple(arr[int(p.y0), 13]) == (0, 128, 255, 255)
+        assert tuple(arr[int(p.y0), 19]) == (255, 255, 255, 0)
+        assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+
+    def test_render_doors_skips_zero_length_segment(self) -> None:
+        renderer = self._renderer()
+        dims = MapImageDimensions(top=0, left=0, height=20, width=20, grid_size=1)
+        layer_size = (20, 20)
+        wall = Wall(5, 5, 5, 5)
+
+        layer = renderer.render_doors([wall], (255, 0, 0, 255), layer_size, dims, 1, 1)
+        arr = np.array(layer)
+
+        assert not arr[..., 3].any()
 
     def test_render_ramps_fills_polygon_and_draws_arrows(self) -> None:
         renderer = self._renderer()

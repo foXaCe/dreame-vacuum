@@ -165,6 +165,16 @@ class _MapRendererState:
             scale: int,
         ) -> Image.Image: ...
 
+        def render_doors(
+            self,
+            doors: list[Any],
+            color: tuple[int, ...],
+            layer_size: tuple[int, int],
+            dimensions: Any,
+            width: int,
+            scale: int,
+        ) -> Image.Image: ...
+
         def render_thresholds(
             self,
             thresholds: list[Any],

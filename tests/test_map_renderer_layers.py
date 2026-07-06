@@ -49,6 +49,7 @@ def _populate_all_optional_layers(map_data) -> None:
     map_data.impassable_thresholds = [Wall(100, 750, 200, 750)]
     map_data.ramps = [Area(300, 600, 300, 650, 350, 650, 350, 600)]
     map_data.curtains = [Wall(400, 600, 500, 600)]
+    map_data.door_lines = [Wall(100, 800, 200, 800)]
     map_data.low_lying_areas = [
         Polygon(1, 100, 100, 100, 150, 150, 150, 150, 100, polygon=[100, 100, 150, 100, 150, 150, 100, 150])
     ]
@@ -85,6 +86,7 @@ class TestRenderObjectsAllLayersEnabled:
             MapRendererLayer.NO_MOP,
             MapRendererLayer.NO_GO,
             MapRendererLayer.WALL,
+            MapRendererLayer.DOOR,
             MapRendererLayer.VIRTUAL_THRESHOLD,
             MapRendererLayer.PASSABLE_THRESHOLD,
             MapRendererLayer.IMPASSABLE_THRESHOLD,
@@ -206,6 +208,7 @@ class TestRenderObjectsLayerDeletion:
             MapRendererLayer.NO_MOP,
             MapRendererLayer.NO_GO,
             MapRendererLayer.WALL,
+            MapRendererLayer.DOOR,
             MapRendererLayer.VIRTUAL_THRESHOLD,
             MapRendererLayer.PASSABLE_THRESHOLD,
             MapRendererLayer.IMPASSABLE_THRESHOLD,
@@ -219,6 +222,51 @@ class TestRenderObjectsLayerDeletion:
             MapRendererLayer.CRUISE_POINTS,
         ):
             assert layer not in cached_layers, f"{layer.name} should have been removed"
+
+
+class TestDoorLinesLayer:
+    """``MapRendererLayer.DOOR`` (walls_info door_lines, rendered independently
+    of any wall_lines pixel replacement -- see docs/dev/wall-lines-render-spike.md).
+    """
+
+    @staticmethod
+    def _renderer(**kwargs: object) -> DreameVacuumMapRenderer:
+        return DreameVacuumMapRenderer(low_resolution=False, cache=True, **kwargs)
+
+    def test_door_layer_present_when_door_lines_populated(self) -> None:
+        map_data = _make_small_map_data()
+        map_data.door_lines = [Wall(100, 800, 200, 800)]
+        renderer = self._renderer()
+        map_image = Image.new("RGBA", (40, 40), (0, 0, 0, 0))
+        cached_layers: dict = {}
+        renderer.render_objects(cached_layers, map_data, 1, 1, map_image, 2)
+        assert MapRendererLayer.DOOR in cached_layers
+
+    def test_door_layer_absent_when_door_lines_empty(self) -> None:
+        map_data = _make_small_map_data()
+        map_data.door_lines = None
+        renderer = self._renderer()
+        map_image = Image.new("RGBA", (40, 40), (0, 0, 0, 0))
+        cached_layers: dict = {}
+        renderer.render_objects(cached_layers, map_data, 1, 1, map_image, 2)
+        assert MapRendererLayer.DOOR not in cached_layers
+
+    def test_door_layer_hidden_via_config(self) -> None:
+        map_data = _make_small_map_data()
+        map_data.door_lines = [Wall(100, 800, 200, 800)]
+        renderer = self._renderer(hidden_map_objects=["door"])
+        map_image = Image.new("RGBA", (40, 40), (0, 0, 0, 0))
+        cached_layers: dict = {}
+        renderer.render_objects(cached_layers, map_data, 1, 1, map_image, 2)
+        assert MapRendererLayer.DOOR not in cached_layers
+
+    def test_door_line_color_is_distinct_from_wall_color_in_every_built_in_scheme(self) -> None:
+        from custom_components.dreame_vacuum.dreame.vacuum_types import MAP_COLOR_SCHEME_LIST
+
+        for name, scheme in MAP_COLOR_SCHEME_LIST.items():
+            door_color = DreameVacuumMapRenderer._door_line_color(scheme.wall)
+            assert door_color != tuple(scheme.wall), f"{name}: door colour must differ from wall colour"
+            assert len(door_color) == 4
 
 
 class TestChargerLayerOffsets:
