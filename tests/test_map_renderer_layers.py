@@ -491,3 +491,102 @@ class TestRobotIconDataUri:
         # Each variant is cached independently.
         assert renderer.robot_icon_data_uri(light_on=True) is lit
         assert renderer.robot_icon_data_uri(light_on=False) is base
+
+    def test_lit_variant_preserves_alpha_and_footprint(self) -> None:
+        """Regression for the "all-white blob" bug (Plan 021).
+
+        The previous implementation ran ``ImageEnhance.Brightness`` on the
+        whole RGBA image (which multiplies the alpha channel too, turning a
+        translucent halo opaque) and layered a blurred "bloom" underneath
+        (expanding the lit area beyond the body's own footprint). Both are
+        gone: the lit variant must have the exact same alpha channel as the
+        base (same footprint, same translucency) and only the RGB channels
+        may differ.
+        """
+        import base64
+        from io import BytesIO
+
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        base = renderer.robot_icon_data_uri(light_on=False)
+        lit = renderer.robot_icon_data_uri(light_on=True)
+        assert base is not None
+        assert lit is not None
+
+        base_arr = np.array(Image.open(BytesIO(base64.b64decode(base.split(",", 1)[1]))).convert("RGBA"))
+        lit_arr = np.array(Image.open(BytesIO(base64.b64decode(lit.split(",", 1)[1]))).convert("RGBA"))
+
+        # Alpha channel strictly identical -- no bloom, no opaque halo.
+        assert np.array_equal(base_arr[:, :, 3], lit_arr[:, :, 3])
+        # Same set of opaque pixels (redundant with the above, spelled out
+        # explicitly per the footprint requirement).
+        assert np.array_equal(base_arr[:, :, 3] > 0, lit_arr[:, :, 3] > 0)
+        # RGB channels differ (the warm tint is visible).
+        assert not np.array_equal(base_arr[:, :, :3], lit_arr[:, :, :3])
+
+
+class TestRobotBeamIconDataUri:
+    """``robot_beam_icon_data_uri`` exposes the forward fill-light beam asset.
+
+    Served as a separate attribute from the body icon (Plan 021): the card
+    draws it behind the body while the fill light is on, instead of the old
+    approach of whitening the body itself (which produced an unreadable blob
+    on the already near-white mop/sweeping-and-mopping bodies).
+    """
+
+    def test_returns_valid_png_data_uri_and_caches(self) -> None:
+        import base64
+        from io import BytesIO
+
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        uri = renderer.robot_beam_icon_data_uri()
+
+        assert uri is not None
+        assert uri.startswith("data:image/png;base64,")
+        image = Image.open(BytesIO(base64.b64decode(uri.split(",", 1)[1])))
+        assert image.format == "PNG"
+        assert image.mode == "RGBA"
+        # Cached: a second call returns the very same string object.
+        assert renderer.robot_beam_icon_data_uri() is uri
+
+    def test_native_orientation_apex_left_opening_toward_plus_x(self) -> None:
+        """Empirical orientation check (see the method's docstring).
+
+        The underlying ``MAP_ROBOT_CLEANING_DIRECTION_IMAGE`` asset was
+        decoded and its opaque-pixel column histogram inspected directly: the
+        cone's apex (narrow, near-robot side) sits in the leftmost columns
+        (~1400 opaque px in the left third) while its wide, fading base sits
+        in the rightmost columns (~6800 opaque px in the right third) --
+        i.e. it already points toward +x at heading 0 with no rotation
+        needed, matching the "heading 0 == +x" contract shared with the body
+        icon.
+        """
+        import base64
+        from io import BytesIO
+
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        uri = renderer.robot_beam_icon_data_uri()
+        assert uri is not None
+        arr = np.array(Image.open(BytesIO(base64.b64decode(uri.split(",", 1)[1]))).convert("RGBA"))
+        opaque = arr[:, :, 3] > 0
+        width = opaque.shape[1]
+        col_counts = opaque.sum(axis=0)
+        left_third = col_counts[: width // 3].sum()
+        right_third = col_counts[-(width // 3) :].sum()
+        # Apex (narrow) on the left, wide/fading base on the right.
+        assert left_third < right_third
+
+    def test_warm_tint_applied(self) -> None:
+        """Opaque pixels are pushed warm (red/green up, blue cut) vs. the
+        plain white native cone, so the beam reads as a light glow rather
+        than the neutral "cleaning direction" indicator it's borrowed from.
+        """
+        import base64
+        from io import BytesIO
+
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        uri = renderer.robot_beam_icon_data_uri()
+        assert uri is not None
+        arr = np.array(Image.open(BytesIO(base64.b64decode(uri.split(",", 1)[1]))).convert("RGBA"))
+        opaque = arr[:, :, 3] > 0
+        assert (arr[opaque, 0] >= arr[opaque, 2]).all()  # red pushed at/above blue
+        assert arr[opaque, 2].mean() < 200  # blue visibly cut vs. the native 255

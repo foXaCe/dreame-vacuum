@@ -148,6 +148,7 @@ class DreameVacuumMapRenderer(
         self._robot_icon = None
         self._robot_icon_data_uri = None
         self._robot_icon_lit_data_uri = None
+        self._robot_beam_icon_data_uri = None
         self._robot_charging_icon = None
         self._robot_cleaning_icon = None
         self._robot_warning_icon = None

@@ -18,7 +18,7 @@ from typing import Any, cast
 import zlib
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 from ..resources import (
     FURNITURE_TYPE_TO_ICON,
@@ -118,26 +118,33 @@ class _ObjectsMixin(_MapRendererState):
         return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
 
     def _build_lit_robot_icon(self) -> Image.Image | None:
-        """Base body icon with a warm "fill light on" glow (same canvas size).
+        """Base body icon with a subtle warm "fill light on" tint (same canvas size).
 
         The device fill light (front LED for the camera / dark obstacle detection)
-        is reflected by warming + brightening the body and adding a soft bloom, so
-        the robot visibly lights up without changing size.
+        is reflected by a small RGB-only warm push on the body's opaque pixels, so
+        the robot visibly warms up without changing size, brightness or shape.
+
+        Deliberately RGB-only: an earlier version ran ``ImageEnhance.Brightness``
+        on the whole RGBA image and layered a blurred "bloom" underneath. Both are
+        wrong for this asset: (a) ``Brightness`` on RGBA multiplies the alpha
+        channel too, so the halo it produced was opaque rather than translucent;
+        (b) most robot bodies (mop/sweeping-and-mopping variants) are already
+        near-white, so brightening them further just clips to a solid white blob
+        with no readable detail. Leaving the alpha channel untouched and only
+        nudging red/green on already-opaque pixels keeps the body readable while
+        still visibly warmer than the "off" variant.
         """
         self._ensure_robot_body_icon()
         if self._robot_icon is None:
             return None
         base = self._robot_icon
-        width = base.size[0]
-        lit = np.array(ImageEnhance.Brightness(base).enhance(1.35)).astype(np.int16)
-        opaque = lit[:, :, 3] > 0
-        lit[opaque, 0] = np.minimum(255, lit[opaque, 0] + 45)  # warm up red
-        lit[opaque, 1] = np.minimum(255, lit[opaque, 1] + 25)  # warm up green
-        body = Image.fromarray(lit.astype(np.uint8), "RGBA")
-        bloom = (
-            ImageEnhance.Brightness(base).enhance(2.2).filter(ImageFilter.GaussianBlur(radius=max(2.0, width * 0.06)))
-        )
-        return Image.alpha_composite(bloom, body)
+        arr = np.array(base).astype(np.int16)
+        opaque = arr[:, :, 3] > 0
+        arr[opaque, 0] = np.minimum(255, arr[opaque, 0] + 18)  # warm red
+        arr[opaque, 1] = np.minimum(255, arr[opaque, 1] + 8)  # warm green
+        # alpha (index 3) volontairement intact -- Brightness RGBA multipliait
+        # aussi l'alpha, c'etait l'un des deux bugs du blob blanc.
+        return Image.fromarray(arr.astype(np.uint8), "RGBA")
 
     def robot_icon_data_uri(self, light_on: bool = False) -> str | None:
         """Return the robot body icon as a PNG ``data:`` URI, or ``None``.
@@ -167,6 +174,50 @@ class _ObjectsMixin(_MapRendererState):
             self._robot_icon_lit_data_uri = uri
         else:
             self._robot_icon_data_uri = uri
+        return uri
+
+    def robot_beam_icon_data_uri(self) -> str | None:
+        """Return the vacuum's forward "fill light" beam as a PNG ``data:`` URI.
+
+        A separate attribute from the robot body icon (see ``robot_icon_data_uri``):
+        exposed on the camera only while the device fill light is on, so the
+        companion card can draw it BEHIND the body -- the earlier approach of
+        whitening the body itself produced an unreadable white blob on the
+        already-near-white mop/sweeping-and-mopping bodies (see
+        ``_build_lit_robot_icon``'s docstring). Same orientation contract as the
+        body: heading 0° = pointing toward vacuum +x.
+
+        Reuses ``MAP_ROBOT_CLEANING_DIRECTION_IMAGE``, the translucent cone
+        already composited in front of the robot for the cleaning-direction
+        indicator (see ``render_vacuum``: it is offset toward +x at heading 0
+        with no extra rotation, so its *native* orientation must already point
+        toward +x there). Verified independently here by inspecting the opaque
+        pixels' column histogram: the shape's apex (narrow, ~130 opaque px in
+        the leftmost 10% of columns) sits at the LEFT of the canvas and it
+        widens to a broad, fading base (~2000 opaque px, alpha trailing off)
+        toward the RIGHT (+x) edge -- i.e. apex on the robot side, opening
+        toward +x, matching the contract with no rotation needed.
+
+        Tinted warm (push red/green up, cut blue) so it reads as a light beam
+        rather than the neutral white "cleaning direction" cone; alpha is
+        trimmed slightly (native alpha x 0.9) to keep it a translucent glow
+        rather than a solid wedge. Cached -- static per device/icon set.
+        """
+        if self._robot_beam_icon_data_uri is not None:
+            return self._robot_beam_icon_data_uri
+        try:
+            image = Image.open(BytesIO(base64.b64decode(MAP_ROBOT_CLEANING_DIRECTION_IMAGE))).convert("RGBA")
+            arr = np.array(image).astype(np.int16)
+            opaque = arr[:, :, 3] > 0
+            arr[opaque, 0] = np.minimum(255, arr[opaque, 0] + 40)  # push red
+            arr[opaque, 1] = np.minimum(255, arr[opaque, 1] + 20)  # push green
+            arr[opaque, 2] = (arr[opaque, 2] * 0.6).astype(np.int16)  # cut blue
+            arr[opaque, 3] = (arr[opaque, 3] * 0.9).astype(np.int16)  # slightly more translucent
+            beam = Image.fromarray(arr.astype(np.uint8), "RGBA")
+            uri = self._encode_png_data_uri(beam)
+        except Exception:  # never let icon export break attribute publishing
+            return None
+        self._robot_beam_icon_data_uri = uri
         return uri
 
     def render_vacuum(
