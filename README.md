@@ -342,7 +342,6 @@ attributes:
 ## To Do
 
 - Shortcut editing
-- Schedule editing
 - Furniture editing
 - Multi-window DnD editing (single-window done; design: docs/dev/dnd-tasks-design.md)
 - Live camera streaming (spike: see docs/dev/streaming-spike.md — size L-or-never, blocked on proprietary transport)

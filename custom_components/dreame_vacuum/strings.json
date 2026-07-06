@@ -1600,6 +1600,16 @@
       },
       "name": "Delete map"
     },
+    "vacuum_delete_schedule": {
+      "description": "Delete a scheduled cleaning task.",
+      "fields": {
+        "schedule_id": {
+          "description": "ID of the scheduled task to be deleted.",
+          "name": "Schedule ID"
+        }
+      },
+      "name": "Delete schedule"
+    },
     "vacuum_discard_temporary_map": {
       "description": "Discard the temporary map.",
       "name": "Discard Temporary Map"
@@ -1935,6 +1945,48 @@
         }
       },
       "name": "Set router position"
+    },
+    "vacuum_set_schedule": {
+      "description": "Create or update a scheduled cleaning task. Omit schedule_id to create a new task.",
+      "fields": {
+        "schedule_id": {
+          "description": "ID of the scheduled task to update. Omit to create a new task.",
+          "name": "Schedule ID"
+        },
+        "enabled": {
+          "description": "Whether the scheduled task is enabled.",
+          "name": "Enabled"
+        },
+        "time": {
+          "description": "Time of day the task runs, as HH:MM.",
+          "name": "Time"
+        },
+        "repeats": {
+          "description": "Raw repeat pattern as understood by the device (opaque, not decoded by this integration). Keeps the previous value when updating an existing task if omitted.",
+          "name": "Repeats"
+        },
+        "once": {
+          "description": "Run the task once instead of repeating.",
+          "name": "Once"
+        },
+        "map_id": {
+          "description": "ID of the map this task applies to. Keeps the previous value when updating an existing task if omitted.",
+          "name": "Map ID"
+        },
+        "suction_level": {
+          "description": "Suction level for the task. Required when creating a new task; keeps the previous value when updating an existing task if omitted.",
+          "name": "Suction Level"
+        },
+        "water_volume": {
+          "description": "Water volume for the task. Required when creating a new task; keeps the previous value when updating an existing task if omitted.",
+          "name": "Water Volume"
+        },
+        "options": {
+          "description": "Raw list of option codes as understood by the device (opaque, not decoded by this integration). Keeps the previous value when updating an existing task if omitted.",
+          "name": "Options"
+        }
+      },
+      "name": "Set schedule"
     },
     "vacuum_set_virtual_threshold": {
       "description": "Define virtual thresholds.",

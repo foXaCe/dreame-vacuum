@@ -864,6 +864,123 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
             str(off_peak_charging_end),
         )
 
+    def set_schedule_task(
+        self,
+        schedule_id: int | None,
+        enabled: bool,
+        time: str,
+        repeats: str | None = None,
+        once: bool = False,
+        map_id: str | None = None,
+        suction_level: int | None = None,
+        water_volume: int | None = None,
+        options: list[str] | None = None,
+    ) -> bool:
+        """Create or update a scheduled cleaning task.
+
+        Rebuilds the ``;``/``-``-joined ``SCHEDULE`` wire string (see
+        docs/dev/schedule-format.md and the parser at ``device.py``'s
+        ``_schedule_changed``) by replacing only the target task (or
+        appending a new one when ``schedule_id`` is ``None``) and leaving
+        every sibling task byte-identical, so fields this integration does
+        not decode (``repeats``, ``options``) are never corrupted for tasks
+        that are not being edited.
+
+        Wire-format caveats (see docs/dev/schedule-format.md for the full
+        derivation):
+
+        - The enabled/status field has two confirmed-enabled wire values
+          (``"1"`` and ``"2"``); what distinguishes them is unconfirmed from
+          static analysis, so this integration always writes ``"1"`` for
+          ``enabled=True`` (a confirmed round-trippable value) and ``"0"``
+          for ``enabled=False``.
+        - ``repeats`` and ``options`` are opaque pass-through values: this
+          method never encodes/decodes them. When omitted on an edit, the
+          previous task's raw value is preserved; when omitted on create, a
+          neutral ``"0"`` placeholder is sent (its acceptance by firmware for
+          a repeating task is unconfirmed - pass an explicit ``repeats``
+          value if you need a specific repeat pattern).
+        - ``suction_level``/``water_volume`` have no confirmed default value,
+          so they are required when creating a new task; they remain
+          optional when editing an existing task, where the previous
+          task's value is kept if omitted.
+        """
+        if not time or not re.match(r"([0-1][0-9]|2[0-3]):[0-5][0-9]$", time):
+            raise InvalidValueException("Schedule time is not valid: (%s).", time)
+
+        if schedule_id is not None and not int(schedule_id):
+            raise InvalidValueException("Schedule id must be a positive integer: (%s).", schedule_id)
+
+        raw_schedule = self.get_property(DreameVacuumProperty.SCHEDULE) or ""
+        tasks = raw_schedule.split(";") if raw_schedule else []
+
+        target_index: int | None = None
+        existing_props: list[str] | None = None
+        existing_ids: list[int] = []
+        for index, task in enumerate(tasks):
+            props = task.split("-")
+            if len(props) < 9:
+                continue
+            try:
+                props_id = int(props[0])
+            except ValueError:
+                continue
+            existing_ids.append(props_id)
+            if schedule_id is not None and props_id == int(schedule_id):
+                target_index = index
+                existing_props = props
+
+        if schedule_id is None:
+            task_id = max(existing_ids, default=0) + 1
+        else:
+            if target_index is None:
+                raise InvalidActionException("Schedule not found! (%s)", schedule_id)
+            task_id = int(schedule_id)
+
+        if repeats is None:
+            repeats = existing_props[3] if existing_props else "0"
+        if map_id is None:
+            map_id = existing_props[5] if existing_props else "0"
+
+        if suction_level is None:
+            if existing_props is None:
+                raise InvalidValueException("Schedule suction_level is required when creating a new task.")
+            suction_level = int(existing_props[6])
+
+        if water_volume is None:
+            if existing_props is None:
+                raise InvalidValueException("Schedule water_volume is required when creating a new task.")
+            water_volume = int(existing_props[7])
+
+        if options is None:
+            # Options is the last field, so join any trailing fragments back
+            # together in case it legitimately contains a "-" (unconfirmed,
+            # but this avoids silently dropping data if it ever does).
+            options_value = "-".join(existing_props[8:]) if existing_props else "0"
+        else:
+            options_value = ",".join(str(option) for option in options) if options else "0"
+
+        new_task = "-".join(
+            [
+                str(task_id),
+                "1" if enabled else "0",
+                str(time),
+                str(repeats),
+                "0" if once else "1",
+                str(map_id),
+                str(int(suction_level)),
+                str(int(water_volume)),
+                options_value,
+            ]
+        )
+
+        if target_index is not None:
+            tasks[target_index] = new_task
+        else:
+            tasks.append(new_task)
+
+        return self.set_property(DreameVacuumProperty.SCHEDULE, ";".join(tasks))
+
     def set_voice_assistant_language(self, voice_assistant_language: str) -> bool:
         if (
             self.get_property(DreameVacuumProperty.VOICE_ASSISTANT_LANGUAGE) is None

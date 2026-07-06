@@ -969,6 +969,59 @@ async def test_install_voice_pack(coordinator: MagicMock) -> None:
     coordinator.device.install_voice_pack.assert_called_once_with("fr", "http://x/y", "deadbeef", 1024)
 
 
+async def test_delete_schedule(coordinator: MagicMock) -> None:
+    """delete_schedule forwards the schedule id."""
+    entity = _make_entity(coordinator)
+    await entity.async_delete_schedule(5)
+    coordinator.device.delete_schedule.assert_called_once_with(5)
+
+
+async def test_delete_schedule_not_found_raises(coordinator: MagicMock) -> None:
+    """A not-found schedule id is converted to HomeAssistantError."""
+    coordinator.device.delete_schedule.side_effect = InvalidActionException("Schedule not found! (99)")
+    entity = _make_entity(coordinator)
+    with pytest.raises(HomeAssistantError) as err:
+        await entity.async_delete_schedule(99)
+    assert err.value.translation_key == "invalid_command"
+
+
+async def test_set_schedule_create_forwards_all_fields(coordinator: MagicMock) -> None:
+    """set_schedule forwards every field to set_schedule_task, in engine order."""
+    entity = _make_entity(coordinator)
+    await entity.async_set_schedule(
+        enabled=True,
+        time="08:00",
+        schedule_id=None,
+        repeats="127",
+        once=False,
+        map_id="1",
+        suction_level=1,
+        water_volume=1,
+        options=["1", "2"],
+    )
+    coordinator.device.set_schedule_task.assert_called_once_with(
+        None, True, "08:00", "127", False, "1", 1, 1, ["1", "2"]
+    )
+
+
+async def test_set_schedule_edit_defaults_optional_fields_to_none(coordinator: MagicMock) -> None:
+    """set_schedule defaults optional fields to None/False when omitted."""
+    entity = _make_entity(coordinator)
+    await entity.async_set_schedule(enabled=True, time="09:00", schedule_id=3)
+    coordinator.device.set_schedule_task.assert_called_once_with(3, True, "09:00", None, False, None, None, None, None)
+
+
+async def test_set_schedule_invalid_value_raises(coordinator: MagicMock) -> None:
+    """An invalid time is converted to HomeAssistantError."""
+    coordinator.device.set_schedule_task.side_effect = InvalidValueException(
+        "Schedule time is not valid: (%s).", "25:00"
+    )
+    entity = _make_entity(coordinator)
+    with pytest.raises(HomeAssistantError) as err:
+        await entity.async_set_schedule(enabled=True, time="25:00")
+    assert err.value.translation_key == "invalid_command"
+
+
 async def test_rename_shortcut(coordinator: MagicMock) -> None:
     """rename_shortcut forwards id + name."""
     entity = _make_entity(coordinator)
