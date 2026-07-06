@@ -1304,14 +1304,18 @@ class TestFurniture:
         assert furniture.x1 is None
         assert furniture.y3 is None
 
-    def test_corners_none_when_origin_is_zero_known_bug(self) -> None:
-        """Real bug: the guard ``if x0 and y0 and width and height`` uses truthiness,
-        so a legitimate origin of x0=0 or y0=0 is treated the same as "missing" and the
-        corners silently stay None even though width/height are set.
+    def test_corners_computed_when_origin_is_zero(self) -> None:
+        """Regression test for a real bug: the guard used to be
+        ``if x0 and y0 and width and height``, which relies on truthiness, so a
+        legitimate origin of x0=0 or y0=0 was treated the same as "missing" and the
+        corners silently stayed None even though width/height were set. Fixed to use
+        ``is not None`` for the origin coordinates (width/height keep the truthiness
+        check — 0 is the real "no dimension data" sentinel from the decoder).
         """
         furniture = Furniture(x=5, y=5, x0=0, y0=0, width=10, height=4, type=FurnitureType.COFFEE_TABLE, size_type=1)
-        assert furniture.x1 is None
-        assert furniture.y3 is None
+        assert (furniture.x1, furniture.y1) == (10, 0)
+        assert (furniture.x2, furniture.y2) == (10, 4)
+        assert (furniture.x3, furniture.y3) == (0, 4)
 
     def test_as_dict_includes_corners_and_metadata(self) -> None:
         furniture = Furniture(

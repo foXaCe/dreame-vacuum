@@ -901,7 +901,7 @@ class Furniture(Point):
         self.y0 = y0
         self.width = width
         self.height = height
-        if x0 and y0 and width and height:
+        if x0 is not None and y0 is not None and width and height:
             self.x1: float | None = x0 + width
             self.y1: float | None = y0
             self.x2: float | None = x0 + width
