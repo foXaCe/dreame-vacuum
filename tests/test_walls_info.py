@@ -3,8 +3,10 @@
 ``DreameVacuumMapDecoder._decode_walls_info`` parses the saved-map
 ``walls_info`` structure (real-world mm segments, grouped by room, with
 doorways flagged ``type == 1``) into two flat ``Wall`` lists on the map
-data — ``wall_lines`` (walls) and ``door_lines`` (doorways) — which the
-renderer draws with distinct colours.
+data — ``wall_lines`` (walls) and ``door_lines`` (doorways). The data is
+decoded and kept on ``MapData`` for a future clean replacement of the
+pixel wall contour; it is not rendered additively (that produced redundant
+gray frames over the existing pixel walls).
 
 The structure is the one captured live from a Dreame Aqua10 (r95285):
 ``{version_flag, storeys: [{rooms: [{room_id, walls: [{type, beg_pt_x,
@@ -130,31 +132,3 @@ def test_wall_lines_to_img_converts_to_pixel_space() -> None:
     # to_img must return a Wall with numeric pixel coordinates (no exception).
     assert isinstance(img_wall, Wall)
     assert all(isinstance(v, (int, float)) for v in img_wall.as_list())
-
-
-def test_renderer_draws_wall_outline_and_door_layers() -> None:
-    """End-to-end: wall_lines/door_lines produce the WALL_OUTLINE and DOOR
-    layers when the wall_outline config is on, and are dropped when off."""
-    from PIL import Image
-
-    from custom_components.dreame_vacuum.dreame.map_renderer import DreameVacuumMapRenderer
-    from custom_components.dreame_vacuum.dreame.vacuum_types import MapRendererLayer
-    from tests.test_map_renderer import _make_small_map_data
-
-    map_data = _make_small_map_data()
-    map_data.wall_lines = [Wall(100, 100, 400, 100), Wall(400, 100, 400, 400)]
-    map_data.door_lines = [Wall(400, 400, 100, 400)]
-
-    renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
-    map_image = Image.new("RGBA", (40, 40), (0, 0, 0, 0))
-    cached: dict = {}
-    renderer.render_objects(cached, map_data, 0, 0, map_image, 2)
-    assert MapRendererLayer.WALL_OUTLINE in cached
-    assert MapRendererLayer.DOOR in cached
-
-    # With the layer disabled the walls are not drawn.
-    renderer_off = DreameVacuumMapRenderer(low_resolution=False, cache=True, hidden_map_objects=["wall_outline"])
-    cached_off: dict = {}
-    renderer_off.render_objects(cached_off, map_data, 0, 0, map_image, 2)
-    assert MapRendererLayer.WALL_OUTLINE not in cached_off
-    assert MapRendererLayer.DOOR not in cached_off

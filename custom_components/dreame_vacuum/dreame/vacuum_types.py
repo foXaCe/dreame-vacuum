@@ -4145,7 +4145,6 @@ class MapRendererConfig:
     no_mop: bool = True
     virtual_wall: bool = True
     pathway: bool = True
-    wall_outline: bool = True
     low_lying_area: bool = True
     active_area: bool = True
     active_point: bool = True
@@ -4181,9 +4180,6 @@ class MapRendererColorScheme:
     no_mop: tuple[int, ...] = (170, 47, 255, 50)
     no_mop_outline: tuple[int, ...] = (153, 0, 210, 200)
     virtual_wall: tuple[int, ...] = (199, 0, 0, 200)
-    # Vectorized room walls / doors from walls_info (bundle: #7F8B98 wall, lighter door).
-    wall_outline: tuple[int, ...] = (127, 139, 152, 255)
-    door_line: tuple[int, ...] = (176, 190, 197, 220)
     virtual_threshold: tuple[int, ...] = (50, 215, 75, 255)
     passable_threshold_outline: tuple[int, ...] = (50, 215, 75, 255)
     passable_threshold: tuple[int, ...] = (50, 215, 75, 50)
@@ -4463,8 +4459,6 @@ class MapRendererLayer(IntEnum):
     OBSTACLE = 23
     CRUISE_POINTS = 24
     CRUISE_POINT = 25
-    WALL_OUTLINE = 26
-    DOOR = 27
 
 
 @dataclass

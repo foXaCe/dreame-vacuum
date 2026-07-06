@@ -80,7 +80,6 @@ MAP_OBJECTS: Final = {
     "no_mop": "No Mop Zones",
     "virtual_wall": "Virtual Walls",
     "pathway": "Virtual Thresholds",
-    "wall_outline": "Wall Outline",
     "active_area": "Active Areas",
     "active_point": "Active Points",
     "charger": "Charger Icon",
