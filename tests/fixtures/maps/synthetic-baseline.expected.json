@@ -1,0 +1,40 @@
+{
+  "charger_position": {
+    "a": 0,
+    "x": 50,
+    "y": 60
+  },
+  "dimensions": {
+    "grid_size": 50,
+    "height": 5,
+    "left": 0,
+    "top": 0,
+    "width": 5
+  },
+  "empty_map": false,
+  "frame_type": 73,
+  "robot_position": {
+    "a": 0,
+    "x": 100,
+    "y": 200
+  },
+  "saved_map": true,
+  "segments": {
+    "1": {
+      "index": 0,
+      "name": "Living Room",
+      "neighbors": [
+        2
+      ],
+      "type": 1
+    },
+    "2": {
+      "index": 0,
+      "name": "Kitchen",
+      "neighbors": [
+        1
+      ],
+      "type": 4
+    }
+  }
+}
