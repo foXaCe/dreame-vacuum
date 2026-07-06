@@ -554,20 +554,20 @@ class DreameMapVacuumMapEditor:
         if map_data and map_data.segments and not map_data.temporary_map:
             new_cleaning_sequence = []
             if cleaning_sequence:
-                for k, v in map_data.segments.items():
+                for k, _v in map_data.segments.items():
                     if k not in cleaning_sequence:
                         map_data.segments[k].order = 0
                         map_data.cleanset[str(k)][3] = 0
 
                 index = 1
                 for k in cleaning_sequence:
-                    if int(k) in map_data.segments.keys():
+                    if int(k) in map_data.segments:
                         map_data.segments[k].order = index
                         map_data.cleanset[str(k)][3] = index
                         new_cleaning_sequence.append(k)
                         index = index + 1
             else:
-                for k in map_data.segments.keys():
+                for k in map_data.segments:
                     map_data.segments[k].order = 0
                     map_data.cleanset[str(k)][3] = 0
 

@@ -236,8 +236,8 @@ def async_update_segment_numbers(
     """Add or remove per-segment number entities to match the current map segments."""
     new_ids: list[int] = []
     if coordinator.device and coordinator.device.status.map_list:
-        for k, v in (coordinator.device.status.map_data_list or {}).items():
-            for j, s in (v.segments or {}).items():
+        for _k, v in (coordinator.device.status.map_data_list or {}).items():
+            for j, _s in (v.segments or {}).items():
                 if j not in new_ids:
                     new_ids.append(j)
 

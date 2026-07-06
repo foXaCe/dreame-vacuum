@@ -588,7 +588,7 @@ class DreameVacuumMapDecoder:
                         segments = DreameVacuumMapDecoder.get_segments(map_data, vslam_map)
                         if segments and "seg_inf" in data_json:
                             seg_inf = data_json["seg_inf"]
-                            for k, v in segments.items():
+                            for k in segments:
                                 if seg_inf.get(str(k)):
                                     segment_info = seg_inf[str(k)]
                                     if segment_info.get("nei_id") is not None:
@@ -788,12 +788,6 @@ class DreameVacuumMapDecoder:
                         and saved_map_data.charger_position
                     ):
                         map_data.charger_position = saved_map_data.charger_position
-
-                    # map_data.walls_info = saved_map_data.walls_info
-                    # map_data.walls_info_new = saved_map_data.walls_info_new
-                    # map_data.ai_outborders_ar_origin = saved_map_data.ai_outborders_ar_origin
-                    # map_data.ai_furniture_ar_origin = saved_map_data.ai_furniture_ar_origin
-                    # map_data.ai_furniture_ar_origin_v2 = saved_map_data.ai_furniture_ar_origin_v2
 
                     if map_data.saved_map_status == 2:
                         map_data.no_go_areas = saved_map_data.no_go_areas
@@ -1291,19 +1285,6 @@ class DreameVacuumMapDecoder:
                     if map_data.cleaning_map_data:
                         map_data.cleaned_segments = map_data.cleaning_map_data.cleaned_segments
 
-            # map_data.ai_outborders_user = data_json.get("ai_outborders_user")
-            # map_data.ai_outborders = data_json.get("ai_outborders")
-            # map_data.ai_outborders_new = data_json.get("ai_outborders_new")
-            # map_data.ai_outborders_2d = data_json.get("ai_outborders_2d")
-            # map_data.ai_outborders_ar_origin = data_json.get("ai_outborders_ar_origin")
-            # map_data.ai_furniture_ar_origin = data_json.get("ai_furniture_ar_origin")
-            # map_data.ai_furniture_ar_origin_v2 = data_json.get("ai_furniture_ar_origin_v2")
-            # map_data.ai_furniture_warning = data_json.get("ai_furniture_warning")
-            # if "walls_info" in data_json:
-            #    map_data.walls_info = data_json["walls_info"]
-            # if "walls_info_new" in data_json:
-            #    map_data.walls_info = data_json["walls_info_new"]
-
             if vslam_map and not map_data.saved_map:
                 map_data.need_optimization = not restored_map
         except Exception:
@@ -1442,7 +1423,7 @@ class DreameVacuumMapDecoder:
                 current_map_data.path = map_data.path
 
         if current_map_data.obstacles is not None:
-            for k, v in current_map_data.obstacles.items():
+            for k, _v in current_map_data.obstacles.items():
                 current_map_data.obstacles[k].set_segment(current_map_data)
 
         DreameVacuumMapDecoder.set_robot_segment(current_map_data)
@@ -1919,7 +1900,7 @@ class DreameVacuumMapDecoder:
                         elif capability.custom_cleaning_mode:
                             cleanset_type = CleansetType.CLEANING_MODE
                 else:
-                    for k, v in cleanset.items():
+                    for v in cleanset.values():
                         if len(v) > 5 and v[5] > 0:
                             cleanset_type = CleansetType.CLEANING_MODE
                             if capability:
@@ -1938,7 +1919,7 @@ class DreameVacuumMapDecoder:
                             cleanset_type = CleansetType.CLEANING_MODE
                             break
 
-            for k, v in map_data.segments.items():
+            for k in map_data.segments:
                 map_data.segments[k].cleanset_type = cleanset_type
                 if cleanset_type != CleansetType.NONE:
                     segment_id = str(k)
@@ -2052,10 +2033,11 @@ class DreameVacuumMapDecoder:
     def split_mopping_settings(value: int) -> list[int]:
         if value is not None:
             value_list = []
-            for i in range(3):
+            for _i in range(3):
                 value_list.append(value & 15)
                 value = value >> 4
             return value_list
+        return None
 
     @staticmethod
     def combine_mopping_settings(values: list[int]) -> int:
@@ -2146,7 +2128,7 @@ class DreameVacuumMapDecoder:
     def set_floor_material(map_data: MapData, capability: Any = None) -> None:
         if map_data.segments:
             floor_material: dict[Any, Any] = {}
-            for k in map_data.segments.keys():
+            for k in map_data.segments:
                 DreameVacuumMapDecoder.set_segment_floor_material(map_data, k, floor_material, capability)
             if floor_material:
                 map_data.floor_material = floor_material

@@ -2727,7 +2727,7 @@ class Obstacle(Point):
                 obstacle_pixel = map_data.pixel_type[x, y]
 
                 if obstacle_pixel not in map_data.segments:
-                    for k, v in map_data.segments.items():
+                    for _k, v in map_data.segments.items():
                         if v.check_point(self.x, self.y, map_data.dimensions.grid_size * 4):
                             self.segment = v.name
                             self.color_index = v.color_index
@@ -3647,7 +3647,7 @@ class RecoveryMapInfo:
 
 
 class MapFrameType(IntEnum):
-    I = 73
+    I = 73  # noqa: E741 — protocol frame letter (I-frame), must match the wire format name
     P = 80
     # T = ??
     W = 87

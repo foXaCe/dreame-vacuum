@@ -781,8 +781,8 @@ def async_update_segment_selects(
     """Add or remove per-segment select entities to match the current map segments."""
     new_ids: set[int] = set()
     if coordinator.device and coordinator.device.status.map_list:
-        for k, v in (coordinator.device.status.map_data_list or {}).items():
-            for j, s in (v.segments or {}).items():
+        for _k, v in (coordinator.device.status.map_data_list or {}).items():
+            for j, _s in (v.segments or {}).items():
                 new_ids.add(j)
 
     current_ids = set(current)

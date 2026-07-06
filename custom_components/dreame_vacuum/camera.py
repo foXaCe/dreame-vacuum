@@ -603,7 +603,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
             self.content_type = JSON_CONTENT_TYPE
         else:
             if self.wifi_map:
-                objects = [k for k in MAP_OBJECTS.keys() if k != "charger"]
+                objects = [k for k in MAP_OBJECTS if k != "charger"]
             else:
                 objects = hidden_map_objects or []
 
@@ -840,7 +840,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
 
             if img_bytes != last_image:
                 # Always write twice, otherwise chrome ignores last frame and displays previous frame after second one
-                for k in range(2):
+                for _k in range(2):
                     await response.write(
                         bytes(
                             "--frameboundary\r\n"
@@ -950,6 +950,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 return await self.hass.async_add_executor_job(
                     self._get_proxy_image, index, map_data, info_text, cache_key
                 )
+        return None
 
     async def recovery_map_file(self, index: Any) -> tuple[Any, Any, Any]:
         """Return the raw recovery map file for the selected map."""
@@ -982,6 +983,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 return await self.hass.async_add_executor_job(
                     self._get_proxy_image, index, map_data, info_text, "recovery"
                 )
+        return None
 
     async def wifi_map_data(self, data_string: Any, include_resources: Any) -> Any:
         """Return the rendered image or data string for the Wi-Fi map."""
@@ -999,6 +1001,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                     return await self.hass.async_add_executor_job(
                         self._get_proxy_image, index, map_data, False, "wifi", 1
                     )
+        return None
 
     def _render_data_string(self, map_data: Any, include_resources: Any) -> str:
         """Render a JSON data string. Must only be called from an executor thread."""
@@ -1055,6 +1058,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 del self._proxy_images[cache_key][next(iter(self._proxy_images[cache_key]))]
             self._proxy_images[cache_key][item_key] = image
             return image
+        return None
 
     def _get_proxy_obstacle_image(
         self, data: Any, obstacle: Any, box: Any, crop: Any, cache_key: str, max_item: int = 3
@@ -1077,6 +1081,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 del self._proxy_images[cache_key][next(iter(self._proxy_images[cache_key]))]
             self._proxy_images[cache_key][item_key] = image
             return image
+        return None
 
     @property
     def wifi_map(self) -> bool:
@@ -1095,6 +1100,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
             if self.wifi_map and map_data:
                 return map_data.wifi_map_data
             return map_data
+        return None
 
     @property
     def _default_map_image(self) -> Any:

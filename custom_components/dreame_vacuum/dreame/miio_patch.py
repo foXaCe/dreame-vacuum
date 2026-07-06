@@ -11,7 +11,6 @@ the fix from PR #1993: https://github.com/rytilahti/python-miio/pull/1993
 from __future__ import annotations
 
 import logging
-import sys
 import warnings
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,11 +23,6 @@ def apply_miio_patch() -> None:
     Filters out the specific warning about functools.partial that
     comes from miio/miot_device.py line 23.
     """
-
-    # Only apply patch on Python 3.13+
-    if sys.version_info < (3, 13):
-        return
-
     try:
         # Add a filter to suppress the specific FutureWarning from miio
         warnings.filterwarnings(

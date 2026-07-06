@@ -1544,7 +1544,7 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
     def shortcut_task(self) -> bool:
         """Returns true when device has an active shortcut task."""
         if self.started and self.shortcuts:
-            for k, v in self.shortcuts.items():
+            for _k, v in self.shortcuts.items():
                 if v.running:
                     return True
         return False
@@ -2386,7 +2386,7 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             attributes[ATTR_MOP_PAD] = self.water_tank_or_mop_installed
             attributes[ATTR_MOP_PAD_HUMIDITY] = self.mop_pad_humidity_name.replace("_", " ").capitalize()
             attributes[f"{ATTR_MOP_PAD_HUMIDITY}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.mop_pad_humidity_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.mop_pad_humidity_list]
                 if availability["mop_pad_humidity"](self._device) or customized
                 else []
             )
@@ -2422,7 +2422,7 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
 
                 attributes[ATTR_WASHING_MODE] = self.washing_mode_name.replace("_", " ").capitalize()
                 attributes[f"{ATTR_WASHING_MODE}_list"] = (
-                    [v.replace("_", " ").capitalize() for v in self.washing_mode_list.keys()]
+                    [v.replace("_", " ").capitalize() for v in self.washing_mode_list]
                     if availability["washing_mode"](self._device)
                     else []
                 )
@@ -2573,28 +2573,28 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
         elif prop is DreameVacuumProperty.WATER_VOLUME:
             value = self.water_volume_name.capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.capitalize() for v in self.water_volume_list.keys()]
+                [v.capitalize() for v in self.water_volume_list]
                 if availability[prop.name](self._device) or customized
                 else []
             )
         elif prop is DreameVacuumProperty.SUCTION_LEVEL:
             value = self.suction_level_name.capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.capitalize() for v in self.suction_level_list.keys()]
+                [v.capitalize() for v in self.suction_level_list]
                 if availability[prop.name](self._device) or customized
                 else []
             )
         elif prop is DreameVacuumProperty.CLEANING_MODE:
             value = self.cleaning_mode_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.cleaning_mode_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.cleaning_mode_list]
                 if availability[prop.name](self._device) or customized
                 else []
             )
         elif prop is DreameVacuumProperty.MOP_WASH_LEVEL:
             value = self.mop_wash_level_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.mop_wash_level_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.mop_wash_level_list]
                 if availability[prop.name](self._device)
                 else []
             )
@@ -2602,90 +2602,88 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             if not self._capability.voice_assistant:
                 return None, None
             value = self.voice_assistant_language_name.replace("_", " ").capitalize()
-            extra[f"{prop_name}_list"] = [
-                v.replace("_", " ").capitalize() for v in self.voice_assistant_language_list.keys()
-            ]
+            extra[f"{prop_name}_list"] = [v.replace("_", " ").capitalize() for v in self.voice_assistant_language_list]
         elif prop is DreameVacuumProperty.CLEANGENIUS_MODE:
             value = self.cleangenius_mode_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.cleangenius_mode_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.cleangenius_mode_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumProperty.WATER_TEMPERATURE:
             value = self.water_temperature_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.water_temperature_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.water_temperature_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumAutoSwitchProperty.CLEANING_ROUTE:
             value = self.cleaning_route_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.cleaning_route_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.cleaning_route_list]
                 if availability[prop.name](self._device) or customized
                 else []
             )
         elif prop is DreameVacuumAutoSwitchProperty.CLEANGENIUS:
             value = self.cleangenius_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.cleangenius_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.cleangenius_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumAutoSwitchProperty.MOPPING_TYPE:
             value = self.mopping_type_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.mopping_type_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.mopping_type_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumAutoSwitchProperty.WIDER_CORNER_COVERAGE:
             value = self.wider_corner_coverage_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.wider_corner_coverage_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.wider_corner_coverage_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumProperty.CARPET_CLEANING:
             value = self.carpet_cleaning_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.carpet_cleaning_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.carpet_cleaning_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumProperty.CARPET_SENSITIVITY:
             value = self.carpet_sensitivity_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.carpet_sensitivity_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.carpet_sensitivity_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumAutoSwitchProperty.MOP_PAD_SWING:
             value = self.mop_pad_swing_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.mop_pad_swing_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.mop_pad_swing_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumAutoSwitchProperty.MOP_EXTEND_FREQUENCY:
             value = self.mop_extend_frequency_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.mop_extend_frequency_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.mop_extend_frequency_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumAutoSwitchProperty.AUTO_REWASHING:
             value = self.auto_rewashing_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.second_cleaning_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.second_cleaning_list]
                 if availability[prop.name](self._device)
                 else []
             )
         elif prop is DreameVacuumAutoSwitchProperty.AUTO_RECLEANING:
             value = self.auto_recleaning_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.second_cleaning_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.second_cleaning_list]
                 if availability[prop.name](self._device)
                 else []
             )
@@ -2697,13 +2695,13 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             if self._capability.auto_empty_mode:
                 extra[ATTR_AUTO_EMPTY_MODE] = self.auto_empty_mode_name.replace("_", " ").capitalize()
                 extra[f"{ATTR_AUTO_EMPTY_MODE}_list"] = [
-                    v.replace("_", " ").capitalize() for v in self.auto_empty_mode_list.keys()
+                    v.replace("_", " ").capitalize() for v in self.auto_empty_mode_list
                 ]
             value = bool(value > 0)
         elif prop is DreameVacuumAutoSwitchProperty.SELF_CLEAN_FREQUENCY:
             value = self.self_clean_frequency_name.replace("_", " ").capitalize()
             extra[f"{prop_name}_list"] = (
-                [v.replace("_", " ").capitalize() for v in self.self_clean_frequency_list.keys()]
+                [v.replace("_", " ").capitalize() for v in self.self_clean_frequency_list]
                 if availability[prop.name](self._device)
                 else []
             )
@@ -2795,7 +2793,7 @@ class DreameVacuumDeviceStatus(_ConsumablesMixin, _StationMixin):
             attributes[ATTR_SELECTED_MAP_ID] = self.selected_map.map_id if self.selected_map else None
             attributes[ATTR_SELECTED_MAP_INDEX] = self.current_map.map_index if self.current_map else None
             attributes[ATTR_ROOMS] = {}
-            for k, v in (self.map_data_list or {}).items():
+            for _k, v in (self.map_data_list or {}).items():
                 attributes[ATTR_ROOMS][v.map_name] = [
                     {ATTR_ID: j, ATTR_NAME: s.name, ATTR_ICON: s.icon} for (j, s) in sorted((v.segments or {}).items())
                 ]

@@ -534,7 +534,6 @@ class TestExtraStateAttributes:
         entity._renderer = MagicMock(spec=["calibration_points", "default_calibration_points"])
         entity._renderer.calibration_points = [{"x": 1}]
 
-        rooms = {5: {"name": "Kitchen"}}
         map_data = SimpleNamespace(
             empty_map=False,
             pixel_type=np.zeros((4, 4), dtype=np.uint8) if segments_present else None,
@@ -1669,7 +1668,7 @@ class TestHistoryMapImage:
             patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
             patch.object(entity, "_get_proxy_image", return_value=b"IMG") as proxy,
         ):
-            result = await entity.history_map_image(2, False, True, False, True, False)
+            await entity.history_map_image(2, False, True, False, True, False)
         device.history_map.assert_called_once_with(2, True)
         device.get_map_for_render.assert_called_once_with(map_data)
         proxy.assert_called_once_with(2, "rendered", False, "cruising")

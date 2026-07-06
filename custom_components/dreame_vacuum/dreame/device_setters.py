@@ -1203,7 +1203,7 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
 
         found = False
         obstacle_type = 142
-        for k, v in self.status.current_map.obstacles.items():
+        for _k, v in self.status.current_map.obstacles.items():
             if int(v.x) == int(x) and int(v.y) == int(y):
                 if v.ignore_status.value == 2:
                     raise InvalidActionException("Cannot ignore a dynamically ignored obstacle")

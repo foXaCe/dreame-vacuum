@@ -87,7 +87,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         self.icon_set: int = MAP_ICON_SET_LIST.get(icon_set or "", 0)
         self.config: MapRendererConfig = MapRendererConfig()
         if hidden_map_objects is not None:
-            for attr in self.config.__dict__.keys():
+            for attr in self.config.__dict__:
                 if attr in hidden_map_objects:
                     setattr(self.config, attr, False)
 
@@ -377,7 +377,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 furniture_images = FURNITURE_TYPE_TO_IMAGE
                 furniture_icons = FURNITURE_TYPE_TO_ICON
 
-            for k, v in furnitures.items():
+            for v in furnitures.values():
                 p = Point(v.x, v.y).to_coord(dimensions)
                 w = 0
                 h = 0
@@ -720,13 +720,6 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                     if map_data.router_position
                     else None
                 ),
-                # ai_outborders_user=map_data.ai_outborders_user,
-                # ai_outborders=map_data.ai_outborders,
-                # ai_outborders_new=map_data.ai_outborders_new,
-                # ai_outborders_2d=map_data.ai_outborders_2d,
-                # ai_furniture_warning=map_data.ai_furniture_warning,
-                # walls_info=map_data.walls_info,
-                # walls_info_new=map_data.walls_info_new,
                 startup_method=map_data.startup_method.name.lower() if map_data.startup_method is not None else None,
                 cleanup_method=map_data.cleanup_method.name.lower() if map_data.cleanup_method is not None else None,
                 second_cleaning=map_data.second_cleaning,
@@ -1034,7 +1027,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
         return json.dumps(
             map_data_json,
-            default=lambda o: dict((key, value) for key, value in o.__dict__.items() if value is not None),
+            default=lambda o: {key: value for key, value in o.__dict__.items() if value is not None},
             allow_nan=False,
             sort_keys=True,
             separators=(",", ":"),
@@ -1181,6 +1174,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             buffer = io.BytesIO()
             image.convert("RGB").save(buffer, format="JPEG")
             return buffer.getvalue()
+        return None
 
     def _smooth_upscale(self, pixels: np.ndarray, scale: int) -> np.ndarray:
         """Upscale the base raster with anti-aliasing instead of nearest-neighbour.
@@ -1477,7 +1471,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
 
                 if map_data.cleaning_map:
                     if map_data.neglected_segments:
-                        for k in map_data.neglected_segments.keys():
+                        for k in map_data.neglected_segments:
                             area_colors[k] = (255, 255, 255, 255)
                 elif map_data.segments is not None and not map_data.cleaning_map:
                     for k, v in map_data.segments.items():
@@ -2198,12 +2192,12 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 (255, 255, 255, 0),
             )
             self._close_image(old_objects)
-            for l in layers:
-                if cached_layers.get(l):
-                    if l in changes:
-                        _LOGGER.debug("Render %s", l.name)
+            for layer in layers:
+                if cached_layers.get(layer):
+                    if layer in changes:
+                        _LOGGER.debug("Render %s", layer.name)
                     old = cached_layers[MapRendererLayer.OBJECTS]
-                    cached_layers[MapRendererLayer.OBJECTS] = Image.alpha_composite(old, cached_layers[l])
+                    cached_layers[MapRendererLayer.OBJECTS] = Image.alpha_composite(old, cached_layers[layer])
                     self._close_image(old)
 
             if layer_size != map_image.size:
@@ -2812,12 +2806,12 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         for point in path:
             p = point.to_img(dimensions)
             if point.path_type == PathType.LINE:
-                l = [p.x * scale, p.y * scale]
+                coords = [p.x * scale, p.y * scale]
                 if path_type == PathType.SWEEP_AND_MOP or (path_type == PathType.SWEEP or self._low_memory):
-                    sweep_path.extend(l)
+                    sweep_path.extend(coords)
 
                 if not self._low_memory and (path_type == PathType.SWEEP_AND_MOP or path_type == PathType.MOP):
-                    mop_path.extend(l)
+                    mop_path.extend(coords)
             else:
                 if mop_path:
                     mop.append(mop_path)
@@ -3596,6 +3590,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                                     x_index = x_index + 1
                                     image[y_index, x_index] = cc
             return image
+        return None
 
     def render_carpets(
         self,
@@ -3639,7 +3634,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
             carpet_data = DreameVacuumMapRenderer._optimize_carpet_pixels(carpet_pixels, dimensions, pixel_type)
 
         if segments:
-            for k in segments.keys():
+            for k in segments:
                 segment = segments[k]
                 if segment.floor_material and segment.floor_material > 4 and segment.floor_material < 8:
                     x0 = int((segment.x0 - dimensions.left) / dimensions.grid_size)
@@ -3673,7 +3668,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
                 x_index = coord[0] * scale
                 y_index = (dimensions.height - coord[1] - 1) * scale
                 render_color = detected_color if px_type == 1 else color
-                for i in range(2):
+                for _i in range(2):
                     if (
                         y_index >= 0
                         and y_index < dimensions.height * scale
@@ -3877,7 +3872,7 @@ class DreameVacuumMapRenderer(_ObjectsMixin, _ShapesMixin, _StaticHelpersMixin):
         if as_json:
             return json.dumps(
                 resources,
-                default=lambda o: dict((key, value) for key, value in o.__dict__.items() if value is not None),
+                default=lambda o: {key: value for key, value in o.__dict__.items() if value is not None},
                 allow_nan=False,
                 sort_keys=True,
                 separators=(",", ":"),

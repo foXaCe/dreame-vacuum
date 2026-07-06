@@ -1335,6 +1335,7 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
                         map_data.cleaning_map_data.cleanup_method = map_data.cleanup_method
                     self.status._history_map_data[item.object_name] = map_data
                 return self.status._history_map_data[item.object_name]
+        return None
 
     def recovery_map(self, map_id: Any, index: Any) -> Any:
         mgr: Any = self._map_manager
@@ -1369,7 +1370,7 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
             current_name = self.status.shortcuts[shortcut_id]
             if current_name != shortcut_name:
                 counter = 1
-                for id, shortcut in self.status.shortcuts.items():
+                for _id, shortcut in self.status.shortcuts.items():
                     if shortcut.name == shortcut_name and shortcut.id != shortcut_id:
                         counter = counter + 1
 

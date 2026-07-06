@@ -558,7 +558,7 @@ def _build_two_segment_map() -> MapData:
     seg1 = Segment(1, x0=0, y0=0, x1=1, y1=1, neighbors=[2])
     seg2 = Segment(2, x0=2, y0=0, x1=3, y1=1, neighbors=[1])
 
-    map_data = _map_data(
+    return _map_data(
         dimensions=dims,
         pixel_type=pixel_type,
         data=bytes([1, 1, 2, 2, 1, 1, 2, 2]),
@@ -566,7 +566,6 @@ def _build_two_segment_map() -> MapData:
         hidden_segments=[2],
         saved_map=False,
     )
-    return map_data
 
 
 def test_merge_segments_relabels_pixels_and_removes_source_segment(

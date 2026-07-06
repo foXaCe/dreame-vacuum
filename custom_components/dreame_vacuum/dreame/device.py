@@ -1752,7 +1752,7 @@ class DreameVacuumDevice(
                         self.history_map(1)
 
                     if self._ready:
-                        for k, v in copy.deepcopy(self.status._history_map_data).items():
+                        for k, _v in copy.deepcopy(self.status._history_map_data).items():
                             found = False
                             if self.status._cleaning_history:
                                 for item in self.status._cleaning_history:
@@ -1852,6 +1852,7 @@ class DreameVacuumDevice(
             value_list.append(byte1)
             value_list.append(value >> 16)
             return value_list
+        return None
 
     @staticmethod
     def combine_group_value(values: list[int]) -> int:

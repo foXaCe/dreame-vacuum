@@ -850,8 +850,7 @@ class DreameVacuumDreameHomeCloudProtocol:
     @staticmethod
     def get_random_agent_id() -> str:
         letters = "ABCDEF"
-        result_str = "".join(random.choice(letters) for i in range(13))
-        return result_str
+        return "".join(random.choice(letters) for i in range(13))
 
 
 class DreameVacuumMiHomeCloudProtocol:
@@ -1403,6 +1402,7 @@ class DreameVacuumMiHomeCloudProtocol:
                         device_list.append(device)
 
             return device_list
+        return None
 
     def get_batch_device_datas(self, props: Any) -> Any:
         api_response = self._api_call("device/batchdevicedatas", [{"did": self._did, "props": props}])
@@ -1726,6 +1726,7 @@ class DreameVacuumProtocol:
 
         if self.device:
             return self.device.send(method, parameters=parameters, retry_count=retry_count)
+        return None
 
     def get_properties(self, parameters: Any = None, retry_count: int = 1) -> Any:
         return self.send("get_properties", parameters=parameters, retry_count=retry_count)

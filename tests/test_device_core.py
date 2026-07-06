@@ -1200,7 +1200,7 @@ class TestWarmBootInitialLoad:
         d._request_properties.assert_called_once_with(force_all=True)
 
     def test_matching_inventory_splits_priority_and_defers_rest(self, monkeypatch) -> None:
-        mapped = [p.value for p in DreameVacuumPropertyMapping.keys() if "aiid" not in DreameVacuumPropertyMapping[p]]
+        mapped = [p.value for p in DreameVacuumPropertyMapping if "aiid" not in DreameVacuumPropertyMapping[p]]
         inventory = {"model": "dreame.vacuum.test", "firmware": "1.0", "present": mapped, "absent": []}
         d, device_module = _warm_boot_device(inventory)
 
@@ -1236,7 +1236,7 @@ class TestWarmBootInitialLoad:
         d._inventory_callback.assert_called_once()
 
     def test_deferred_failure_never_leaves_entities_gated(self, monkeypatch) -> None:
-        mapped = [p.value for p in DreameVacuumPropertyMapping.keys() if "aiid" not in DreameVacuumPropertyMapping[p]]
+        mapped = [p.value for p in DreameVacuumPropertyMapping if "aiid" not in DreameVacuumPropertyMapping[p]]
         inventory = {"model": "dreame.vacuum.test", "firmware": "1.0", "present": mapped, "absent": []}
         d, device_module = _warm_boot_device(inventory)
 

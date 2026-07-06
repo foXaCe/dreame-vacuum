@@ -880,7 +880,7 @@ class _ObjectsMixin(_MapRendererState):
         problem_icon = self._map_problem_icon.resize((int(icon_size), int(icon_size))).rotate(-rotation, expand=1)
 
         mask_layer.paste(segment_mask, (0, 0))
-        for k in neglected_segments.keys():
+        for k in neglected_segments:
             if k in segments:
                 segment = segments[k]
                 p = Point(segment.x, segment.y).to_img(dimensions, False)

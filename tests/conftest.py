@@ -9,7 +9,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_dreame_vacuum_protocol() -> Generator[MagicMock, None, None]:
+def mock_dreame_vacuum_protocol() -> Generator[MagicMock]:
     """Mock DreameVacuumProtocol."""
     with patch("custom_components.dreame_vacuum.config_flow.DreameVacuumProtocol") as mock_protocol:
         protocol = MagicMock()

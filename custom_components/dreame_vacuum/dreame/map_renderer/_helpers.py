@@ -9,6 +9,7 @@ mixin is inherited by the renderer, so existing call sites keep working.
 
 from __future__ import annotations
 
+import contextlib
 import io
 import math
 from typing import Any
@@ -95,11 +96,9 @@ class _StaticHelpersMixin:
     def _close_image(img: Image.Image | None) -> None:
         """Safely close a PIL Image to release memory."""
         if img is not None:
-            try:
+            # Already closed, not a PIL image, or backend error — nothing to do.
+            with contextlib.suppress(AttributeError, ValueError, OSError):
                 img.close()
-            except (AttributeError, ValueError, OSError):
-                # Already closed, not a PIL image, or backend error — nothing to do.
-                pass
 
     @staticmethod
     def _del_layer(cached_layers: dict[Any, Any], key: Any) -> None:
@@ -128,7 +127,7 @@ class _StaticHelpersMixin:
         if old_parent is not None:
             _StaticHelpersMixin._close_image(old_parent)
         if sub in cached_layers:
-            for k, v in sorted(cached_layers[sub].items()):
+            for _k, v in sorted(cached_layers[sub].items()):
                 if v is not None:
                     old = cached_layers[parent]
                     cached_layers[parent] = Image.alpha_composite(old, v)

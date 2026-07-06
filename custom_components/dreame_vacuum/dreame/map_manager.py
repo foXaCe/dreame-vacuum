@@ -401,7 +401,7 @@ class DreameMapVacuumMapManager:
 
         frame_id = self._current_frame_id
         map_data_queue = copy.deepcopy(self._map_data_queue)
-        for k, v in map_data_queue.items():
+        for k, _v in map_data_queue.items():
             if k != self._latest_map_id:
                 del self._map_data_queue[k]
 
@@ -409,7 +409,7 @@ class DreameMapVacuumMapManager:
             return
 
         map_data_queue = copy.deepcopy(self._map_data_queue[self._latest_map_id])
-        for k, v in map_data_queue.items():
+        for k, _v in map_data_queue.items():
             if k <= frame_id:
                 del self._map_data_queue[self._latest_map_id][k]
 
@@ -576,6 +576,7 @@ class DreameMapVacuumMapManager:
                                 self._request_map()
                             else:
                                 self.request_new_map()
+        return None
 
     def _add_map_data_file(self, object_name: str, timestamp: Any) -> None:
         response, key = self._get_object_file_data(object_name, timestamp)
@@ -904,7 +905,7 @@ class DreameMapVacuumMapManager:
 
     def _refresh_recovery_map_list(self) -> None:
         index = 1
-        for map_id, saved_map_data in sorted(self._saved_map_data.items()):
+        for _map_id, saved_map_data in sorted(self._saved_map_data.items()):
             if saved_map_data.recovery_map_list:
                 for recovery_map_data in saved_map_data.recovery_map_list:
                     map_type = recovery_map_data.map_type.name.replace("_", " ").title()
@@ -1044,6 +1045,7 @@ class DreameMapVacuumMapManager:
                     "History map decoding failed: %s",
                     traceback.format_exc(),
                 )
+        return None
 
     def get_recovery_map(self, map_id: Any, index: Any) -> Any:
         if map_id in self._map_list:
@@ -1074,6 +1076,7 @@ class DreameMapVacuumMapManager:
                         recovery_map_list[index].map_data.recovery_map_type = recovery_map_list[index].map_type
                         recovery_map_list[index].map_data.recovery_map = True
                 return recovery_map_list[index].map_data
+        return None
 
     def get_recovery_map_file(self, map_id: Any, index: Any) -> Any:
         if map_id in self._map_list:
@@ -1403,7 +1406,7 @@ class DreameMapVacuumMapManager:
 
                 selected_map_id = map_info[MAP_PARAMETER_CURR_ID]
                 current_map_list = self._saved_map_data.copy()
-                for map_id in current_map_list.keys():
+                for map_id in current_map_list:
                     if map_id not in map_list and map_id != selected_map_id:
                         del self._saved_map_data[map_id]
                         changed = True

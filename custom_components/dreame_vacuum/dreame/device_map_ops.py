@@ -336,8 +336,8 @@ class DreameVacuumDeviceMapMixin(DreameVacuumDeviceState):
                                 render_map_data.segments[segment_id].order = None
 
                     if self.capability.cleaning_route:
-                        for k, v in render_map_data.segments.items():
-                            render_map_data.segments[k].custom_mopping_route = None
+                        for segment in render_map_data.segments.values():
+                            segment.custom_mopping_route = None
 
                 return cast("MapData | None", render_map_data)
 
@@ -436,8 +436,8 @@ class DreameVacuumDeviceMapMixin(DreameVacuumDeviceState):
                     render_map_data.sequence = False
 
                 if self.capability.cleaning_route:
-                    for k, v in render_map_data.segments.items():
-                        render_map_data.segments[k].custom_mopping_route = None
+                    for segment in render_map_data.segments.values():
+                        segment.custom_mopping_route = None
 
             if render_map_data.robot_position:
                 # Device currently may not be docked but map data can be old and still showing when robot is docked
@@ -1008,7 +1008,7 @@ class DreameVacuumDeviceMapMixin(DreameVacuumDeviceState):
         if self._map_manager:
             if cleaning_sequence and self.status.segments:
                 for k in cleaning_sequence:
-                    if int(k) not in self.status.segments.keys():
+                    if int(k) not in self.status.segments:
                         raise InvalidValueException("Segment not found! (%s)", k)
 
             map_data = self.status.current_map
@@ -1355,7 +1355,7 @@ class DreameVacuumDeviceMapMixin(DreameVacuumDeviceState):
         if self._map_manager:
             if hidden_segments and self.status.segments:
                 for k in hidden_segments:
-                    if int(k) not in self.status.segments.keys():
+                    if int(k) not in self.status.segments:
                         raise InvalidValueException("Segment not found! (%s)", k)
 
             # hidden_segments = self._map_manager.editor.set_hidden_segments(hidden_segments)
