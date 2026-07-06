@@ -154,7 +154,6 @@ Start selected zone cleaning with optional customized cleaning parameters.
         - 3
     target:
       entity_id: vacuum.vacuum
-    ```tity_id: vacuum.vacuum
     ```
 
 ### `dreame_vacuum.vacuum_clean_spot`
