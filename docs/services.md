@@ -219,9 +219,22 @@ Start selected spot cleaning with optional customized cleaning parameters.
 
 ### `dreame_vacuum.vacuum_goto`
 
-TODO
+Move the robot to a specific coordinate on the current map without cleaning along the way. On devices without native point-cruising support, the integration triggers a small zone-clean centered on the point instead.
 
-- Go to at [819, -2235] and stop
+> - The coordinate must be inside the current map.
+> - Battery must be at least 15%.
+> - Not available while the device is draining the mop tank or self-repairing/testing.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `x` | yes | X coordinate on the current map | `819` |
+| `y` | yes | Y coordinate on the current map | `-2235` |
+
+**Example:**
+
+- Go to [819, -2235] and stop
     ```yaml
     service: dreame_vacuum.vacuum_goto
     data:
@@ -233,11 +246,57 @@ TODO
 
 ### `dreame_vacuum.vacuum_follow_path`
 
-TODO
+Start a "follow path" surveillance job: the robot cruises through the given waypoints in order while live camera streaming is active, without cleaning. If `points` is omitted, the map's saved predefined points (see `vacuum_set_predefined_points`) are used instead.
 
-### `dreame_vacuum.vacuum_start_shortcut_`
+> - Requires a device with cruising capability and an active camera stream (follow path only works with live camera streaming).
+> - Battery must be at least 15%.
+> - Not available while the device is draining the mop tank or self-repairing/testing.
+> - At most 20 points are sent to the device; extra points are ignored.
 
-TODO
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `points` | no | One `[x, y]` pair or a list of `[x, y]` pairs to cruise through, in order | `[819,-263] or [[819,-263],[900,-463]]` |
+
+**Example:**
+
+- Follow a two-point path
+    ```yaml
+    service: dreame_vacuum.vacuum_follow_path
+    data:
+      points:
+        - - 819
+          - -263
+        - - 900
+          - -463
+    target:
+      entity_id: vacuum.vacuum
+    ```
+
+### `dreame_vacuum.vacuum_start_shortcut`
+
+Run a saved shortcut (a saved sequence of cleaning actions, configured in the Dreame app) by its id.
+
+> - Shortcuts are only available on devices that support the shortcuts feature.
+> - `shortcut_id` must be between 32 and 128 inclusive.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `shortcut_id` | yes | Id of the shortcut to run (32-128) | `32` |
+
+**Example:**
+
+- Run shortcut 32
+    ```yaml
+    service: dreame_vacuum.vacuum_start_shortcut
+    data:
+      shortcut_id: 32
+    target:
+      entity_id: vacuum.vacuum
+    ```
 
 ### `dreame_vacuum.vacuum_remote_control_move_step`
 
@@ -318,6 +377,38 @@ Set customized room cleaning parameters on current map.
         entity_id: vacuum.vacuum
     ```
 
+### `dreame_vacuum.vacuum_set_custom_carpet_cleaning`
+
+Set per-carpet cleaning behavior on the current map (only available on devices with carpet recognition).
+
+> - Settings for all targeted carpets must be passed as lists (or a single value applied to a single carpet).
+> - `carpet_settings` requires a device with carpet cleanset v3 support; unsupported flags for your device are ignored.
+> - Not available while a temporary (unsaved) map is present.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `id` | yes | Carpet id(s) to configure | `[1,2] or 3` |
+| `type` | yes | Carpet type: `0` = automatically detected, `1` = manually created, `2` = room carpet (device dependent) | `[0,1] or 1` |
+| `carpet_cleaning` | no | Cleaning behavior: `0`/omitted = not set, `1` = avoidance, `2` = adaptation, `3` = remove mop, `4` = adaptation without route, `5` = vacuum and mop, `6` = ignore, `7` = cross | `[0,3] or 5` |
+| `carpet_settings` | no | Extra flags applied on top of `carpet_cleaning` (device dependent): `carpet_boost`, `clean_carpets_first`, `intensive_carpet_cleaning`, `side_brush_carpet_rotate` | `['carpet_boost'] or 'clean_carpets_first' or []` |
+
+**Example:**
+
+- Set carpet 3 (manually created) to vacuum and mop with carpet boost enabled
+    ```yaml
+    service: dreame_vacuum.vacuum_set_custom_carpet_cleaning
+    data:
+        id: 3
+        type: 1
+        carpet_cleaning: 5
+        carpet_settings:
+          - "carpet_boost"
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
 ### `dreame_vacuum.vacuum_reset_consumable`
 
 Reset a consumable life by type.
@@ -354,6 +445,55 @@ Reset a consumable life by type.
     service: dreame_vacuum.vacuum_reset_consumable
     data:
         consumable: "mop_pad"
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+### `dreame_vacuum.vacuum_set_property`
+
+Low-level escape hatch: directly set a device property by name, bypassing the integration's higher-level services.
+
+> **Warning**: `key` must match the name of a `DreameVacuumProperty` (or auto-switch/AI property) member defined in `custom_components/dreame_vacuum/dreame/vacuum_types.py`, whose human-readable mapping lives in `dreame/const.py` (for example `suction_level`, `water_volume`, `cleaning_mode`). Values are validated against the matching enum/type where one exists, but setting an unsupported or out-of-range value for your specific device can still misconfigure it. Prefer the dedicated services (e.g. `vacuum_set_custom_cleaning`) when one already covers your use case.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `key` | yes | Name of the property to set (case-insensitive) | `suction_level` |
+| `value` | no | Value to set; accepted forms depend on the property (integer, enum name, or boolean) | `2` |
+
+**Example:**
+
+- Set suction level to level 2 directly
+    ```yaml
+    service: dreame_vacuum.vacuum_set_property
+    data:
+        key: suction_level
+        value: 2
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+### `dreame_vacuum.vacuum_call_action`
+
+Low-level escape hatch: directly invoke a device action by name, bypassing the integration's higher-level services.
+
+> **Warning**: `key` must match the name of a `DreameVacuumAction` member defined in `custom_components/dreame_vacuum/dreame/vacuum_types.py`, whose human-readable mapping lives in `dreame/const.py` (for example `start_auto_empty`). Calling an action that is unavailable or nonsensical for your model/current state can produce a device error or unexpected behavior. Prefer the dedicated services (e.g. `vacuum_reset_consumable`) when one already covers your use case.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `key` | yes | Name of the action to call (case-insensitive) | `start_auto_empty` |
+| `value` | no | Optional parameter passed to the action *(behavior to confirm — meaning depends entirely on which action is called)* | — |
+
+**Example:**
+
+- Trigger auto-empty of the dust bin
+    ```yaml
+    service: dreame_vacuum.vacuum_call_action
+    data:
+        key: start_auto_empty
     target:
         entity_id: vacuum.vacuum
     ```
@@ -685,28 +825,171 @@ Set custom name for a room in current map.
 
 ### `dreame_vacuum.vacuum_rename_shortcut`
 
-TODO
+Rename a saved shortcut.
 
+> - The vacuum must not be running.
+> - If the requested name is already used by another shortcut, a numeric suffix is appended automatically.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `shortcut_id` | yes | Id of the shortcut to rename | `32` |
+| `shortcut_name` | yes | New name for the shortcut | `"Mopping after sweeping"` |
+
+**Example:**
+
+- Rename shortcut 32 to "Mopping after sweeping"
+    ```yaml
+    service: dreame_vacuum.vacuum_rename_shortcut
+    data:
+        shortcut_id: 32
+        shortcut_name: "Mopping after sweeping"
+    target:
+        entity_id: vacuum.vacuum
+    ```
 
 ### `dreame_vacuum.vacuum_set_obstacle_ignore`
 
-TODO
+Mark a detected obstacle at a coordinate as ignored (or un-ignore it) so the robot does not avoid it during cleaning.
+
+> - Requires AI obstacle detection and a cloud connection (map manager).
+> - The vacuum must not be running.
+> - An obstacle matching the coordinate must already exist on the current map; obstacles that were dynamically ignored by the device itself cannot be re-ignored through this service.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `x` | yes | X coordinate of the obstacle on the current map | `819` |
+| `y` | yes | Y coordinate of the obstacle on the current map | `-263` |
+| `obstacle_ignored` | yes | `true` to ignore the obstacle, `false` to stop ignoring it | `false` |
+
+**Example:**
+
+- Ignore the obstacle at [819, -263]
+    ```yaml
+    service: dreame_vacuum.vacuum_set_obstacle_ignore
+    data:
+        x: 819
+        y: -263
+        obstacle_ignored: true
+    target:
+        entity_id: vacuum.vacuum
+    ```
 
 ### `dreame_vacuum.vacuum_set_router_position`
 
-TODO
+Set the WiFi router's position on the current map (used to render its icon and, on supported devices, for router-relative navigation).
 
-### `dreame_vacuum.vacuum_set_pathway`
+> - Requires a device with WiFi map support.
+> - The vacuum must not be running.
 
-TODO
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `x` | yes | X coordinate of the router on the current map | `819` |
+| `y` | yes | Y coordinate of the router on the current map | `-263` |
+
+**Example:**
+
+- Place the router marker at [819, -263]
+    ```yaml
+    service: dreame_vacuum.vacuum_set_router_position
+    data:
+        x: 819
+        y: -263
+    target:
+        entity_id: vacuum.vacuum
+    ```
 
 ### `dreame_vacuum.vacuum_set_carpet_area`
 
-TODO
+Define which areas of the current saved map are carpets, and which detected carpets should be ignored.
+
+> - Cannot be used to edit carpets on a temporary (unsaved) map.
+> - Both fields default to an empty list, which clears the corresponding set.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `carpets` | no | List of `[x0, y0, x1, y1]` rectangles to mark as carpets | `[[819,-263,4424,2105],[-2001,-3050,-542,515]]` |
+| `ignored_carpets` | no | List of `[x0, y0, x1, y1]` rectangles of detected carpets to ignore | `[[819,-263,4424,2105],[-2001,-3050,-542,515]]` |
+
+**Example:**
+
+- Mark one rectangle as a carpet
+    ```yaml
+    service: dreame_vacuum.vacuum_set_carpet_area
+    data:
+        carpets:
+          - - 819
+            - -263
+            - 4424
+            - 2105
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+### `dreame_vacuum.vacuum_set_virtual_threshold`
+
+Define virtual thresholds (floor-transition lines) on the current saved map, used by devices that distinguish floor materials or auto-carpet cleaning to decide where to lift the mop or change suction.
+
+> - Cannot be used to edit thresholds on a temporary (unsaved) map.
+> - Requires a device that supports virtual/passable thresholds or floor material detection.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `virtual_thresholds` | no | List of `[x0, y0, x1, y1]` lines marking floor-material transitions | `[[819,-263,4424,2105],[-2001,-3050,-542,515]]` |
+
+**Example:**
+
+- Define one virtual threshold line
+    ```yaml
+    service: dreame_vacuum.vacuum_set_virtual_threshold
+    data:
+        virtual_thresholds:
+          - - 819
+            - -263
+            - 4424
+            - 2105
+    target:
+        entity_id: vacuum.vacuum
+    ```
 
 ### `dreame_vacuum.vacuum_set_predefined_points`
 
-TODO
+Save a list of predefined coordinates on the current map. These points are reused by `vacuum_follow_path` when called without explicit `points`, and are shown in the app as saved points of interest.
+
+> - Requires a device with cruising capability.
+> - The vacuum must not be running.
+> - Coordinates must be inside the current map.
+> - At most 20 points are kept; extra points are truncated.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `points` | no | One `[x, y]` pair or a list of `[x, y]` pairs to save | `[819,-263] or [[819,-263],[900,-463]]` |
+
+**Example:**
+
+- Save two predefined points
+    ```yaml
+    service: dreame_vacuum.vacuum_set_predefined_points
+    data:
+        points:
+          - - 819
+            - -263
+          - - 900
+            - -463
+    target:
+        entity_id: vacuum.vacuum
+    ```
 
 
 ## Other Services
