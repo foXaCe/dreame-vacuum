@@ -88,13 +88,20 @@ rules:
   async-dependency:
     status: exempt
     comment: >-
-      The vendor protocol relies on requests (sync HTTP) and paho-mqtt
-      (thread-based). All blocking calls are isolated in executor threads and
-      never touch the event loop; a migration to aiohttp/aiomqtt is tracked
-      but out of scope for now.
+      Cloud HTTP now runs on an async-native aiohttp transport (step 1 of the
+      incremental async migration), but the protocol layer is still driven by
+      dedicated worker threads and paho-mqtt (thread-based) plus python-miio
+      (sync UDP) remain on the critical path. All blocking calls stay isolated
+      from the event loop. Remaining steps (worker threads to asyncio tasks,
+      aiomqtt with the TOFU pinning ported, async MiIO) are tracked in
+      docs/overhaul and ARCHITECTURE.md.
   inject-websession:
     status: exempt
-    comment: Depends on async-dependency (requests sessions are internal).
+    comment: >-
+      The aiohttp transport (dreame/http_client.py AsyncHttpClient) already
+      accepts an injected ClientSession; wiring Home Assistant's shared
+      websession requires the protocol layer to run on the HA event loop
+      first (see async-dependency).
   strict-typing:
     status: todo
     comment: >-
