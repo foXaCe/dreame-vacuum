@@ -1,16 +1,17 @@
 """Non-regression tests for Passe 2 (coordinator robustness) and Passe 3 (security).
 
 Covers B3 (Liskov signature), B4 (device kept on transient error), B6 (no implicit
-None on disconnect), B16 (401 re-login replay without spurious breaker failure),
-B21 (config flow session closed on flow end) behaviourally, and B9 via a guard.
+None on disconnect), B9 (reauth drops the cleartext password once an auth_key is
+held), B16 (401 re-login replay without spurious breaker failure), B21 (config
+flow session closed on flow end) - all behaviourally.
 """
 
 from __future__ import annotations
 
 from datetime import timedelta
 import inspect
-import pathlib
-from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.helpers.update_coordinator import UpdateFailed
 import pytest
@@ -19,8 +20,6 @@ from custom_components.dreame_vacuum.config_flow import DreameVacuumFlowHandler
 from custom_components.dreame_vacuum.coordinator import DreameVacuumDataUpdateCoordinator
 from custom_components.dreame_vacuum.dreame.exceptions import RateLimitError
 from custom_components.dreame_vacuum.dreame.protocol import DreameVacuumDreameHomeCloudProtocol
-
-_CC = pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "dreame_vacuum"
 
 
 def _coordinator() -> tuple[DreameVacuumDataUpdateCoordinator, MagicMock]:
@@ -161,7 +160,48 @@ def test_b21_async_remove_is_noop_without_protocol() -> None:
 # --- B9: reauth must not blindly re-persist the cleartext password -----------
 
 
-def test_b9_reauth_drops_password_when_auth_key_available() -> None:
-    """Guard: the reauth path must drop CONF_PASSWORD when an auth_key is held."""
-    src = (_CC / "config_flow.py").read_text()
-    assert "data.pop(CONF_PASSWORD, None)" in src
+async def test_b9_reauth_drops_password_when_auth_key_available() -> None:
+    """The reauth path must drop CONF_PASSWORD once the server issued an auth_key."""
+    from homeassistant.config_entries import SOURCE_USER
+    from homeassistant.const import CONF_PASSWORD
+
+    from custom_components.dreame_vacuum.config_flow import ACCOUNT_TYPE_MI
+    from custom_components.dreame_vacuum.const import CONF_AUTH_KEY
+
+    with patch("custom_components.dreame_vacuum.config_flow.DreameVacuumProtocol") as mock_protocol_cls:
+        cloud_protocol = mock_protocol_cls.return_value
+        cloud_protocol.cloud = MagicMock(auth_key="fresh_key")
+        cloud_protocol.connect = MagicMock(return_value={"mac": "AA:BB:CC:DD:EE:FF", "model": "dreame.vacuum.p2009"})
+        cloud_protocol.disconnect = MagicMock()
+
+        async def _run_executor_job(func, *args):
+            return func(*args)
+
+        flow = DreameVacuumFlowHandler()
+        flow.hass = MagicMock()
+        flow.hass.async_add_executor_job = AsyncMock(side_effect=_run_executor_job)
+        flow.context = {"source": SOURCE_USER}
+        flow.reauth = True
+        flow.account_type = ACCOUNT_TYPE_MI
+        flow.protocol = cloud_protocol
+        flow.prefer_cloud = True
+        flow.host = "192.168.1.100"
+        flow.token = "t" * 32
+        flow.username = "user@example.com"
+        flow.password = "secret"
+        flow.country = "eu"
+        flow.device_id = "1"
+        flow._get_reauth_entry = lambda: SimpleNamespace(data={CONF_PASSWORD: "stored-secret"})
+
+        captured: dict = {}
+
+        def _update_reload_and_abort(entry, *, data):
+            captured["data"] = data
+            return {"type": "abort", "reason": "reauth_successful"}
+
+        flow.async_update_reload_and_abort = _update_reload_and_abort
+
+        await flow.async_step_connect()
+
+    assert CONF_PASSWORD not in captured["data"]
+    assert captured["data"][CONF_AUTH_KEY] == "fresh_key"
