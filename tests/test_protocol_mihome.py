@@ -1696,19 +1696,37 @@ def test_aggregate_send_async_device_cloud_not_logged_in_uses_cloud_device_id() 
 
 
 def test_aggregate_send_async_device_cloud_uses_mac_when_no_cloud_did() -> None:
-    """When self.cloud has no device_id either, falls back to self._mac.
-
-    NOTE: send_async()/send() access ``self.cloud.device_id`` unconditionally
-    (no ``self.cloud is not None`` guard) inside this branch. If ``self.cloud``
-    is ``None`` while ``device_cloud`` is truthy (possible when
-    ``prefer_cloud=True`` but username/country/password were not all
-    supplied), this raises ``AttributeError`` instead of falling back to
-    ``self._mac``. This looks like a real latent bug, but it was left
-    unmodified per the coverage-only mandate for this pass — see the
-    ``self.cloud`` truthiness requirement below, which routes around it.
-    """
+    """When self.cloud has no device_id either, falls back to self._mac."""
     p = DreameVacuumProtocol(username="u", password="pw", country="de", account_type="mi", prefer_cloud=True)
     p.cloud = MagicMock(device_id=None)
+    p._mac = "AA:BB"
+    p.device_cloud = MagicMock(logged_in=False, device_id=None)
+
+    def fake_login() -> None:
+        p.device_cloud.logged_in = True
+
+    p.device_cloud.login.side_effect = fake_login
+
+    p.send_async(MagicMock(), "get_properties", [])
+
+    p.device_cloud.get_info.assert_called_once_with("AA:BB")
+
+
+def test_aggregate_send_async_device_cloud_uses_mac_when_cloud_is_none() -> None:
+    """Regression test for a real bug: send_async() used to access
+    ``self.cloud.device_id`` unconditionally in this branch, with no
+    ``self.cloud is not None`` guard. If ``self.cloud`` is ``None`` while
+    ``device_cloud`` is truthy (possible when ``prefer_cloud=True`` but
+    username/country/password were not all supplied), this raised
+    ``AttributeError`` instead of falling back to ``self._mac``.
+    Unreachable via the current config flow (which always supplies cloud
+    credentials together), but defended against here regardless.
+    """
+    # No username/country/password/auth_key -> self.cloud stays None. prefer_cloud=True
+    # still builds device_cloud (device_cloud construction only checks the
+    # constructor's ``prefer_cloud`` argument, not the cloud credentials).
+    p = DreameVacuumProtocol(account_type="mi", prefer_cloud=True)
+    assert p.cloud is None
     p._mac = "AA:BB"
     p.device_cloud = MagicMock(logged_in=False, device_id=None)
 
@@ -1772,6 +1790,25 @@ def test_aggregate_send_device_cloud_not_logged_in_uses_cloud_device_id() -> Non
 def test_aggregate_send_device_cloud_not_logged_in_uses_mac_fallback() -> None:
     p = DreameVacuumProtocol(username="u", password="pw", country="de", account_type="mi", prefer_cloud=True)
     p.cloud = MagicMock(device_id=None)
+    p._mac = "AA:BB"
+    p.device_cloud = MagicMock(logged_in=False, device_id=None)
+
+    def fake_login() -> None:
+        p.device_cloud.logged_in = True
+
+    p.device_cloud.login.side_effect = fake_login
+    p.device_cloud.send.return_value = {"ok": 1}
+
+    p.send("get_properties", [])
+
+    p.device_cloud.get_info.assert_called_once_with("AA:BB")
+
+
+def test_aggregate_send_device_cloud_uses_mac_when_cloud_is_none() -> None:
+    """Regression test mirroring the send_async() case above: send() must not
+    dereference ``self.cloud.device_id`` when ``self.cloud`` is None."""
+    p = DreameVacuumProtocol(account_type="mi", prefer_cloud=True)
+    assert p.cloud is None
     p._mac = "AA:BB"
     p.device_cloud = MagicMock(logged_in=False, device_id=None)
 
