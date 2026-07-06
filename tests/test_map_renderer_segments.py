@@ -165,7 +165,11 @@ class TestRenderSegmentOrderBadge:
 class TestRenderSegmentCustomCleanset:
     @staticmethod
     def _renderer() -> DreameVacuumMapRenderer:
-        return DreameVacuumMapRenderer()
+        renderer = DreameVacuumMapRenderer()
+        # render_segment() is normally only reached via render_map(), which
+        # warms the icon sets first; called directly here, so warm them up.
+        renderer._warm_up_icons()
+        return renderer
 
     def test_all_custom_fields_with_cleaning_mode_sweep_and_mop(self) -> None:
         renderer = self._renderer()
@@ -231,6 +235,7 @@ class TestRenderSegmentCustomCleanset:
 
     def test_disabled_config_flags_shrink_icon_row(self) -> None:
         renderer = DreameVacuumMapRenderer(hidden_map_objects=["suction_level", "cleaning_mode"])
+        renderer._warm_up_icons()
         segment = _segment(type=1, suction_level=1, water_volume=1, cleaning_times=1, cleaning_mode=2)
         full = self._renderer().render_segment(
             _segment(type=1, suction_level=1, water_volume=1, cleaning_times=1, cleaning_mode=2),

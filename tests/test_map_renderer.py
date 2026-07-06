@@ -990,9 +990,19 @@ class TestObjectsMixin:
 
 
 class TestInitVariants:
+    def test_construction_does_not_warm_up_icons(self) -> None:
+        """Icon decoding is lazy: __init__ must leave the icon lists unset."""
+        renderer = DreameVacuumMapRenderer(icon_set="Mijia")
+        assert renderer._icons_warmed is False
+        assert renderer._cleaning_times_icon is None
+        assert renderer._suction_level_icon is None
+        assert renderer._cleaning_mode_icon is None
+
     def test_icon_set_mijia_loads_mijia_icon_lists(self) -> None:
         renderer = DreameVacuumMapRenderer(icon_set="Mijia")
         assert renderer.icon_set == 2
+        renderer._warm_up_icons()
+        assert renderer._icons_warmed is True
         assert len(renderer._cleaning_times_icon) > 0
         assert len(renderer._suction_level_icon) > 0
         assert len(renderer._water_volume_icon) > 0
@@ -1002,11 +1012,25 @@ class TestInitVariants:
     def test_icon_set_material_loads_material_icon_lists(self) -> None:
         renderer = DreameVacuumMapRenderer(icon_set="Material")
         assert renderer.icon_set == 3
+        renderer._warm_up_icons()
         assert len(renderer._cleaning_times_icon) > 0
         assert len(renderer._suction_level_icon) > 0
         assert len(renderer._water_volume_icon) > 0
         assert len(renderer._cleaning_route_icon) > 0
         assert len(renderer._custom_mopping_route_icon) > 0
+
+    def test_warm_up_icons_is_idempotent(self) -> None:
+        renderer = DreameVacuumMapRenderer(icon_set="Mijia")
+        renderer._warm_up_icons()
+        first = renderer._cleaning_times_icon
+        renderer._warm_up_icons()
+        assert renderer._cleaning_times_icon is first
+
+    def test_construction_never_calls_pil_image_open(self) -> None:
+        """No PIL decode may happen while building the renderer on the event loop."""
+        with patch.object(Image, "open", wraps=Image.open) as spy:
+            DreameVacuumMapRenderer(icon_set="Mijia")
+        spy.assert_not_called()
 
     def test_icon_set_unknown_falls_back_to_dreame(self) -> None:
         renderer = DreameVacuumMapRenderer(icon_set="Does Not Exist")
