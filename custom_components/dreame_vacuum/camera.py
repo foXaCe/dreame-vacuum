@@ -510,6 +510,14 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 remap[raw] = room_key
                 room_to_raw[room_key] = int(raw)
 
+        # No room centre mapped to a raw pixel value -> the blue channel would be
+        # uniformly zero. Publishing that degenerate buffer makes the card treat
+        # every pixel as "outside a room"; the contract says to publish the
+        # attribute only when it has content (the card falls back to polygon
+        # hit-testing when the attribute is absent). Skip it instead.
+        if not room_to_raw:
+            return None
+
         # Flip Y to match the rendered camera image which uses pixel_type[x, height-1-y].
         blue = remap[np.flip(pt, axis=1).T]
         img_data = np.zeros((h, w, 3), dtype=np.uint8)
