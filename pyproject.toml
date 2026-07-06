@@ -68,6 +68,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # resources.py uses lazy-loading via __getattr__; names in __all__ are resolved at runtime
 "custom_components/dreame_vacuum/dreame/resources.py" = ["F822"]
+# vacuum_types.py is a compatibility facade re-exporting the types_*.py submodules
+"custom_components/dreame_vacuum/dreame/vacuum_types.py" = ["F403", "F405"]
 
 [tool.ruff.lint.mccabe]
 # Maximum allowed complexity

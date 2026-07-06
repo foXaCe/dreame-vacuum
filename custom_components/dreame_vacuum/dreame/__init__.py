@@ -39,27 +39,19 @@ def __getattr__(name: str) -> Any:
     if name in _lazy_imports:
         return _lazy_imports[name]
 
-    # Try importing from const module
-    try:
-        from . import const
+    # A failing import of the backing modules must propagate with its real
+    # traceback — swallowing it here would surface every symbol lookup as a
+    # misleading AttributeError.
+    from . import const, vacuum_types as types
 
-        if hasattr(const, name):
-            value = getattr(const, name)
-            _lazy_imports[name] = value
-            return value
-    except (ImportError, AttributeError):
-        pass
-
-    # Try importing from types module
-    try:
-        from . import vacuum_types as types
-
-        if hasattr(types, name):
-            value = getattr(types, name)
-            _lazy_imports[name] = value
-            return value
-    except (ImportError, AttributeError):
-        pass
+    for module in (const, types):
+        try:
+            if hasattr(module, name):
+                value = getattr(module, name)
+                _lazy_imports[name] = value
+                return value
+        except AttributeError:
+            pass
 
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 

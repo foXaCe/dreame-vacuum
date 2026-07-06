@@ -28,6 +28,9 @@ def test_exclude_attributes_contains_known_camera_and_vacuum_attributes() -> Non
     # A large-map-data camera attribute that must never hit the recorder DB.
     assert ATTR_MAP_ID in result
     assert ATTR_ROOMS in result
+    # Vectorized wall/door geometry from the saved map — large map data too.
+    assert "wall_lines" in result
+    assert "door_lines" in result
     # A vacuum attribute duplicated by a dedicated sensor entity.
     assert ATTR_STATUS in result
     assert "battery_level" in result
