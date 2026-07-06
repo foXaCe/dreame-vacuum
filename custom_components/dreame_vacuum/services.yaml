@@ -447,12 +447,12 @@ vacuum_set_custom_carpet_cleaning:
       selector:
         object:
     type:
-      example: "[0,1] or 1"
+      example: "[0,2] or 1"
       required: true
       selector:
         number:
           min: 0
-          max: 1
+          max: 2
     carpet_cleaning:
       example: "[0,3] or 5"
       required: false
