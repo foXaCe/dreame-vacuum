@@ -13,8 +13,10 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
+from homeassistant.const import EntityCategory
 
 from .const import DreameVacuumConfigEntry
+from .dreame import DreameVacuumProperty
 from .entity import DreameVacuumBinarySensorEntityDescription, DreameVacuumEntity
 
 PARALLEL_UPDATES = 1
@@ -41,6 +43,41 @@ BINARY_SENSORS: tuple[DreameVacuumBinarySensorEntityDescription, ...] = (
             else "mdi:power-plug"
         ),
         value_fn=lambda value, device: device.status.charging,
+    ),
+    # Station (siid 27) telemetry confirmed by a live property probe but not
+    # otherwise mapped/consumed yet. Read-only, diagnostic, disabled by
+    # default: writability is unknown and unverified statuses should not be
+    # surfaced to users without an explicit opt-in.
+    DreameVacuumBinarySensorEntityDescription(
+        key="dust_bag_dry_status",
+        property_key=DreameVacuumProperty.DUST_BAG_DRY_STATUS,
+        device_class=BinarySensorDeviceClass.RUNNING,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda value, device: bool(value),
+    ),
+    DreameVacuumBinarySensorEntityDescription(
+        key="station_clean_status",
+        property_key=DreameVacuumProperty.STATION_CLEAN_STATUS,
+        device_class=BinarySensorDeviceClass.RUNNING,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda value, device: bool(value),
+    ),
+    DreameVacuumBinarySensorEntityDescription(
+        key="mechanical_foot_status",
+        property_key=DreameVacuumProperty.MECHANICAL_FOOT_STATUS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda value, device: bool(value),
+    ),
+    DreameVacuumBinarySensorEntityDescription(
+        key="station_ota_status",
+        property_key=DreameVacuumProperty.STATION_OTA_STATUS,
+        device_class=BinarySensorDeviceClass.RUNNING,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda value, device: bool(value),
     ),
 )
 

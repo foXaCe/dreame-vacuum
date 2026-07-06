@@ -147,6 +147,18 @@
     "binary_sensor": {
       "charging_state": {
         "name": "État de charge"
+      },
+      "dust_bag_dry_status": {
+        "name": "Séchage du sac à poussière"
+      },
+      "mechanical_foot_status": {
+        "name": "Pied mécanique de la station"
+      },
+      "station_clean_status": {
+        "name": "Auto-nettoyage de la station"
+      },
+      "station_ota_status": {
+        "name": "Mise à jour du firmware de la station"
       }
     },
     "button": {
