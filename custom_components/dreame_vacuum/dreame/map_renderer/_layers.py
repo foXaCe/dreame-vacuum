@@ -283,6 +283,33 @@ class _LayersMixin(_MapRendererState):
             changes.append(layer)
             self._del_layer(cached_layers, layer)
 
+        # walls_info door segments (MapData.door_lines): a subtle dashed marker,
+        # drawn after the physical walls. Independent of any wall_lines pixel
+        # replacement -- see docs/dev/wall-lines-render-spike.md for why a full
+        # pixel-wall replacement is blocked on this device, and why doors are
+        # shipped on their own (additive information the pixel grid can't express).
+        layer = MapRendererLayer.DOOR
+        if map_data.door_lines and self.config.door:
+            layers.append(layer)
+            if (
+                not self._cache
+                or self._map_data is None
+                or self._map_data.door_lines != map_data.door_lines
+                or not cached_layers.get(layer)
+            ):
+                changes.append(layer)
+                cached_layers[layer] = self.render_doors(
+                    map_data.door_lines,
+                    self._door_line_color(self.color_scheme.wall),
+                    layer_size,
+                    map_data.dimensions,
+                    max(1, line_width - 1),
+                    scale,
+                )
+        elif self._cache and cached_layers.get(layer):
+            changes.append(layer)
+            self._del_layer(cached_layers, layer)
+
         layer = MapRendererLayer.VIRTUAL_THRESHOLD
         if map_data.virtual_thresholds and self.config.pathway:
             layers.append(layer)

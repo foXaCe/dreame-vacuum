@@ -53,6 +53,28 @@ class _StaticHelpersMixin:
         return Image.fromarray(arr)
 
     @staticmethod
+    def _door_line_color(wall_color: tuple[int, ...]) -> tuple[int, ...]:
+        """Derive a sober, distinct door-marker colour from the wall colour.
+
+        ``door_lines`` (walls_info ``type 1`` segments) are drawn as a
+        subtle marker, never a solid wall-coloured duplicate -- that was
+        the reverted "additive" bug (redundant gray frames on top of the
+        pixel walls, see docs/dev/wall-lines-render-spike.md). Blending in a
+        modest warm tint keeps the marker readable in both the light and
+        dark built-in colour schemes without a new palette entry per theme.
+        """
+        r, g, b = wall_color[0], wall_color[1], wall_color[2]
+        a = wall_color[3] if len(wall_color) > 3 else 255
+        tint = (196, 148, 74)
+        ratio = 0.4
+        return (
+            min(255, int(r * (1 - ratio) + tint[0] * ratio)),
+            min(255, int(g * (1 - ratio) + tint[1] * ratio)),
+            min(255, int(b * (1 - ratio) + tint[2] * ratio)),
+            a,
+        )
+
+    @staticmethod
     def _round_coord(coord: float, grid_size: float) -> float:
         remainder = coord % grid_size
         if remainder <= grid_size / 2:

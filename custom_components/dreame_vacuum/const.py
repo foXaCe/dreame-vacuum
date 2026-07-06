@@ -98,6 +98,7 @@ MAP_OBJECTS: Final = {
     "ramp": "Ramp",
     "curtain": "Curtain",
     "cruise_point": "Cruise Points",
+    "door": "Doors",
 }
 NOTIFICATION: Final = {
     "cleanup_completed": "Cleanup Completed",

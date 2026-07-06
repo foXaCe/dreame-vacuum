@@ -143,6 +143,62 @@ class TestRenderMapFullPipeline:
         # Segment 2 interior pixel (grid x=15, y=2) -> segment color_index 1.
         assert rgba.getpixel((186, 150)) == MapRendererColorScheme().segment[1][0]
 
+    def test_wall_lines_alone_does_not_change_pixel_output(self) -> None:
+        """wall_lines has no rendering effect today.
+
+        Replacing the pixel wall contour with wall_lines vectors is BLOCKED
+        (see docs/dev/wall-lines-render-spike.md): on the real reference
+        fixture only ~44% of grid wall cells sit near a wall_lines segment,
+        and every wall_lines segment is axis-aligned anyway (zero anti-
+        aliasing to gain where it *is* covered). So wall_lines is decoded
+        and carried on MapData, but the renderer must not act on it: this
+        pins the current byte-identical fallback so it isn't silently
+        broken by a future half-finished attempt.
+        """
+        baseline = _make_small_map_data()
+        png_without = DreameVacuumMapRenderer(low_resolution=True, cache=True).render_map(
+            baseline, robot_status=1, station_status=0
+        )
+
+        with_wall_lines = _make_small_map_data()
+        with_wall_lines.wall_lines = [Wall(0, 100, 900, 100)]
+        png_with = DreameVacuumMapRenderer(low_resolution=True, cache=True).render_map(
+            with_wall_lines, robot_status=1, station_status=0
+        )
+
+        assert png_with == png_without
+
+    def test_door_lines_draw_additive_marker_without_touching_wall_or_segment_pixels(self) -> None:
+        """door_lines (walls_info type 1) draw a distinct, additive marker.
+
+        Unlike wall_lines, door_lines carry information the pixel grid has
+        no way to express on its own, so they are rendered -- but only ever
+        additively, layered after the existing wall pixels/objects, never
+        replacing or duplicating them (that additive-over-wall-pixels
+        pattern is exactly the reverted bug: redundant gray frames).
+        """
+        without_doors = _make_small_map_data()
+        png_without = DreameVacuumMapRenderer(low_resolution=True, cache=True).render_map(
+            without_doors, robot_status=1, station_status=0
+        )
+
+        with_doors = _make_small_map_data()
+        with_doors.door_lines = [Wall(0, 500, 900, 500)]
+        renderer = DreameVacuumMapRenderer(low_resolution=True, cache=True)
+        png_with = renderer.render_map(with_doors, robot_status=1, station_status=0)
+
+        # The door marker is drawn as its own object layer...
+        assert MapRendererLayer.DOOR in renderer._layers
+        # ...and something in the final PNG actually changed as a result.
+        assert png_with != png_without
+
+        img_with = Image.open(io.BytesIO(png_with)).convert("RGBA")
+        # The wall-border and segment pixels asserted in the sibling test
+        # (test_renders_wall_segment_and_outside_colors) are untouched.
+        assert img_with.getpixel((156, 150)) == MapRendererColorScheme().wall
+        assert img_with.getpixel((160, 150)) == MapRendererColorScheme().segment[0][0]
+        assert img_with.getpixel((186, 150)) == MapRendererColorScheme().segment[1][0]
+
     def test_calibration_points_set_after_render(self) -> None:
         map_data = _make_small_map_data()
         renderer = DreameVacuumMapRenderer(low_resolution=True, cache=True)
@@ -552,6 +608,16 @@ class TestShapesMixin:
         return DreameVacuumMapRenderer(low_resolution=True)
 
     def test_render_walls_draws_line_at_expected_pixel(self) -> None:
+        # AA note (contract backlog B / docs/dev/wall-lines-render-spike.md):
+        # render_walls now runs its drawn content through _antialias_region (a
+        # small alpha-aware Gaussian blur, restricted to the shape's own
+        # bounding box so the cost stays proportional to the shape rather than
+        # the whole map canvas) to soften jagged diagonal virtual-wall/
+        # threshold edges. On this deliberately minimal width=1 hairline,
+        # blurring softens the peak alpha from 255 to 209 -- the hue itself
+        # (pure red, no white-fringe bleed thanks to premultiplied-alpha
+        # blurring) is unaffected. Real renders use thicker lines (line_width
+        # * object_scale >= 2), where the effect is far milder.
         renderer = self._renderer()
         dims = MapImageDimensions(top=0, left=0, height=20, width=20, grid_size=1)
         layer_size = (20, 20)
@@ -561,8 +627,26 @@ class TestShapesMixin:
         arr = np.array(layer)
 
         p = wall.to_img(dims)
-        assert tuple(arr[int(p.y0), 10]) == (255, 0, 0, 255)
+        assert tuple(arr[int(p.y0), 10]) == (255, 0, 0, 209)
+        # (0, 0) sits outside the blurred bounding box for this geometry, so
+        # it keeps the layer's untouched initial fill.
         assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+
+    def test_render_walls_blur_region_entirely_off_layer_is_a_no_op(self) -> None:
+        # The AA blur's bounding box (see test_render_walls_draws_line_at_
+        # expected_pixel) is padded for the blur radius and then clamped to
+        # the layer bounds; when a wall's own geometry maps to coordinates
+        # entirely outside a (deliberately tiny) layer, that clamped region
+        # collapses to nothing and _antialias_region must no-op instead of
+        # cropping/pasting a degenerate rectangle.
+        renderer = self._renderer()
+        dims = MapImageDimensions(top=0, left=0, height=5, width=5, grid_size=1)
+        wall = Wall(500, 500, 600, 500)
+
+        layer = renderer.render_walls([wall], (255, 0, 0, 255), (5, 5), dims, 1, 1)
+
+        assert layer.size == (5, 5)
+        assert not np.array(layer)[..., 3].any()
 
     def test_render_areas_fills_polygon(self) -> None:
         renderer = self._renderer()
@@ -575,8 +659,16 @@ class TestShapesMixin:
 
         p = area.to_img(dims)
         cx, cy = int((p.x0 + p.x2) / 2), int((p.y0 + p.y2) / 2)
+        # Well inside the filled polygon, the AA blur (see
+        # test_render_walls_draws_line_at_expected_pixel) has no effect: a
+        # uniform interior blurs to itself.
         assert tuple(arr[cy, cx]) == (0, 0, 255, 100)
-        assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+        # On this small 20x20 canvas the polygon's blurred bounding box
+        # happens to reach all the way to (0, 0): premultiplied-alpha blur
+        # zeroes RGB wherever alpha is 0 (instead of leaking the layer's
+        # initial (255, 255, 255) fill) -- harmless since alpha=0 pixels
+        # never contribute to the final composite either way.
+        assert tuple(arr[0, 0]) == (0, 0, 0, 0)
 
     def test_render_points_fills_square_around_point(self) -> None:
         renderer = self._renderer()
@@ -601,6 +693,9 @@ class TestShapesMixin:
         arr = np.array(layer)
 
         p = wall.to_img(dims)
+        # Well inside the filled band, the AA blur (see
+        # test_render_walls_draws_line_at_expected_pixel) has no effect, and
+        # (0, 0) sits outside the blurred bounding box for this geometry.
         assert tuple(arr[int(p.y0), 15]) == (0, 255, 0, 255)
         assert tuple(arr[0, 0]) == (255, 255, 255, 0)
 
@@ -615,6 +710,59 @@ class TestShapesMixin:
 
         assert tuple(arr[29, 10]) == (0, 0, 255, 255)
         assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+
+    def test_render_doors_draws_dashed_line(self) -> None:
+        renderer = self._renderer()
+        dims = MapImageDimensions(top=0, left=0, height=50, width=1400, grid_size=1)
+        layer_size = (1400, 50)
+        # 1200 mm : dans la fenêtre porte réaliste (DOOR_RENDER_MIN/MAX_LENGTH_MM).
+        wall = Wall(10, 25, 1210, 25)
+
+        layer = renderer.render_doors([wall], (0, 128, 255, 255), layer_size, dims, 1, 1)
+        arr = np.array(layer)
+
+        p = wall.to_img(dims)
+        # dash_length=6, gap_length=5, period=11 at scale=1: x=13 falls inside
+        # the first dash (0-6), x=19 falls inside the following gap (6-11).
+        # AA note (see test_render_walls_draws_line_at_expected_pixel): the
+        # blur softens this width=1 dash's peak alpha from 255 to 209, hue
+        # unaffected; the gap keeps a near-zero (not exactly zero, Gaussian
+        # tail) alpha.
+        dash_pixel = tuple(int(v) for v in arr[int(p.y0), 13])
+        assert dash_pixel[0] == 0
+        assert dash_pixel[2] == 255
+        assert abs(dash_pixel[1] - 128) <= 3  # green channel: blur rounding
+        assert dash_pixel[3] == 209
+        gap_pixel = tuple(arr[int(p.y0), 19])
+        assert gap_pixel[3] < 5
+        # (0, 0) sits outside the blurred bounding box for this geometry.
+        assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+
+    def test_render_doors_skips_segments_longer_than_a_real_door(self) -> None:
+        """Multi-meter walls_info type-1 segments are partition/construction
+        lines, not doorways (verified visually on r95285, 2026-07-07): they
+        must stay out of the PNG while short, door-sized segments render."""
+        renderer = self._renderer()
+        dims = MapImageDimensions(top=0, left=0, height=50, width=3000, grid_size=1)
+        layer_size = (3000, 50)
+        long_partition = Wall(10, 25, 2600, 25)  # 2590 mm >> DOOR_RENDER_MAX_LENGTH_MM
+        tiny_artifact = Wall(10, 40, 60, 40)  # 50 mm << DOOR_RENDER_MIN_LENGTH_MM
+
+        layer = renderer.render_doors([long_partition, tiny_artifact], (255, 0, 0, 255), layer_size, dims, 1, 1)
+        arr = np.array(layer)
+
+        assert not arr[..., 3].any()
+
+    def test_render_doors_skips_zero_length_segment(self) -> None:
+        renderer = self._renderer()
+        dims = MapImageDimensions(top=0, left=0, height=20, width=20, grid_size=1)
+        layer_size = (20, 20)
+        wall = Wall(5, 5, 5, 5)
+
+        layer = renderer.render_doors([wall], (255, 0, 0, 255), layer_size, dims, 1, 1)
+        arr = np.array(layer)
+
+        assert not arr[..., 3].any()
 
     def test_render_ramps_fills_polygon_and_draws_arrows(self) -> None:
         renderer = self._renderer()
