@@ -361,15 +361,21 @@ class DreameVacuumDeviceCapability:
         if self.auto_switch_settings and self.mop_pad_lifting:
             return True
         segments = self._device.status.current_segments
+        # next(..., None) instead of next(iter(...)): segments is truthy at every
+        # call site below, so this never actually hit StopIteration, but a bare
+        # next(iter(...)) has no defensive default if that ever changes.
+        first_segment = next(iter(segments.values()), None) if segments else None
         if not self._custom_cleaning_mode:
             if segments:
-                if next(iter(segments.values())).cleaning_mode is not None:
+                if first_segment is not None and first_segment.cleaning_mode is not None:
                     self._custom_cleaning_mode = True
                     return True
             else:
                 self._custom_cleaning_mode = self.mop_pad_lifting
                 return self.mop_pad_lifting
-        return self._custom_cleaning_mode and (not segments or next(iter(segments.values())).cleaning_mode is not None)
+        return self._custom_cleaning_mode and (
+            not segments or (first_segment is not None and first_segment.cleaning_mode is not None)
+        )
 
     @property
     def cruising(self) -> bool:

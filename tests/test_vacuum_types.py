@@ -1304,14 +1304,18 @@ class TestFurniture:
         assert furniture.x1 is None
         assert furniture.y3 is None
 
-    def test_corners_none_when_origin_is_zero_known_bug(self) -> None:
-        """Real bug: the guard ``if x0 and y0 and width and height`` uses truthiness,
-        so a legitimate origin of x0=0 or y0=0 is treated the same as "missing" and the
-        corners silently stay None even though width/height are set.
+    def test_corners_computed_when_origin_is_zero(self) -> None:
+        """Regression test for a real bug: the guard used to be
+        ``if x0 and y0 and width and height``, which relies on truthiness, so a
+        legitimate origin of x0=0 or y0=0 was treated the same as "missing" and the
+        corners silently stayed None even though width/height were set. Fixed to use
+        ``is not None`` for the origin coordinates (width/height keep the truthiness
+        check — 0 is the real "no dimension data" sentinel from the decoder).
         """
         furniture = Furniture(x=5, y=5, x0=0, y0=0, width=10, height=4, type=FurnitureType.COFFEE_TABLE, size_type=1)
-        assert furniture.x1 is None
-        assert furniture.y3 is None
+        assert (furniture.x1, furniture.y1) == (10, 0)
+        assert (furniture.x2, furniture.y2) == (10, 4)
+        assert (furniture.x3, furniture.y3) == (0, 4)
 
     def test_as_dict_includes_corners_and_metadata(self) -> None:
         furniture = Furniture(
@@ -1642,19 +1646,18 @@ class TestRecoveryMapInfo:
         info = RecoveryMapInfo(1, None, "raw", "obj", "name", map_type=0)
         assert info.as_dict() is None
 
-    def test_eq_logic_is_inverted_known_bug(self) -> None:
-        """Documents a real bug: __eq__'s body is written as an "is different" check
-        (``or``-chain of ``!=``) rather than negated like every sibling class in this
-        module. As a result identical instances compare unequal, and instances that
-        differ in date/map_id/object_name compare *equal*. Not fixed here per task
-        scope — flagged in the final report instead.
+    def test_eq_compares_date_map_id_and_object_name(self) -> None:
+        """Regression test for a real bug: __eq__'s body used to be written as an
+        "is different" check (``or``-chain of ``!=``) rather than negated like every
+        sibling class in this module, so identical instances compared unequal and
+        differing instances compared equal. Fixed to normal equality semantics.
         """
         a = RecoveryMapInfo(1, 1700000000.0, "raw", "obj", "name", map_type=0)
         b = RecoveryMapInfo(1, 1700000000.0, "raw", "obj", "name", map_type=0)
-        assert (a == b) is False  # identical instances erroneously compare unequal
+        assert (a == b) is True  # identical instances compare equal
 
         c = RecoveryMapInfo(2, 1700000000.0, "raw", "obj", "different-name", map_type=0)
-        assert (a == c) is True  # differing instances erroneously compare equal
+        assert (a == c) is False  # differing instances compare unequal
 
     def test_eq_with_non_recovery_map_info_is_not_equal(self) -> None:
         info = RecoveryMapInfo(1, 1700000000.0, "raw", "obj", "name", map_type=0)

@@ -626,10 +626,9 @@ class Segment(Zone):
 
             result[k] = name
 
-        if self.type == 0:
-            name = self.custom_name if self.custom_name else translations.get(0, f"Room {self.segment_id}")
-        else:
-            name = self.custom_name if self.custom_name else translations.get(0, f"Room {self.segment_id}")
+        # Room-zero name is the same regardless of self.type (both branches of the
+        # former if/else on self.type == 0 computed this identical expression).
+        name = self.custom_name if self.custom_name else translations.get(0, f"Room {self.segment_id}")
         result[0] = name
         if self.type != 0:
             result[self.type] = self.get_translated_name(language)
@@ -901,7 +900,7 @@ class Furniture(Point):
         self.y0 = y0
         self.width = width
         self.height = height
-        if x0 and y0 and width and height:
+        if x0 is not None and y0 is not None and width and height:
             self.x1: float | None = x0 + width
             self.y1: float | None = y0
             self.x2: float | None = x0 + width
@@ -1280,7 +1279,7 @@ class RecoveryMapInfo:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, RecoveryMapInfo):
             return NotImplemented
-        return self.date != other.date or self.map_id != other.map_id or self.object_name != other.object_name
+        return self.date == other.date and self.map_id == other.map_id and self.object_name == other.object_name
 
     @property
     def __dict__(self: RecoveryMapInfo) -> dict[str, Any]:  # type: ignore[override]
@@ -1487,8 +1486,8 @@ class MapData:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MapData):
             return NotImplemented
-        if other is None:
-            return False
+        # `other` is guaranteed non-None here: isinstance(None, MapData) is False,
+        # so a None `other` would already have returned NotImplemented above.
 
         if self.map_id != other.map_id:
             return False

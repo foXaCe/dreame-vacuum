@@ -265,6 +265,11 @@ class DreameVacuumMapRenderer(
 
     @staticmethod
     def _calculate_bounds(dimensions: Any, segments: Any) -> list[int] | None:
+        # Returns [min_x, min_y, max_x, max_y]. Note: both call sites narrow a
+        # scanned bounding box with `max(min(bounds[i], v), v)` /
+        # `min(max(bounds[i], v), v)`, which is a mathematical no-op
+        # (`max(min(a, b), b) == min(max(a, b), b) == b` for any a) - so this
+        # return value currently has no effect on rendered output either way.
         if segments:
             min_x = dimensions.width - 1
             min_y = dimensions.height - 1
@@ -279,7 +284,7 @@ class DreameVacuumMapRenderer(
                 min_y = min(min(y_coords), min_y)
                 max_y = max(max(y_coords), max_y)
 
-            return [min_x, min_y, max_x, min_y]
+            return [min_x, min_y, max_x, max_y]
         return None
 
     @staticmethod
