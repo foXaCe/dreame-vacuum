@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .device_info import DreameVacuumDeviceInfo
     from .device_status import DreameVacuumDeviceStatus
+    from .map_manager import DreameMapVacuumMapManager
     from .protocol import DreameVacuumProtocol
     from .vacuum_types import (
         DirtyData,
@@ -62,10 +63,7 @@ class DreameVacuumDeviceState:
         property_mapping: dict[DreameVacuumProperty, dict[str, int]]
         action_mapping: dict[DreameVacuumAction, dict[str, int]]
         _protocol: DreameVacuumProtocol
-        # Deliberately ``Any``: device_map_ops narrows it with truthy guards and calls
-        # editor/optimizer surfaces that still rely on duck typing. Tightening to
-        # ``DreameMapVacuumMapManager | None`` regresses ~36 errors there.
-        _map_manager: Any
+        _map_manager: DreameMapVacuumMapManager | None
         # Timing state shared with the mixins (they assign ``= 0`` / ``time.time()``);
         # declared here so the type is canonical across the whole MRO.
         _last_settings_request: float
