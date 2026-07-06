@@ -180,7 +180,7 @@ Cleaning and cruising history maps can be displayed via `Current Map` entity cam
 
 **Example:**
 
-`http://local.homeassistant/api/camera_history_map_proxy/camera.vacuum_map?token=5df93cfcf8ecc23fa17b233ca938cc52f41e2b17a46ca291865be3f9ba64d89b&index=5`
+`http://local.homeassistant/api/camera_history_map_proxy/camera.vacuum_map?token=<YOUR_CAMERA_ACCESS_TOKEN>&index=5`
 
 #### Cleaning History Card
 
@@ -252,7 +252,7 @@ Map obstacle photos be displayed via `Current Map` entity camera proxy.
 
 **Example:**
 
-`http://local.homeassistant/api/camera_map_obstacle_proxy/camera.vacuum_map?token=5df93cfcf8ecc23fa17b233ca938cc52f41e2b17a46ca291865be3f9ba64d89b&index=2&crop=1`
+`http://local.homeassistant/api/camera_map_obstacle_proxy/camera.vacuum_map?token=<YOUR_CAMERA_ACCESS_TOKEN>&index=2&crop=1`
 
 #### Obstacles Card
 
@@ -345,7 +345,7 @@ Map obstacle photos for history maps be displayed via `Current Map` entity camer
 
 **Example:**
 
-`http://local.homeassistant/api/camera_map_obstacle_history_proxy/camera.vacuum_map?token=5df93cfcf8ecc23fa17b233ca938cc52f41e2b17a46ca291865be3f9ba64d89b&history_index=2&index=3`
+`http://local.homeassistant/api/camera_map_obstacle_history_proxy/camera.vacuum_map?token=<YOUR_CAMERA_ACCESS_TOKEN>&history_index=2&index=3`
 
 ### Backup and Recovery
 
@@ -365,11 +365,11 @@ Recovery maps can be displayed and downloaded via related `Saved or Current Map`
 
 **Example for displaying the recovery map:**
 
-`http://local.homeassistant/api/camera_recovery_map_proxy/camera.vacuum_map_1?token=5df93cfcf8ecc23fa17b233ca938cc52f41e2b17a46ca291865be3f9ba64d89b&index=2`
+`http://local.homeassistant/api/camera_recovery_map_proxy/camera.vacuum_map_1?token=<YOUR_CAMERA_ACCESS_TOKEN>&index=2`
 
 **Example for downloading the recovery map file:**
 
-`http://local.homeassistant/api/camera_recovery_map_proxy/camera.vacuum_map_1?token=5df93cfcf8ecc23fa17b233ca938cc52f41e2b17a46ca291865be3f9ba64d89b&index=2&file=1`
+`http://local.homeassistant/api/camera_recovery_map_proxy/camera.vacuum_map_1?token=<YOUR_CAMERA_ACCESS_TOKEN>&index=2&file=1`
 
 <a href="https://github.com/foXaCe/dreame-vacuum/blob/main/docs/services.md#dreame_vacuumvacuum_restore_map" target="_blank">**How to restore the map**</a>
 
@@ -473,7 +473,7 @@ Saved WiFi maps can be displayed using <a href="https://github.com/foXaCe/dreame
 
 **Example:**
 
-`http://local.homeassistant/api/camera_wifi_map_proxy/camera.vacuum_map_1?token=5df93cfcf8ecc23fa17b233ca938cc52f41e2b17a46ca291865be3f9ba64d89b`
+`http://local.homeassistant/api/camera_wifi_map_proxy/camera.vacuum_map_1?token=<YOUR_CAMERA_ACCESS_TOKEN>`
 
 
 #### WiFi Map Card

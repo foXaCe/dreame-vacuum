@@ -1,0 +1,19 @@
+# gitleaks configuration for dreame-vacuum.
+#
+# The full-history scan (scheduled run on `main`) flags one documentation
+# example token that lived in an old commit of docs/map.md. It is an inert
+# example of a Home Assistant camera-proxy access token (not a live secret),
+# and the current docs no longer contain it. Rewriting git history to purge a
+# doc example is not worth it, so it is allowlisted here. Real secrets keep
+# being detected: the default ruleset is preserved via [extend].
+title = "dreame-vacuum gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Inert documentation example tokens (not live credentials)"
+regexes = [
+  # docs/map.md camera_wifi_map_proxy example token (historical commit)
+  '''5df93cfcf8ecc23fa17b233ca938cc52f41e2b17a46ca291865be3f9ba64d89b''',
+]
