@@ -862,38 +862,19 @@ class DreameVacuumSelectEntity(DreameVacuumOptionNavigationMixin, DreameVacuumEn
 
         super().__init__(coordinator, description)
 
-        # Override _computed_value_fn if we have a _name property
-        if description.value_fn is None and (description.property_key is not None or self._computed_key is not None):
-            value_prop: str | None = None
-            if description.property_key is not None:
-                value_prop = f"{description.property_key.name.lower()}_name"
-            elif self._computed_key:
-                value_prop = f"{self._computed_key.lower()}_name"
-            if value_prop is not None and hasattr(coordinator.device.status, value_prop):
-                attr_name = value_prop
-                self._computed_value_fn = lambda value, device: getattr(device.status, attr_name)
+        # Override _computed_value_fn if we have a _name property (shared resolver)
+        resolved_value = self._resolve_value_fn(coordinator, description, "_name")
+        if resolved_value is not None and resolved_value is not description.value_fn:
+            self._computed_value_fn = resolved_value
 
-        # Override _computed_set_fn if we can find a setter method
-        if description.set_fn is None and (description.property_key is not None or self._computed_key is not None):
-            set_prop: str | None = None
-            if description.property_key is not None:
-                set_prop = f"set_{description.property_key.name.lower()}"
-            elif self._computed_key:
-                set_prop = f"set_{self._computed_key.lower()}"
-            if set_prop is not None and hasattr(coordinator.device, set_prop):
-                set_name = set_prop
-                self._computed_set_fn = lambda device, segment_id, value: getattr(device, set_name)(value)
+        # Override _computed_set_fn if we can find a setter method (shared resolver,
+        # adapted from the 2-arg wrapper to the 3-arg (device, segment_id, value) shape).
+        resolved_set = self._resolve_set_fn(coordinator, description)
+        if resolved_set is not None and resolved_set is not description.set_fn:
+            self._computed_set_fn = lambda device, segment_id, value: resolved_set(device, value)
 
-        # Override _computed_options_fn if we have a _list property
-        if description.options is None and (description.property_key is not None or self._computed_key is not None):
-            options_prop: str | None = None
-            if description.property_key is not None:
-                options_prop = f"{description.property_key.name.lower()}_list"
-            elif self._computed_key:
-                options_prop = f"{self._computed_key.lower()}_list"
-            if options_prop is not None and hasattr(coordinator.device.status, options_prop):
-                list_name = options_prop
-                self._computed_options_fn = lambda device, segment: list(getattr(device.status, list_name))
+        # Override _computed_options_fn if we have a _list property (shared resolver)
+        self._computed_options_fn = self._resolve_options_fn(coordinator, description)
 
         self._generate_entity_id(ENTITY_ID_FORMAT)
         if self._computed_options_fn is not None:
@@ -999,27 +980,11 @@ class DreameVacuumSegmentSelectEntity(DreameVacuumOptionNavigationMixin, DreameV
 
         super().__init__(coordinator, description)
 
-        # Override _segment_set_fn if we can find a segment setter method
-        if description.set_fn is None and (description.property_key is not None or self._computed_key is not None):
-            segment_set_prop: str | None = None
-            if description.property_key is not None:
-                segment_set_prop = f"set_segment_{description.property_key.name.lower()}"
-            elif self._computed_key:
-                segment_set_prop = f"set_segment_{self._computed_key.lower()}"
-            if segment_set_prop is not None and hasattr(coordinator.device, segment_set_prop):
-                set_name = segment_set_prop
-                self._segment_set_fn = lambda device, segment_id, value: getattr(device, set_name)(segment_id, value)
+        # Override _segment_set_fn if we can find a segment setter method (shared resolver)
+        self._segment_set_fn = self._resolve_segment_set_fn(coordinator, description)
 
-        # Override _segment_options_fn if we have a _list property
-        if description.options is None and (description.property_key is not None or self._computed_key is not None):
-            segment_options_prop: str | None = None
-            if description.property_key is not None:
-                segment_options_prop = f"{description.property_key.name.lower()}_list"
-            elif self._computed_key:
-                segment_options_prop = f"{self._computed_key.lower()}_list"
-            if segment_options_prop is not None and hasattr(coordinator.device.status, segment_options_prop):
-                list_name = segment_options_prop
-                self._segment_options_fn = lambda device, segment: list(getattr(device.status, list_name))
+        # Override _segment_options_fn if we have a _list property (shared resolver)
+        self._segment_options_fn = self._resolve_options_fn(coordinator, description)
 
         # Override options for room name select to use translated room type names
         if description.name == "" and description.options is not None:
