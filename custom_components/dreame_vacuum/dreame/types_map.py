@@ -1280,7 +1280,7 @@ class RecoveryMapInfo:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, RecoveryMapInfo):
             return NotImplemented
-        return self.date != other.date or self.map_id != other.map_id or self.object_name != other.object_name
+        return self.date == other.date and self.map_id == other.map_id and self.object_name == other.object_name
 
     @property
     def __dict__(self: RecoveryMapInfo) -> dict[str, Any]:  # type: ignore[override]

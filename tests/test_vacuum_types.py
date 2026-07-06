@@ -1642,19 +1642,18 @@ class TestRecoveryMapInfo:
         info = RecoveryMapInfo(1, None, "raw", "obj", "name", map_type=0)
         assert info.as_dict() is None
 
-    def test_eq_logic_is_inverted_known_bug(self) -> None:
-        """Documents a real bug: __eq__'s body is written as an "is different" check
-        (``or``-chain of ``!=``) rather than negated like every sibling class in this
-        module. As a result identical instances compare unequal, and instances that
-        differ in date/map_id/object_name compare *equal*. Not fixed here per task
-        scope — flagged in the final report instead.
+    def test_eq_compares_date_map_id_and_object_name(self) -> None:
+        """Regression test for a real bug: __eq__'s body used to be written as an
+        "is different" check (``or``-chain of ``!=``) rather than negated like every
+        sibling class in this module, so identical instances compared unequal and
+        differing instances compared equal. Fixed to normal equality semantics.
         """
         a = RecoveryMapInfo(1, 1700000000.0, "raw", "obj", "name", map_type=0)
         b = RecoveryMapInfo(1, 1700000000.0, "raw", "obj", "name", map_type=0)
-        assert (a == b) is False  # identical instances erroneously compare unequal
+        assert (a == b) is True  # identical instances compare equal
 
         c = RecoveryMapInfo(2, 1700000000.0, "raw", "obj", "different-name", map_type=0)
-        assert (a == c) is True  # differing instances erroneously compare equal
+        assert (a == c) is False  # differing instances compare unequal
 
     def test_eq_with_non_recovery_map_info_is_not_equal(self) -> None:
         info = RecoveryMapInfo(1, 1700000000.0, "raw", "obj", "name", map_type=0)
