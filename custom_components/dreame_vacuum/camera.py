@@ -40,8 +40,10 @@ from .const import (
     CONF_HIDDEN_MAP_OBJECTS,
     CONF_ICON_SET,
     CONF_LOW_RESOLUTION,
+    CONF_MAP_SCALE,
     CONF_SQUARE,
     CONF_VECTOR_ROOMS,
+    DEFAULT_MAP_SCALE,
     LOGGER,
     MAP_OBJECTS,
     DreameVacuumConfigEntry,
@@ -144,6 +146,7 @@ async def async_setup_entry(
         square = entry.options.get(CONF_SQUARE, False)
         hidden_map_objects = entry.options.get(CONF_HIDDEN_MAP_OBJECTS, [])
         vector_rooms = entry.options.get(CONF_VECTOR_ROOMS, True)
+        render_scale = entry.options.get(CONF_MAP_SCALE, DEFAULT_MAP_SCALE)
 
         async_add_entities(
             DreameVacuumCameraEntity(
@@ -156,6 +159,7 @@ async def async_setup_entry(
                 square,
                 language=hass.config.language,
                 vector_rooms=vector_rooms,
+                render_scale=render_scale,
             )
             for description in CAMERAS
         )
@@ -171,6 +175,7 @@ async def async_setup_entry(
             low_resolution,
             square,
             hass.config.language,
+            render_scale,
         )
         entry.async_on_unload(coordinator.async_add_listener(update_map_cameras))
         update_map_cameras()
@@ -189,6 +194,7 @@ def async_update_map_cameras(
     low_resolution: bool,
     square: bool,
     language: str | None = None,
+    render_scale: int = 2,
 ) -> None:
     """Add or remove map camera entities to match the current saved maps."""
     if coordinator.device is None:
@@ -216,6 +222,7 @@ def async_update_map_cameras(
                 square,
                 map_index,
                 language,
+                render_scale=render_scale,
             )
         ]
 
@@ -237,6 +244,7 @@ def async_update_map_cameras(
                     square,
                     map_index,
                     language,
+                    render_scale=render_scale,
                 )
             )
 
@@ -306,6 +314,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         map_index: int = 0,
         language: str | None = None,
         vector_rooms: bool = False,
+        render_scale: int = 2,
     ) -> None:
         """Initialize a Dreame Vacuum Camera entity."""
         super().__init__(coordinator, description)
@@ -351,6 +360,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 True,
                 language,
                 vector_rooms,
+                render_scale=render_scale,
             )
             if not self.wifi_map:
                 # One proxy renderer is shared across every map camera
@@ -368,6 +378,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                         square,
                         False,
                         language,
+                        render_scale=render_scale,
                     )
                     coordinator._shared_proxy_renderer = cached
                 self._proxy_renderer = cached

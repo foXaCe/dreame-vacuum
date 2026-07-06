@@ -76,6 +76,7 @@ class DreameVacuumMapRenderer(
         cache: bool = True,
         language: str | None = None,
         vector_rooms: bool = False,
+        render_scale: int = 2,
     ) -> None:
         self.color_scheme: MapRendererColorScheme = MAP_COLOR_SCHEME_LIST.get(
             color_scheme or "", MapRendererColorScheme()
@@ -95,6 +96,10 @@ class DreameVacuumMapRenderer(
         self._robot_type: Any = robot_type
         self._low_resolution: bool = low_resolution
         self._low_memory: bool = low_resolution
+        # Render-resolution multiplier for the live map PNG (1/2/3). Higher =
+        # crisper under the card's pinch-zoom, at a memory/CPU cost that grows
+        # with the square of the factor. Ignored in low-resolution mode.
+        self._render_scale: int = max(1, min(3, int(render_scale)))
         self._square: bool = square
         self._vector_rooms: bool = vector_rooms
         self._cache: bool = cache
@@ -1283,6 +1288,20 @@ class DreameVacuumMapRenderer(
 
             if scale == 3 and (render_material or render_carpet):
                 scale = 2 if info_text else 4
+
+            # Apply the render-resolution multiplier only after the base scale
+            # (and its material/carpet bump) is fully resolved. Skip it in
+            # low-resolution mode, for the info_text renders (downscaled to a
+            # fixed width anyway) and the secondary wifi/history maps. Calibration
+            # derives from ``dimensions.scale`` below, so it re-coheres with the
+            # multiplied resolution automatically (contract §3.2).
+            if (
+                self._render_scale > 1
+                and not self._low_resolution
+                and not info_text
+                and not ((map_data.wifi_map or map_data.history_map) and self._cache)
+            ):
+                scale = scale * self._render_scale
 
             if not map_data.saved_map:
                 if (

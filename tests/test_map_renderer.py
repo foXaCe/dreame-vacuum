@@ -1584,24 +1584,25 @@ class TestRenderMapCacheInvalidation:
         assert _decode(second).size[0] > 0
 
     def test_saved_map_status_2_enables_material_and_carpet_rendering(self) -> None:
+        # render_scale=1 isolates the base scale-selection logic under test.
         map_data = _make_small_map_data()
         map_data.saved_map_status = 2
         map_data.floor_material = {1: 1, 2: 2}
         map_data.carpet_pixels = [(3, 3), (4, 4)]
-        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True, render_scale=1)
         png = renderer.render_map(map_data, robot_status=0, station_status=0)
         assert _decode(png).size[0] > 0
         assert renderer._map_data.dimensions.scale == 4
 
     def test_carpet_render_bumps_scale_from_3_to_4(self) -> None:
         map_data = _make_small_map_data()
-        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True, render_scale=1)
         renderer.render_map(map_data, robot_status=0, station_status=0, info_text=False)
         assert renderer._map_data.dimensions.scale == 4
 
     def test_info_text_forces_scale_down_to_2(self) -> None:
         map_data = _make_small_map_data()
-        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True, render_scale=1)
         renderer.render_map(map_data, robot_status=0, station_status=0, info_text=True)
         assert renderer._map_data.dimensions.scale == 2
 
@@ -1610,10 +1611,34 @@ class TestRenderMapCacheInvalidation:
         # top-of-function cache short-circuit, forcing a full recompute where the
         # newly-computed scale (2, forced by info_text) differs from the previous
         # cached scale (4) -> exercises the mid-function cache invalidation branch.
-        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True, render_scale=1)
         renderer.render_map(_make_small_map_data(), robot_status=0, station_status=0, info_text=False)
         assert renderer._map_data.dimensions.scale == 4
         renderer.render_map(_make_small_map_data(), robot_status=1, station_status=0, info_text=True)
+        assert renderer._map_data.dimensions.scale == 2
+
+    def test_render_scale_multiplies_the_interactive_map_resolution(self) -> None:
+        # The multiplier scales the resolved base scale (4 here, carpet bump) and
+        # doubles the rendered image, while calibration stays coherent because it
+        # derives from dimensions.scale (contract 3.2).
+        map_data = _make_small_map_data()
+        base = DreameVacuumMapRenderer(low_resolution=False, cache=True, render_scale=1)
+        base.render_map(map_data, robot_status=0, station_status=0)
+        base_scale = base._map_data.dimensions.scale
+        base_cal = base.calibration_points
+
+        hi = DreameVacuumMapRenderer(low_resolution=False, cache=True, render_scale=2)
+        hi_png = hi.render_map(_make_small_map_data(), robot_status=0, station_status=0)
+        assert hi._map_data.dimensions.scale == base_scale * 2
+        assert _decode(hi_png).size[0] == _decode(base.render_map(_make_small_map_data(), 0, 0)).size[0] * 2
+        # Calibration map pixels scale with the resolution (still coherent).
+        assert hi.calibration_points[0]["map"]["x"] == base_cal[0]["map"]["x"] * 2
+
+    def test_render_scale_ignored_in_low_resolution_mode(self) -> None:
+        # Low-resolution mode is for low-memory hosts: the multiplier must not
+        # blow the image back up.
+        renderer = DreameVacuumMapRenderer(low_resolution=True, cache=True, render_scale=3)
+        renderer.render_map(_make_small_map_data(), robot_status=0, station_status=0)
         assert renderer._map_data.dimensions.scale == 2
 
     def test_bounds_cache_invalidated_when_segments_move(self) -> None:
