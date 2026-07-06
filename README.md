@@ -190,6 +190,116 @@ segment_colors:
   - rgb(184, 217, 141)
 ```
 
+#### With [Xiaomi Vacuum Map Card](https://github.com/PiotrMachowski/lovelace-xiaomi-vacuum-map-card)
+ > Template for room and zone cleaning.
+<a href="https://my.home-assistant.io/redirect/developer_template/" target="_blank"><img src="https://my.home-assistant.io/badges/developer_template.svg" alt="Open your Home Assistant instance and show your template developer tools." /></a>
+```yaml
+{# ----------------- PROVIDE YOUR OWN ENTITY IDS HERE ----------------- #}
+{% set camera_entity = "camera." %}
+{% set vacuum_entity = "vacuum." %}
+{# ------------------- DO NOT CHANGE ANYTHING BELOW ------------------- #}
+{% set attributes = states[camera_entity].attributes %}
+
+type: custom:xiaomi-vacuum-map-card
+vacuum_platform: default
+entity: {{ vacuum_entity }}
+map_source:
+  camera: {{ camera_entity }}
+calibration_source:
+  camera: true
+map_modes:
+  - template: vacuum_clean_zone
+    max_selections: 10
+    repeats_type: EXTERNAL
+    max_repeats: 3
+    service_call_schema:
+      service: dreame_vacuum.vacuum_clean_zone
+      service_data:
+        entity_id: '[[entity_id]]'
+        zone: '[[selection]]'
+        repeats: '[[repeats]]'
+  - template: vacuum_clean_segment
+    repeats_type: EXTERNAL
+    max_repeats: 3
+    service_call_schema:
+      service: dreame_vacuum.vacuum_clean_segment
+      service_data:
+        entity_id: '[[entity_id]]'
+        segments: '[[selection]]'
+        repeats: '[[repeats]]'
+    predefined_selections:
+{%- for room_id in attributes.rooms | default([]) %}
+{%- set room = attributes.rooms[room_id] %}
+      - id: {{room_id}}
+        outline:
+          - - {{room["x0"]}}
+            - {{room["y0"]}}
+          - - {{room["x0"]}}
+            - {{room["y1"]}}
+          - - {{room["x1"]}}
+            - {{room["y1"]}}
+          - - {{room["x1"]}}
+            - {{room["y0"]}}
+{%- endfor %}
+  - name: Clean Spot
+    icon: mdi:map-marker-plus
+    max_repeats: 3
+    selection_type: MANUAL_POINT
+    repeats_type: EXTERNAL
+    service_call_schema:
+      service: dreame_vacuum.vacuum_clean_spot
+      service_data:
+        entity_id: '[[entity_id]]'
+        points: '[[selection]]'
+        repeats: '[[repeats]]'
+```
+
+#### With <a href="https://github.com/benct/lovelace-xiaomi-vacuum-card" target="_blank">Xiaomi Vacuum Card</a> and Picture Entity Card
+```yaml
+type: picture-entity
+entity: # Your vacuum entity
+camera_image: # Your camera entity
+show_state: false
+show_name: false
+camera_view: live
+tap_action:
+  action: none
+hold_action:
+  action: none
+```
+
+```yaml
+type: custom:xiaomi-vacuum-card
+entity: # Your vacuum entity
+vendor: xiaomi
+attributes:
+  main_brush_life:
+    label: 'Main Brush: '
+    key: main_brush_left
+    unit: '%'
+    icon: mdi:car-turbocharger
+  side_brush_life:
+    label: 'Side Brush: '
+    key: side_brush_left
+    unit: '%'
+    icon: mdi:pinwheel-outline
+  filter_life:
+    label: 'Filter: '
+    key: filter_left
+    unit: '%'
+    icon: mdi:air-filter
+  sensor_life:
+    label: 'Sensor: '
+    key: sensor_dirty_left
+    unit: '%'
+    icon: mdi:radar
+  main_brush: false
+  side_brush: false
+  filter: false
+  sensor: false
+
+```
+
 
 ## Documentation
 
@@ -236,7 +346,6 @@ segment_colors:
 - Furniture editing
 - DnD editing
 - Live camera streaming
-- Full async migration (replace `requests` with `aiohttp`)
 
 
 ## Contributing

@@ -1,6 +1,6 @@
 {
   "name": "Dreame Vacuum",
-  "render_readme": false,
+  "render_readme": true,
   "homeassistant": "2025.8.0",
   "zip_release": true,
   "filename": "dreame_vacuum.zip"
