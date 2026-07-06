@@ -713,9 +713,10 @@ class TestShapesMixin:
 
     def test_render_doors_draws_dashed_line(self) -> None:
         renderer = self._renderer()
-        dims = MapImageDimensions(top=0, left=0, height=50, width=350, grid_size=1)
-        layer_size = (350, 50)
-        wall = Wall(10, 25, 310, 25)
+        dims = MapImageDimensions(top=0, left=0, height=50, width=1400, grid_size=1)
+        layer_size = (1400, 50)
+        # 1200 mm : dans la fenêtre porte réaliste (DOOR_RENDER_MIN/MAX_LENGTH_MM).
+        wall = Wall(10, 25, 1210, 25)
 
         layer = renderer.render_doors([wall], (0, 128, 255, 255), layer_size, dims, 1, 1)
         arr = np.array(layer)
@@ -736,6 +737,21 @@ class TestShapesMixin:
         assert gap_pixel[3] < 5
         # (0, 0) sits outside the blurred bounding box for this geometry.
         assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+
+    def test_render_doors_skips_segments_longer_than_a_real_door(self) -> None:
+        """Multi-meter walls_info type-1 segments are partition/construction
+        lines, not doorways (verified visually on r95285, 2026-07-07): they
+        must stay out of the PNG while short, door-sized segments render."""
+        renderer = self._renderer()
+        dims = MapImageDimensions(top=0, left=0, height=50, width=3000, grid_size=1)
+        layer_size = (3000, 50)
+        long_partition = Wall(10, 25, 2600, 25)  # 2590 mm >> DOOR_RENDER_MAX_LENGTH_MM
+        tiny_artifact = Wall(10, 40, 60, 40)  # 50 mm << DOOR_RENDER_MIN_LENGTH_MM
+
+        layer = renderer.render_doors([long_partition, tiny_artifact], (255, 0, 0, 255), layer_size, dims, 1, 1)
+        arr = np.array(layer)
+
+        assert not arr[..., 3].any()
 
     def test_render_doors_skips_zero_length_segment(self) -> None:
         renderer = self._renderer()

@@ -28,6 +28,16 @@ grid, not `WALL` cells), so drawing them is purely additive — it never
 touches or duplicates an existing wall pixel, so it can't regress into the
 reverted bug.
 
+**Length window (visual review, 2026-07-07):** the raw `type 1` list is NOT
+"doors only". On r95285 it holds 20 segments from 50 to 7800 mm: the
+multi-meter ones trace app partition/construction lines spanning entire
+rooms (rendered, they draw dashed rectangles across half the map — seen on
+the full-map render and rejected), and the 50-300 mm ones are point-like
+artifacts. Only segments within `DOOR_RENDER_MIN_LENGTH_MM`..
+`DOOR_RENDER_MAX_LENGTH_MM` (500-2000 mm, `_shapes.py`) are rendered —
+on this fixture that keeps exactly the 3 real doorways (1150/1650/1800 mm).
+Out-of-window segments stay decoded in the `door_lines` attribute.
+
 ## 1. Method
 
 `scripts/wall_lines_coverage.py` decodes the committed

@@ -24,6 +24,17 @@ from ._base import _MapRendererState
 # object_scale then BOX-thumbnailed) to the remaining vector object layers
 # that still show visible stair-stepping on diagonal/curved edges: no-go/
 # no-mop zone outlines, virtual walls, thresholds and door markers
+# Real-world length window for a walls_info "door" segment to be rendered as
+# a doorway marker, in mm. Verified on r95285 (2026-07-07, 20 segments,
+# lengths 50..7800 mm): door-sized segments (1150/1650/1800 mm) sit on real
+# doorways; multi-meter segments (2550-7800 mm) trace partition/construction
+# lines spanning entire rooms, and the 50-300 mm ones are point-like
+# artifacts -- rendering either reads as noise. Out-of-window segments stay
+# decoded (door_lines attribute, consumed by the card); they are only
+# excluded from the rendered PNG.
+DOOR_RENDER_MIN_LENGTH_MM = 500
+DOOR_RENDER_MAX_LENGTH_MM = 2000
+
 # (render_areas, render_walls, render_doors, render_thresholds). PIL's
 # ImageDraw has no native anti-aliasing, and these shapes are drawn directly
 # at the object-layer resolution (already a 2x supersample of the final
@@ -228,6 +239,11 @@ class _ShapesMixin(_MapRendererState):
         gray frames -- see docs/dev/wall-lines-render-spike.md). A dashed
         line in a distinct, sober tint can never read as a duplicated wall
         outline.
+
+        Only plausibly door-sized segments are drawn (see
+        DOOR_RENDER_MAX_LENGTH_MM): on real walls_info data, type-1
+        segments several meters long trace app partition/construction
+        lines across the whole building, not doorways.
         """
         new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(new_layer, "RGBA")
@@ -235,6 +251,12 @@ class _ShapesMixin(_MapRendererState):
         gap_length = 5 * scale
         period = dash_length + gap_length
         for wall in doors:
+            # Longueur RÉELLE du segment (coordonnées vacuum en mm), avant
+            # toute projection image : le filtre doit être indépendant du
+            # scale/crop du rendu.
+            real_length = math.hypot(wall.x1 - wall.x0, wall.y1 - wall.y0)
+            if not (DOOR_RENDER_MIN_LENGTH_MM <= real_length <= DOOR_RENDER_MAX_LENGTH_MM):
+                continue
             p = wall.to_img(dimensions)
             x0, y0 = p.x0 * scale, p.y0 * scale
             x1, y1 = p.x1 * scale, p.y1 * scale
