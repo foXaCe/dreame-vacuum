@@ -13,10 +13,105 @@ from __future__ import annotations
 
 import math
 
-from PIL import Image, ImageDraw
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 
 from ..vacuum_types import Area, MapImageDimensions, Point, Wall
 from ._base import _MapRendererState
+
+# Extends the same "supersample, then reduce" idea already used for the base
+# floor/room raster (_smooth_upscale, bicubic) and the path layer (drawn at
+# object_scale then BOX-thumbnailed) to the remaining vector object layers
+# that still show visible stair-stepping on diagonal/curved edges: no-go/
+# no-mop zone outlines, virtual walls, thresholds and door markers
+# (render_areas, render_walls, render_doors, render_thresholds). PIL's
+# ImageDraw has no native anti-aliasing, and these shapes are drawn directly
+# at the object-layer resolution (already a 2x supersample of the final
+# image -- see _LayersMixin.render_objects/_compose_object_layers), so a
+# small Gaussian blur right before returning softens the jagged edges left
+# over from that supersample without needing a second, more expensive
+# full-canvas supersample-and-resize pass. The radius scales with ``scale``
+# (the object-layer multiplier) so the blur amount at final resolution
+# stays consistent regardless of how much supersampling already happened
+# upstream. Deliberately NOT applied to the segment_map raster (never
+# anti-aliased, contract) or to furniture (pastes pre-rendered icon
+# bitmaps, a different mechanism -- rotation there already gets PIL's
+# resampling-filter AA).
+_AA_BLUR_MIN_RADIUS = 0.45
+_AA_BLUR_SCALE_FACTOR = 0.25
+
+
+def _blur_premultiplied(img: Image.Image, radius: float) -> Image.Image:
+    """Alpha-aware Gaussian blur: premultiply, blur, un-premultiply.
+
+    Blurring RGB and alpha independently (a plain ``Image.filter`` call)
+    bleeds whatever RGB value sits behind a fully-transparent pixel into the
+    blurred result -- these layers are always initialized to opaque white
+    with alpha=0 (``(255, 255, 255, 0)``), so a naive blur would fringe every
+    edge with a faint white halo, in both the light and dark themes.
+    Premultiplying RGB by alpha before the blur, and un-premultiplying by the
+    *blurred* alpha afterwards, keeps the softened edge a pure fade of the
+    shape's own colour instead.
+    """
+    arr = np.asarray(img, dtype=np.float32)
+    alpha = arr[..., 3:4] / 255.0
+    premultiplied = arr.copy()
+    premultiplied[..., :3] *= alpha
+    blurred = np.asarray(
+        Image.fromarray(premultiplied.astype(np.uint8), "RGBA").filter(ImageFilter.GaussianBlur(radius=radius)),
+        dtype=np.float32,
+    )
+    out_alpha = blurred[..., 3:4]
+    safe_alpha = np.where(out_alpha > 0, out_alpha, 1.0)
+    out_rgb = np.clip(blurred[..., :3] / (safe_alpha / 255.0), 0, 255)
+    out = np.concatenate([out_rgb, out_alpha], axis=-1).astype(np.uint8)
+    return Image.fromarray(out, "RGBA")
+
+
+def _antialias_region(layer: Image.Image, scale: int, bbox: tuple[float, float, float, float]) -> Image.Image:
+    """Blur only ``bbox`` (padded for the blur radius) of ``layer`` in place.
+
+    These vector shapes (a couple of no-go zones, a handful of wall/
+    threshold segments) are usually tiny relative to the full object-layer
+    canvas, which is already a 2x supersample of the whole map image --
+    blurring the *entire* layer costs O(map area) per shape layer regardless
+    of how small the shape itself is. Restricting the blur to the drawn
+    content's own bounding box keeps the cost proportional to the shape,
+    not the map.
+    """
+    radius = max(_AA_BLUR_MIN_RADIUS, scale * _AA_BLUR_SCALE_FACTOR)
+    pad = int(math.ceil(radius * 3)) + 2
+    min_x, min_y, max_x, max_y = bbox
+    left = max(0, int(math.floor(min_x)) - pad)
+    top = max(0, int(math.floor(min_y)) - pad)
+    right = min(layer.width, int(math.ceil(max_x)) + pad)
+    bottom = min(layer.height, int(math.ceil(max_y)) + pad)
+    if right <= left or bottom <= top:
+        return layer
+    crop = layer.crop((left, top, right, bottom))
+    layer.paste(_blur_premultiplied(crop, radius), (left, top))
+    return layer
+
+
+class _BBoxTracker:
+    """Accumulates a bounding box across draw calls (in already-scaled px)."""
+
+    def __init__(self) -> None:
+        self.min_x = math.inf
+        self.min_y = math.inf
+        self.max_x = -math.inf
+        self.max_y = -math.inf
+
+    def add(self, *coords: float) -> None:
+        xs = coords[0::2]
+        ys = coords[1::2]
+        self.min_x = min(self.min_x, *xs)
+        self.max_x = max(self.max_x, *xs)
+        self.min_y = min(self.min_y, *ys)
+        self.max_y = max(self.max_y, *ys)
+
+    def expand(self, margin: float) -> tuple[float, float, float, float]:
+        return (self.min_x - margin, self.min_y - margin, self.max_x + margin, self.max_y + margin)
 
 
 class _ShapesMixin(_MapRendererState):
@@ -36,21 +131,24 @@ class _ShapesMixin(_MapRendererState):
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for area in areas:
             p = area.to_img(dimensions)
-            draw.polygon(
-                [
-                    p.x0 * scale,
-                    p.y0 * scale,
-                    p.x1 * scale,
-                    p.y1 * scale,
-                    p.x2 * scale,
-                    p.y2 * scale,
-                    p.x3 * scale,
-                    p.y3 * scale,
-                ],
-                fill,
-                color,
-                width=(width * scale),
-            )
+            coords = [
+                p.x0 * scale,
+                p.y0 * scale,
+                p.x1 * scale,
+                p.y1 * scale,
+                p.x2 * scale,
+                p.y2 * scale,
+                p.x3 * scale,
+                p.y3 * scale,
+            ]
+            draw.polygon(coords, fill, color, width=(width * scale))
+            # Antialias per-item (not once over the whole layer/all items):
+            # a map can carry many no-go/no-mop zones scattered across the
+            # whole canvas, and blurring the full layer costs O(map area)
+            # regardless of how small each zone actually is.
+            bbox = _BBoxTracker()
+            bbox.add(*coords)
+            _antialias_region(new_layer, scale, bbox.expand(width * scale))
         return new_layer
 
     def render_points(
@@ -105,11 +203,12 @@ class _ShapesMixin(_MapRendererState):
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for wall in walls:
             p = wall.to_img(dimensions)
-            draw.line(
-                [p.x0 * scale, p.y0 * scale, p.x1 * scale, p.y1 * scale],
-                color,
-                width=(width * scale),
-            )
+            coords = [p.x0 * scale, p.y0 * scale, p.x1 * scale, p.y1 * scale]
+            draw.line(coords, color, width=(width * scale))
+            # Per-item antialiasing: see render_areas.
+            bbox = _BBoxTracker()
+            bbox.add(*coords)
+            _antialias_region(new_layer, scale, bbox.expand(width * scale))
         return new_layer
 
     def render_doors(
@@ -157,6 +256,12 @@ class _ShapesMixin(_MapRendererState):
                     width=(width * scale),
                 )
                 position += period
+            # Per-door antialiasing (see render_areas): walls_info can carry
+            # many door segments spread across the whole building, so a
+            # single shared bounding box would degenerate to ~the full map.
+            bbox = _BBoxTracker()
+            bbox.add(x0, y0, x1, y1)
+            _antialias_region(new_layer, scale, bbox.expand(width * scale))
         return new_layer
 
     def render_thresholds(
@@ -181,21 +286,21 @@ class _ShapesMixin(_MapRendererState):
             x = w / t * thickness / 2
             y = h / t * thickness / 2
 
-            draw.polygon(
-                [
-                    (p.x0 - x) * scale,
-                    (p.y0 - y) * scale,
-                    (p.x1 - x) * scale,
-                    (p.y1 - y) * scale,
-                    (p.x1 + x) * scale,
-                    (p.y1 + y) * scale,
-                    (p.x0 + x) * scale,
-                    (p.y0 + y) * scale,
-                ],
-                fill,
-                color,
-                width=(width * scale),
-            )
+            outer_coords = [
+                (p.x0 - x) * scale,
+                (p.y0 - y) * scale,
+                (p.x1 - x) * scale,
+                (p.y1 - y) * scale,
+                (p.x1 + x) * scale,
+                (p.y1 + y) * scale,
+                (p.x0 + x) * scale,
+                (p.y0 + y) * scale,
+            ]
+            draw.polygon(outer_coords, fill, color, width=(width * scale))
+            # The outer polygon (thickness = width*8) is the widest extent of
+            # this shape -- the inner zigzag drawn below stays within it.
+            bbox = _BBoxTracker()
+            bbox.add(*outer_coords)
 
             thickness = thickness - width
             x = w / t * thickness / 2
@@ -217,6 +322,9 @@ class _ShapesMixin(_MapRendererState):
 
             for i in range(len(tp) - 1):
                 draw.line([tp[i][0], tp[i][1], bp[i + 1][0], bp[i + 1][1]], color, width=(width * scale), joint="curve")
+
+            # Per-threshold antialiasing: see render_areas.
+            _antialias_region(new_layer, scale, bbox.expand(width * scale))
         return new_layer
 
     def render_curtains(

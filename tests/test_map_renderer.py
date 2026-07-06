@@ -608,6 +608,16 @@ class TestShapesMixin:
         return DreameVacuumMapRenderer(low_resolution=True)
 
     def test_render_walls_draws_line_at_expected_pixel(self) -> None:
+        # AA note (contract backlog B / docs/dev/wall-lines-render-spike.md):
+        # render_walls now runs its drawn content through _antialias_region (a
+        # small alpha-aware Gaussian blur, restricted to the shape's own
+        # bounding box so the cost stays proportional to the shape rather than
+        # the whole map canvas) to soften jagged diagonal virtual-wall/
+        # threshold edges. On this deliberately minimal width=1 hairline,
+        # blurring softens the peak alpha from 255 to 209 -- the hue itself
+        # (pure red, no white-fringe bleed thanks to premultiplied-alpha
+        # blurring) is unaffected. Real renders use thicker lines (line_width
+        # * object_scale >= 2), where the effect is far milder.
         renderer = self._renderer()
         dims = MapImageDimensions(top=0, left=0, height=20, width=20, grid_size=1)
         layer_size = (20, 20)
@@ -617,8 +627,26 @@ class TestShapesMixin:
         arr = np.array(layer)
 
         p = wall.to_img(dims)
-        assert tuple(arr[int(p.y0), 10]) == (255, 0, 0, 255)
+        assert tuple(arr[int(p.y0), 10]) == (255, 0, 0, 209)
+        # (0, 0) sits outside the blurred bounding box for this geometry, so
+        # it keeps the layer's untouched initial fill.
         assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+
+    def test_render_walls_blur_region_entirely_off_layer_is_a_no_op(self) -> None:
+        # The AA blur's bounding box (see test_render_walls_draws_line_at_
+        # expected_pixel) is padded for the blur radius and then clamped to
+        # the layer bounds; when a wall's own geometry maps to coordinates
+        # entirely outside a (deliberately tiny) layer, that clamped region
+        # collapses to nothing and _antialias_region must no-op instead of
+        # cropping/pasting a degenerate rectangle.
+        renderer = self._renderer()
+        dims = MapImageDimensions(top=0, left=0, height=5, width=5, grid_size=1)
+        wall = Wall(500, 500, 600, 500)
+
+        layer = renderer.render_walls([wall], (255, 0, 0, 255), (5, 5), dims, 1, 1)
+
+        assert layer.size == (5, 5)
+        assert not np.array(layer)[..., 3].any()
 
     def test_render_areas_fills_polygon(self) -> None:
         renderer = self._renderer()
@@ -631,8 +659,16 @@ class TestShapesMixin:
 
         p = area.to_img(dims)
         cx, cy = int((p.x0 + p.x2) / 2), int((p.y0 + p.y2) / 2)
+        # Well inside the filled polygon, the AA blur (see
+        # test_render_walls_draws_line_at_expected_pixel) has no effect: a
+        # uniform interior blurs to itself.
         assert tuple(arr[cy, cx]) == (0, 0, 255, 100)
-        assert tuple(arr[0, 0]) == (255, 255, 255, 0)
+        # On this small 20x20 canvas the polygon's blurred bounding box
+        # happens to reach all the way to (0, 0): premultiplied-alpha blur
+        # zeroes RGB wherever alpha is 0 (instead of leaking the layer's
+        # initial (255, 255, 255) fill) -- harmless since alpha=0 pixels
+        # never contribute to the final composite either way.
+        assert tuple(arr[0, 0]) == (0, 0, 0, 0)
 
     def test_render_points_fills_square_around_point(self) -> None:
         renderer = self._renderer()
@@ -657,6 +693,9 @@ class TestShapesMixin:
         arr = np.array(layer)
 
         p = wall.to_img(dims)
+        # Well inside the filled band, the AA blur (see
+        # test_render_walls_draws_line_at_expected_pixel) has no effect, and
+        # (0, 0) sits outside the blurred bounding box for this geometry.
         assert tuple(arr[int(p.y0), 15]) == (0, 255, 0, 255)
         assert tuple(arr[0, 0]) == (255, 255, 255, 0)
 
@@ -684,8 +723,18 @@ class TestShapesMixin:
         p = wall.to_img(dims)
         # dash_length=6, gap_length=5, period=11 at scale=1: x=13 falls inside
         # the first dash (0-6), x=19 falls inside the following gap (6-11).
-        assert tuple(arr[int(p.y0), 13]) == (0, 128, 255, 255)
-        assert tuple(arr[int(p.y0), 19]) == (255, 255, 255, 0)
+        # AA note (see test_render_walls_draws_line_at_expected_pixel): the
+        # blur softens this width=1 dash's peak alpha from 255 to 209, hue
+        # unaffected; the gap keeps a near-zero (not exactly zero, Gaussian
+        # tail) alpha.
+        dash_pixel = tuple(int(v) for v in arr[int(p.y0), 13])
+        assert dash_pixel[0] == 0
+        assert dash_pixel[2] == 255
+        assert abs(dash_pixel[1] - 128) <= 3  # green channel: blur rounding
+        assert dash_pixel[3] == 209
+        gap_pixel = tuple(arr[int(p.y0), 19])
+        assert gap_pixel[3] < 5
+        # (0, 0) sits outside the blurred bounding box for this geometry.
         assert tuple(arr[0, 0]) == (255, 255, 255, 0)
 
     def test_render_doors_skips_zero_length_segment(self) -> None:
