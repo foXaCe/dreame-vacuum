@@ -13,7 +13,6 @@ from datetime import timedelta
 from functools import partial
 import math
 import time
-import traceback
 from typing import Any
 
 from homeassistant.components import persistent_notification
@@ -351,9 +350,9 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             self._check_consumables()
         self._washing = self._device.status.washing
 
-    def _check_consumable(self, consumable: Any, notification_id: str, property: Any) -> None:
+    def _check_consumable(self, consumable: str, notification_id: str, prop: DreameVacuumProperty) -> None:
         assert self._device is not None
-        description = self._device.status.consumable_life_warning_description(property)
+        description = self._device.status.consumable_life_warning_description(prop)
         if description:
             from .dreame.resources import CONSUMABLE_IMAGE
 
@@ -368,7 +367,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
                 notification_id,
             )
 
-            life_left = self._device.get_property(property)
+            life_left = self._device.get_property(prop)
             self._fire_event(
                 EVENT_CONSUMABLE,
                 {
@@ -639,7 +638,7 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
             # ("Device not initialized") with no reconnection. The auth-failed
             # path above already raises ConfigEntryAuthFailed, and cleanup() still
             # tears the device down on unload.
-            LOGGER.warning("Update failed: %s", traceback.format_exc())
+            LOGGER.warning("Update failed: %s", ex, exc_info=True)
             raise UpdateFailed(ex) from ex
 
     @property
