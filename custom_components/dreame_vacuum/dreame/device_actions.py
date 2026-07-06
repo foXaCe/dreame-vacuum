@@ -1335,20 +1335,18 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
         return None
 
     def recovery_map(self, map_id: Any, index: Any) -> Any:
+        # The `map_id` truthiness check in the guard below already rules out
+        # None/"" here, so a "fall back to the selected map" branch on that
+        # condition can never run - removed as dead code.
         mgr: Any = self._map_manager
         if self.capability.map and map_id and index and str(index).isnumeric() and mgr:
-            if (map_id is None or map_id == "") and self.status.selected_map:
-                map_id = self.status.selected_map.map_id
-
             return mgr.get_recovery_map(map_id, index)
         return None
 
     def recovery_map_file(self, map_id: Any, index: Any) -> Any:
+        # See recovery_map() above: same redundant guard removed.
         mgr: Any = self._map_manager
         if self.capability.map and map_id and index and str(index).isnumeric() and mgr:
-            if (map_id is None or map_id == "") and self.status.selected_map:
-                map_id = self.status.selected_map.map_id
-
             return mgr.get_recovery_map_file(map_id, index)
         return None
 
