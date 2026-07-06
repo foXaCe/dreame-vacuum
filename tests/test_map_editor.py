@@ -20,9 +20,15 @@ import custom_components.dreame_vacuum.dreame.map_editor as map_editor_module
 from custom_components.dreame_vacuum.dreame.map_editor import DreameMapVacuumMapEditor
 from custom_components.dreame_vacuum.dreame.vacuum_types import (
     Area,
+    Carpet,
+    Coordinate,
     MapData,
     MapImageDimensions,
+    Obstacle,
+    ObstacleIgnoreStatus,
+    ObstacleType,
     Point,
+    RecoveryMapInfo,
     Segment,
     Wall,
 )
@@ -885,3 +891,1126 @@ def test_refresh_map_with_unknown_saved_map_id_does_not_update(
     _FakeTimer.instances[0].fire()
 
     manager._map_data_updated.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 7. set_active_segments / set_cruise_points / clear_path / reset_map
+# ---------------------------------------------------------------------------
+
+
+def test_set_active_segments_stores_ids(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(frame_id=2)
+    manager._map_data = map_data
+
+    editor.set_active_segments([3, 4])
+
+    assert map_data.active_segments == [3, 4]
+    assert manager._updated_frame_id == 2
+    assert len(_FakeTimer.instances) == 1
+
+
+def test_set_cruise_points_builds_coordinates_and_clears_related_state(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(
+        frame_id=5,
+        path=["p"],
+        obstacles={"1": object()},
+        active_areas=["a"],
+        active_segments=[1],
+    )
+    manager._map_data = map_data
+
+    editor.set_cruise_points([[1, 2, 1, 3], [4, 5, 0, 7]])
+
+    assert map_data.path is None
+    assert map_data.obstacles is None
+    assert map_data.active_areas is None
+    assert map_data.active_segments is None
+    assert map_data.active_cruise_points == {
+        1: Coordinate(1, 2, True, 3),
+        2: Coordinate(4, 5, False, 7),
+    }
+    assert manager._updated_frame_id == 5
+
+
+def test_set_cruise_points_empty_list_only_resets_dict(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(frame_id=1, path=["p"])
+    manager._map_data = map_data
+
+    editor.set_cruise_points([])
+
+    assert map_data.active_cruise_points == {}
+    # Falsy input skips the "clear related state" block entirely.
+    assert map_data.path == ["p"]
+
+
+def test_clear_path_resets_transient_fields(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(frame_id=4, path=["p"], active_areas=["a"], active_segments=[1])
+    manager._map_data = map_data
+
+    editor.clear_path()
+
+    assert map_data.path is None
+    assert map_data.active_areas is None
+    assert map_data.active_segments is None
+    assert manager._updated_frame_id == 4
+
+
+def test_reset_map_clears_map_state(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    dims = MapImageDimensions(top=0, left=0, height=5, width=5, grid_size=1)
+    map_data = _map_data(
+        dimensions=dims,
+        segments={1: _segment(1)},
+        floor_material={1: 0},
+        carpet_cleanset=[[0, 1, -1]],
+        hidden_segments=[1],
+        path=["p"],
+        carpets=[],
+        detected_carpets=[],
+        ignored_carpets=[],
+        carpet_pixels=[(0, 0)],
+        obstacles={"1": object()},
+        empty_map=False,
+        saved_map_status=2,
+        frame_id=7,
+    )
+    manager._map_data = map_data
+
+    editor.reset_map()
+
+    assert dims.width == 0
+    assert dims.height == 0
+    assert map_data.segments == {}
+    assert map_data.floor_material is None
+    assert map_data.carpet_cleanset is None
+    assert map_data.hidden_segments is None
+    assert map_data.path is None
+    assert map_data.carpets is None
+    assert map_data.detected_carpets is None
+    assert map_data.ignored_carpets is None
+    assert map_data.carpet_pixels is None
+    assert map_data.obstacles is None
+    assert map_data.empty_map is True
+    assert map_data.saved_map_status == 0
+    assert manager._updated_frame_id == 8
+
+
+def test_reset_map_noop_without_dimensions(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(dimensions=None)
+    manager._map_data = map_data
+
+    editor.reset_map()
+
+    assert _FakeTimer.instances == []
+
+
+# ---------------------------------------------------------------------------
+# 8. set_map_name / set_selected_map
+# ---------------------------------------------------------------------------
+
+
+def test_set_map_name_sets_custom_name(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    saved = _map_data(map_index=3)
+    manager._saved_map_data = {5: saved}
+
+    editor.set_map_name(5, "Kitchen")
+
+    assert saved.custom_name == "Kitchen"
+    assert saved.map_name == "Kitchen"
+    assert len(_FakeTimer.instances) == 2
+    assert _FakeTimer.instances[0].args == [5]
+    assert _FakeTimer.instances[1].args == [None]
+
+
+def test_set_map_name_empty_name_falls_back_to_generated_name(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    saved = _map_data(map_index=3)
+    manager._saved_map_data = {5: saved}
+
+    editor.set_map_name(5, "")
+
+    assert saved.custom_name is None
+    assert saved.map_name == "Map 3"
+
+
+def test_set_map_name_noop_for_unknown_map_id(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    manager._saved_map_data = {}
+
+    editor.set_map_name(9, "X")
+
+    assert _FakeTimer.instances == []
+
+
+def test_set_selected_map_delegates_to_set_current_map_when_changed(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    manager._selected_map_id = 3
+    editor.set_current_map = MagicMock()
+
+    editor.set_selected_map(9)
+
+    editor.set_current_map.assert_called_once_with(9)
+
+
+def test_set_selected_map_noop_when_already_selected(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    manager._selected_map_id = 3
+    editor.set_current_map = MagicMock()
+
+    editor.set_selected_map(3)
+
+    editor.set_current_map.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 9. set_carpets / set_virtual_thresholds / set_predefined_points
+# ---------------------------------------------------------------------------
+
+
+def test_set_carpets_builds_carpets_and_syncs_saved_map(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(frame_id=1, carpets=[], ignored_carpets=None)
+    saved = _map_data()
+    manager._map_data = map_data
+    manager._selected_map_id = 3
+    manager._saved_map_data = {3: saved}
+
+    editor.set_carpets(
+        carpets=[[0, 0, 10, 10]],
+        ignored_carpets=[[20, 20, 30, 30]],
+    )
+
+    assert len(map_data.carpets) == 1
+    carpet = map_data.carpets[0]
+    assert (carpet.x0, carpet.y0, carpet.x1, carpet.y1, carpet.x2, carpet.y2, carpet.x3, carpet.y3) == (
+        0,
+        0,
+        10,
+        0,
+        10,
+        10,
+        0,
+        10,
+    )
+    assert carpet.id == 0  # carpets without a 5th element default to id 0
+
+    assert len(map_data.ignored_carpets) == 1
+    ignored = map_data.ignored_carpets[0]
+    assert ignored.id == 1  # ignored carpets are indexed starting at 1
+    assert (ignored.x0, ignored.y0, ignored.x2, ignored.y2) == (20, 20, 30, 30)
+
+    assert saved.carpets == map_data.carpets
+    assert saved.ignored_carpets == map_data.ignored_carpets
+    assert manager._updated_frame_id == 1
+    assert len(_FakeTimer.instances) == 2
+
+
+def test_set_carpets_empty_inputs_clear_lists(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(carpets=[Carpet(1, 0, 0, 1, 0, 1, 1, 0, 1)], ignored_carpets=None)
+    saved = _map_data()
+    manager._map_data = map_data
+    manager._selected_map_id = 1
+    manager._saved_map_data = {1: saved}
+
+    editor.set_carpets(carpets=None, ignored_carpets=None)
+
+    assert map_data.carpets == []
+    assert map_data.ignored_carpets == []
+    assert saved.carpets == []
+
+
+def test_set_carpets_noop_when_map_does_not_support_carpets(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(carpets=None, ignored_carpets=None)
+    manager._map_data = map_data
+    manager._selected_map_id = 5
+
+    editor.set_carpets(carpets=[[0, 0, 1, 1]], ignored_carpets=None)
+
+    assert map_data.carpets is None
+    assert _FakeTimer.instances == []
+
+
+def test_set_virtual_thresholds_uses_passable_thresholds_when_present(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(frame_id=2, passable_thresholds=[], virtual_thresholds=None)
+    saved = _map_data()
+    manager._map_data = map_data
+    manager._selected_map_id = 4
+    manager._saved_map_data = {4: saved}
+
+    editor.set_virtual_thresholds([[0, 0, 10, 0]])
+
+    assert map_data.passable_thresholds == [Wall(0, 0, 10, 0)]
+    assert saved.passable_thresholds == map_data.passable_thresholds
+    assert map_data.virtual_thresholds is None
+    assert manager._updated_frame_id == 2
+
+
+def test_set_virtual_thresholds_falls_back_to_virtual_thresholds(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(frame_id=2, passable_thresholds=None, virtual_thresholds=[])
+    saved = _map_data()
+    manager._map_data = map_data
+    manager._selected_map_id = 9
+    manager._saved_map_data = {9: saved}
+
+    editor.set_virtual_thresholds([[0, 0, 5, 5]])
+
+    assert map_data.virtual_thresholds == [Wall(0, 0, 5, 5)]
+    assert saved.virtual_thresholds == map_data.virtual_thresholds
+
+
+def test_set_virtual_thresholds_noop_when_unsupported(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(passable_thresholds=None, virtual_thresholds=None)
+    manager._map_data = map_data
+    manager._selected_map_id = 1
+
+    editor.set_virtual_thresholds([[0, 0, 1, 1]])
+
+    assert map_data.virtual_thresholds is None
+    assert _FakeTimer.instances == []
+
+
+def test_set_predefined_points_builds_coordinates(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(frame_id=3, predefined_points={})
+    saved = _map_data()
+    manager._map_data = map_data
+    manager._selected_map_id = 2
+    manager._saved_map_data = {2: saved}
+
+    editor.set_predefined_points([[1, 2, 0, 1], [3, 4, 1, 1]])
+
+    assert map_data.predefined_points == {
+        1: Coordinate(1, 2, False, 1),
+        2: Coordinate(3, 4, True, 1),
+    }
+    assert saved.predefined_points == map_data.predefined_points
+    assert manager._updated_frame_id == 3
+
+
+def test_set_predefined_points_empty_clears_dict(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(predefined_points={1: Coordinate(0, 0, False, 1)})
+    saved = _map_data()
+    manager._map_data = map_data
+    manager._selected_map_id = 2
+    manager._saved_map_data = {2: saved}
+
+    editor.set_predefined_points([])
+
+    assert map_data.predefined_points == {}
+
+
+def test_set_predefined_points_noop_when_unsupported(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(predefined_points=None)
+    manager._map_data = map_data
+    manager._selected_map_id = 1
+
+    editor.set_predefined_points([[1, 2, 0, 1]])
+
+    assert map_data.predefined_points is None
+    assert _FakeTimer.instances == []
+
+
+# ---------------------------------------------------------------------------
+# 10. set_obstacle_ignore / set_router_position
+# ---------------------------------------------------------------------------
+
+
+def test_set_obstacle_ignore_marks_matching_obstacle(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    obstacle = Obstacle(5, 5, ObstacleType.OBSTACLE.value, 90)
+    other = Obstacle(1, 1, ObstacleType.OBSTACLE.value, 80)
+    map_data = _map_data(frame_id=1, obstacles={"a": obstacle, "b": other})
+    manager._map_data = map_data
+
+    editor.set_obstacle_ignore(5, 5, True)
+
+    assert obstacle.ignore_status == ObstacleIgnoreStatus.MANUALLY_IGNORED
+    assert other.ignore_status == ObstacleIgnoreStatus.NOT_IGNORED  # untouched
+    assert manager._updated_frame_id == 1
+
+
+def test_set_obstacle_ignore_clears_ignore_flag(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    obstacle = Obstacle(
+        5, 5, ObstacleType.OBSTACLE.value, 90, ignore_status=ObstacleIgnoreStatus.MANUALLY_IGNORED.value
+    )
+    map_data = _map_data(obstacles={"a": obstacle})
+    manager._map_data = map_data
+
+    editor.set_obstacle_ignore(5, 5, False)
+
+    assert obstacle.ignore_status == ObstacleIgnoreStatus.NOT_IGNORED
+
+
+def test_set_obstacle_ignore_noop_without_obstacles(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(obstacles=None)
+    manager._map_data = map_data
+
+    editor.set_obstacle_ignore(1, 1, True)
+
+    assert _FakeTimer.instances == []
+
+
+def test_set_router_position_updates_map_and_wifi_data(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    wifi_map_data = MagicMock(router_position=None)
+    saved_wifi_map_data = MagicMock(router_position=None)
+    map_data = _map_data(frame_id=1, router_position=Point(0, 0), wifi_map_data=wifi_map_data)
+    saved = _map_data(wifi_map_data=saved_wifi_map_data)
+    manager._map_data = map_data
+    manager._selected_map_id = 6
+    manager._saved_map_data = {6: saved}
+
+    editor.set_router_position(12, 34)
+
+    assert map_data.router_position == Point(12, 34)
+    assert saved.router_position == Point(12, 34)
+    assert wifi_map_data.router_position == Point(12, 34)
+    assert saved_wifi_map_data.router_position == Point(12, 34)
+    assert manager._updated_frame_id == 1
+
+
+def test_set_router_position_noop_when_unsupported(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(router_position=None)
+    manager._map_data = map_data
+    manager._selected_map_id = 1
+
+    editor.set_router_position(1, 1)
+
+    assert _FakeTimer.instances == []
+
+
+# ---------------------------------------------------------------------------
+# 11. save/discard/replace temporary map, restore_map
+# ---------------------------------------------------------------------------
+
+
+def test_save_temporary_map_marks_permanent(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(temporary_map=True)
+    manager._map_data = map_data
+
+    editor.save_temporary_map()
+
+    assert map_data.temporary_map is False
+    manager.request_next_map_list.assert_called_once()
+    assert len(_FakeTimer.instances) == 1
+
+
+def test_save_temporary_map_noop_when_not_temporary(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(temporary_map=False)
+    manager._map_data = map_data
+
+    editor.save_temporary_map()
+
+    manager.request_next_map_list.assert_not_called()
+    assert _FakeTimer.instances == []
+
+
+def test_discard_temporary_map_restores_current_map(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(temporary_map=True)
+    manager._map_data = map_data
+    manager._selected_map_id = 5
+    editor.set_current_map = MagicMock()
+
+    editor.discard_temporary_map()
+
+    editor.set_current_map.assert_called_once_with(5)
+    manager.request_next_map_list.assert_called_once()
+
+
+def test_discard_temporary_map_noop_when_not_temporary(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(temporary_map=False)
+    manager._map_data = map_data
+    editor.set_current_map = MagicMock()
+
+    editor.discard_temporary_map()
+
+    editor.set_current_map.assert_not_called()
+    manager.request_next_map_list.assert_not_called()
+
+
+def test_replace_temporary_map_promotes_temp_map_into_a_fresh_slot(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    discarded = _map_data(map_index=9, segments=None, cleanset=None, carpet_cleanset=None)
+    temp_map = _map_data(
+        temporary_map=True,
+        saved_map_id=42,
+        map_index=3,
+        segments=None,
+        cleanset=None,
+        carpet_cleanset=None,
+    )
+    manager._map_data = temp_map
+    manager._saved_map_data = {7: discarded}
+
+    editor.replace_temporary_map(map_id=7)
+
+    # The old "discarded" slot (7) is gone; the temp map is promoted under its
+    # own pre-assigned id (42, taken from its saved_map_id).
+    assert 7 not in manager._saved_map_data
+    assert 42 in manager._saved_map_data
+    new_saved = manager._saved_map_data[42]
+    assert new_saved.saved_map is True
+    assert new_saved.saved_map_status == -1
+    assert new_saved.map_id == 42
+    assert new_saved.saved_map_id is None
+
+    assert manager._map_data is temp_map
+    assert temp_map.temporary_map is False
+    assert temp_map.saved_map is False
+    assert temp_map.saved_map_status == 0
+    assert temp_map.restored_map is True
+    assert temp_map.empty_map is False
+    assert temp_map.saved_map_id == 42
+    assert temp_map.map_index == 3  # copied back from the newly-promoted entry
+    assert manager._selected_map_id == 42
+    manager.request_next_map_list.assert_called_once()
+    manager._refresh_map_list.assert_called_once()
+
+
+def test_replace_temporary_map_defaults_map_index_when_new_slot_collides_with_replaced_id(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    """Documents a real quirk: when the temp map's pre-assigned id is the same
+    slot passed in as the id being replaced, the insert-then-delete sequence
+    in replace_temporary_map leaves that id absent from _saved_map_data, so
+    map_index falls back to 0 instead of carrying over the previous value."""
+    discarded = _map_data(map_index=9, segments=None, cleanset=None, carpet_cleanset=None)
+    temp_map = _map_data(
+        temporary_map=True,
+        saved_map_id=7,
+        map_index=3,
+        segments=None,
+        cleanset=None,
+        carpet_cleanset=None,
+    )
+    manager._map_data = temp_map
+    manager._saved_map_data = {7: discarded}
+    manager._selected_map_id = 7
+
+    editor.replace_temporary_map()  # map_id=None -> defaults to selected_map_id (7)
+
+    assert 7 not in manager._saved_map_data
+    assert temp_map.map_index == 0
+
+
+def test_replace_temporary_map_noop_when_not_temporary(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    map_data = _map_data(temporary_map=False)
+    manager._map_data = map_data
+
+    editor.replace_temporary_map(map_id=1)
+
+    assert _FakeTimer.instances == []
+
+
+def test_restore_map_replaces_saved_entry_with_provided_map_data(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    old_saved = _map_data(
+        map_name="Living Room",
+        custom_name="Living Room",
+        rotation=90,
+        map_index=1,
+        recovery_map_list=["r1"],
+        timestamp_ms=111,
+    )
+    manager._map_list = [8]
+    manager._saved_map_data = {8: old_saved}
+    manager._map_data = None
+    manager._selected_map_id = None
+
+    restored = MapData()
+    restored.wifi_map_data = MagicMock(last_updated=None)
+    info = RecoveryMapInfo(map_id=8, date=None, raw_map="ignored", map_object_name="obj", object_name="obj", map_type=0)
+    info.map_data = restored
+
+    editor.restore_map(info)
+
+    assert manager._saved_map_data[8] is restored
+    assert restored.recovery_map is False
+    assert restored.saved_map is True
+    assert restored.wifi_map_data.last_updated is not None
+    assert restored.map_name == "Living Room"
+    assert restored.custom_name == "Living Room"
+    assert restored.rotation == 90
+    assert restored.map_index == 1
+    assert restored.recovery_map_list == ["r1"]
+    assert restored.timestamp_ms == 111
+    assert restored.last_updated is not None
+    assert manager._map_request_count == 0
+    assert manager._map_request_time is None
+    assert manager._need_map_request is True
+    assert manager._need_map_list_request is True
+    assert len(_FakeTimer.instances) == 1
+    assert _FakeTimer.instances[0].args == [8]
+
+
+def test_restore_map_updates_current_map_when_selected(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    old_saved = _map_data(
+        map_name="X", custom_name=None, rotation=0, map_index=0, recovery_map_list=None, timestamp_ms=None
+    )
+    manager._map_list = [8]
+    manager._saved_map_data = {8: old_saved}
+    manager._selected_map_id = 8
+    manager._map_data = _map_data()
+    editor.set_current_map = MagicMock()
+
+    restored = MapData()
+    restored.wifi_map_data = None
+    info = RecoveryMapInfo(map_id=8, date=None, raw_map="ignored", map_object_name="obj", object_name="obj", map_type=0)
+    info.map_data = restored
+
+    editor.restore_map(info)
+
+    editor.set_current_map.assert_called_once_with(8)
+
+
+def test_restore_map_noop_when_map_id_unknown(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    manager._map_list = []
+    info = RecoveryMapInfo(map_id=8, date=None, raw_map="x", map_object_name="obj", object_name="obj", map_type=0)
+
+    editor.restore_map(info)
+
+    assert _FakeTimer.instances == []
+    manager.schedule_update.assert_not_called()
+
+
+def test_restore_map_returns_when_decoded_map_is_none(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manager._map_list = [8]
+    manager._saved_map_data = {8: _map_data(rotation=0)}
+    monkeypatch.setattr(
+        map_editor_module.DreameVacuumMapDecoder,
+        "decode_saved_map",
+        staticmethod(lambda *a, **k: None),
+    )
+    info = RecoveryMapInfo(
+        map_id=8, date=None, raw_map="raw-bytes", map_object_name=None, object_name="obj", map_type=0
+    )
+
+    editor.restore_map(info)
+
+    assert manager._saved_map_data[8] is not None  # untouched
+    assert _FakeTimer.instances == []
+
+
+def test_restore_map_swallows_missing_get_interim_file_data_helper(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    """Characterizes a real bug: DreameMapVacuumMapEditor has no
+    ``_get_interim_file_data`` method of its own (only the map manager
+    defines it), so whenever raw_map is missing and must be fetched by
+    object name, this call raises AttributeError. It is caught by the
+    surrounding ``except Exception`` and silently treated like a normal
+    "fetch failed" warning, meaning recovery silently no-ops instead of
+    surfacing a clear error."""
+    manager._map_list = [8]
+    manager._saved_map_data = {8: _map_data(rotation=0)}
+    info = RecoveryMapInfo(map_id=8, date=None, raw_map=None, map_object_name="obj-name", object_name="obj", map_type=0)
+
+    editor.restore_map(info)  # must not raise, despite the missing helper
+
+    assert _FakeTimer.instances == []
+
+
+# ---------------------------------------------------------------------------
+# 12. set_cleaning_sequence (editor)
+# ---------------------------------------------------------------------------
+
+
+def test_editor_set_cleaning_sequence_reorders_and_resets_absent_segments(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg1, seg2, seg3 = _segment(1), _segment(2), _segment(3)
+    map_data = _map_data(
+        segments={1: seg1, 2: seg2, 3: seg3},
+        cleanset={"1": [1, 3, 1, 0], "2": [1, 3, 1, 0], "3": [1, 3, 1, 0]},
+        temporary_map=False,
+        map_id=9,
+    )
+    manager._map_data = map_data
+    manager._saved_map_data = {9: map_data}
+    manager.cleaning_sequence = [2, 1]
+
+    result = editor.set_cleaning_sequence([2, 1])
+
+    assert seg2.order == 1
+    assert seg1.order == 2
+    assert seg3.order == 0  # not part of the new sequence -> reset
+    assert map_data.cleanset["2"][3] == 1
+    assert map_data.cleanset["1"][3] == 2
+    assert map_data.cleanset["3"][3] == 0
+    assert result == manager.cleaning_sequence
+    assert manager._saved_map_data[9].cleanset == map_data.cleanset
+
+
+def test_editor_set_cleaning_sequence_empty_resets_all_orders(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg1, seg2 = _segment(1, order=2), _segment(2, order=1)
+    map_data = _map_data(
+        segments={1: seg1, 2: seg2},
+        cleanset={"1": [1, 3, 1, 2], "2": [1, 3, 1, 1]},
+        temporary_map=False,
+    )
+    manager._map_data = map_data
+    manager.cleaning_sequence = []
+
+    editor.set_cleaning_sequence([])
+
+    assert seg1.order == 0
+    assert seg2.order == 0
+    assert map_data.cleanset["1"][3] == 0
+    assert map_data.cleanset["2"][3] == 0
+
+
+def test_editor_set_cleaning_sequence_noop_for_temporary_map(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(segments={1: _segment(1)}, temporary_map=True)
+    manager._map_data = map_data
+
+    assert editor.set_cleaning_sequence([1]) is None
+
+
+# ---------------------------------------------------------------------------
+# 13. set_segment_order additional branch: conflict reassignment
+# ---------------------------------------------------------------------------
+
+
+def test_set_segment_order_reassigns_previous_holder_of_the_same_order(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    """Documents the conflict-swap branch: segment 1 already holds order=1;
+    requesting order=1 for segment 2 bumps segment 1 out of the way first.
+    The final reindex pass then renumbers strictly by position in
+    cleaning_sequence, so segment 1 (first in the sequence) ends up back at
+    position 1 and segment 2 at position 2 -- the swap is transient."""
+    seg1 = _segment(1, order=1)
+    seg2 = _segment(2, order=None)
+    map_data = _map_data(
+        segments={1: seg1, 2: seg2},
+        cleanset={"1": [1, 3, 1, 1], "2": [1, 3, 1, 0]},
+    )
+    manager._map_data = map_data
+    manager.cleaning_sequence = [1, 2]
+
+    editor.set_segment_order(2, 1)
+
+    assert seg1.order == 1
+    assert seg2.order == 2
+    assert map_data.cleanset["1"][3] == 1
+    assert map_data.cleanset["2"][3] == 2
+
+
+# ---------------------------------------------------------------------------
+# 14. carpet cleanset helpers
+# ---------------------------------------------------------------------------
+
+
+def test_set_carpet_cleanset_updates_map_data_and_notifies(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(carpet_cleanset=None, frame_id=3, detected_carpets=None, carpets=None, segments=None)
+    manager._map_data = map_data
+
+    editor.set_carpet_cleanset([[0, 1, -1]])
+
+    assert map_data.carpet_cleanset == [[0, 1, -1]]
+    assert manager._updated_frame_id == 3
+    assert len(_FakeTimer.instances) == 1
+
+
+def test_set_carpet_cleanset_noop_without_map_data(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    manager._map_data = None
+
+    editor.set_carpet_cleanset([[0, 1, -1]])
+
+    assert _FakeTimer.instances == []
+
+
+def test_set_custom_carpet_settings_updates_matching_entries_with_len4_carpet(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(
+        carpet_cleanset=[[0, 1, -1, 5], [0, 2, -1, 5]], detected_carpets=None, carpets=None, segments=None
+    )
+    manager._map_data = map_data
+
+    result = editor.set_custom_carpet_settings([[0, 1, -1, 9]])
+
+    assert result == [[0, 1, -1, 9]]
+    assert map_data.carpet_cleanset[0] == [0, 1, -1, 9]
+    assert map_data.carpet_cleanset[1] == [0, 2, -1, 5]
+
+
+def test_set_custom_carpet_settings_short_carpet_entry_skips_index3(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(carpet_cleanset=[[0, 1, -1]], detected_carpets=None, carpets=None, segments=None)
+    manager._map_data = map_data
+
+    result = editor.set_custom_carpet_settings([[0, 1, -1, 9]])
+
+    assert result == [[0, 1, -1]]  # len(carpet) <= 3 -> the [3] assignment is skipped
+
+
+def test_set_custom_carpet_settings_noop_without_existing_cleanset(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(carpet_cleanset=None)
+    manager._map_data = map_data
+
+    result = editor.set_custom_carpet_settings([[0, 1, -1, 9]])
+
+    assert result == [[0, 1, -1, 9]]
+
+
+def test_set_custom_carpet_cleaning_v3_appends_settings_value(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(carpet_cleanset=[[0, 1, -1, 5]], detected_carpets=None, carpets=None, segments=None)
+    manager._map_data = map_data
+    manager._capability.carpet_cleanset_v3 = True
+
+    result = editor.set_custom_carpet_cleaning([[0, 1, 3, 7]])
+
+    assert result == [[0, 1, 3, 7]]
+    assert map_data.carpet_cleanset[0] == [0, 1, 3, 7]
+
+
+def test_set_custom_carpet_cleaning_v3_minus_one_setting_resets_extra_field(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(carpet_cleanset=[[0, 1, -1, 5]], detected_carpets=None, carpets=None, segments=None)
+    manager._map_data = map_data
+    manager._capability.carpet_cleanset_v3 = True
+
+    result = editor.set_custom_carpet_cleaning([[0, 1, -1]])
+
+    assert result == [[0, 1, -1]]
+    assert map_data.carpet_cleanset[0] == [0, 1, -1, -1]
+
+
+def test_set_custom_carpet_cleaning_without_v3_ignores_extra_field(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    map_data = _map_data(carpet_cleanset=[[0, 1, -1, 5]], detected_carpets=None, carpets=None, segments=None)
+    manager._map_data = map_data
+    manager._capability.carpet_cleanset_v3 = False
+
+    result = editor.set_custom_carpet_cleaning([[0, 1, 3, 7]])
+
+    assert result == [[0, 1, 3]]
+    assert map_data.carpet_cleanset[0] == [0, 1, 3, 5]
+
+
+# ---------------------------------------------------------------------------
+# 15. per-segment cleanset setters: water volume / wetness / cleaning mode /
+#     custom mopping route / cleaning route / visibility
+# ---------------------------------------------------------------------------
+
+
+def test_set_segment_water_volume_returns_none_without_refresh(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, water_volume=1, custom_mopping_route=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0]})
+    manager._map_data = map_data
+
+    result = editor.set_segment_water_volume(1, 3, refresh_map=False)
+
+    assert seg.water_volume == 3
+    assert result is None
+    assert _FakeTimer.instances == []
+
+
+def test_set_segment_water_volume_syncs_saved_map(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    seg = _segment(1, water_volume=1, custom_mopping_route=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0]})
+    manager._map_data = map_data
+    manager._selected_map_id = 2
+    manager._saved_map_data = {2: map_data}
+
+    editor.set_segment_water_volume(1, 3)
+
+    assert manager._saved_map_data[2].cleanset == map_data.cleanset
+
+
+def test_set_segment_wetness_level_high_sets_max_water_volume(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, custom_mopping_route=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 0, 1, 0]})
+    manager._map_data = map_data
+    manager._capability.mop_clean_frequency = False
+
+    result = editor.set_segment_wetness_level(1, 30)
+
+    assert seg.wetness_level == 30
+    assert seg.water_volume == 3
+    assert map_data.cleanset["1"][1] == 30
+    assert result == [[1, 1, 30, 1]]  # [segment_id, suction_level(default 1), wetness_level, cleaning_times(default 1)]
+
+
+def test_set_segment_wetness_level_low_sets_min_water_volume(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, custom_mopping_route=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 0, 1, 0]})
+    manager._map_data = map_data
+
+    editor.set_segment_wetness_level(1, 3)
+
+    assert seg.water_volume == 1
+
+
+def test_set_segment_wetness_level_mid_sets_medium_water_volume(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, custom_mopping_route=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 0, 1, 0]})
+    manager._map_data = map_data
+
+    editor.set_segment_wetness_level(1, 10)
+
+    assert seg.water_volume == 2
+
+
+def test_set_segment_wetness_level_resets_custom_mopping_route(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, custom_mopping_route=-1, mopping_settings=0)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 0, 1, 0, 2, 0]})
+    manager._map_data = map_data
+
+    editor.set_segment_wetness_level(1, 10)
+
+    assert seg.custom_mopping_route == 0
+    assert map_data.cleanset["1"][5] == seg.mopping_settings
+
+
+def test_set_segment_wetness_level_syncs_saved_map_and_no_refresh_returns_none(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, custom_mopping_route=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 0, 1, 0]})
+    manager._map_data = map_data
+    manager._selected_map_id = 2
+    manager._saved_map_data = {2: map_data}
+
+    result = editor.set_segment_wetness_level(1, 10, refresh_map=False)
+
+    assert result is None
+    assert manager._saved_map_data[2].cleanset == map_data.cleanset
+    assert _FakeTimer.instances == []
+
+
+def test_set_segment_cleaning_times_syncs_saved_map(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    seg = _segment(1, cleaning_times=1)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0]})
+    manager._map_data = map_data
+    manager._selected_map_id = 2
+    manager._saved_map_data = {2: map_data}
+
+    editor.set_segment_cleaning_times(1, 3)
+
+    assert manager._saved_map_data[2].cleanset == map_data.cleanset
+
+
+def test_set_segment_cleaning_mode_updates_when_already_set(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, cleaning_mode=1)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0, 1]})
+    manager._map_data = map_data
+    manager._selected_map_id = 2
+    manager._saved_map_data = {2: map_data}
+
+    result = editor.set_segment_cleaning_mode(1, 2)
+
+    assert seg.cleaning_mode == 2
+    assert map_data.cleanset["1"][4] == 2
+    assert manager._saved_map_data[2].cleanset == map_data.cleanset
+    # [segment_id, suction_level(default 1), water_volume+1(default 2+1), cleaning_times(default 1), cleaning_mode]
+    assert result == [[1, 1, 3, 1, 2]]
+
+
+def test_set_segment_cleaning_mode_noop_when_never_initialized(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, cleaning_mode=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0]})
+    manager._map_data = map_data
+
+    result = editor.set_segment_cleaning_mode(1, 2)
+
+    assert seg.cleaning_mode is None
+    assert result is None
+
+
+def test_set_segment_cleaning_mode_no_refresh_returns_none(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, cleaning_mode=1)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0, 1]})
+    manager._map_data = map_data
+
+    result = editor.set_segment_cleaning_mode(1, 2, refresh_map=False)
+
+    assert seg.cleaning_mode == 2
+    assert result is None
+    assert _FakeTimer.instances == []
+
+
+def test_set_segment_custom_mopping_route_minus_one_uses_water_volume(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, custom_mopping_route=0, mopping_settings=0, water_volume=2)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0, 2, 0]})
+    manager._map_data = map_data
+
+    result = editor.set_segment_custom_mopping_route(1, -1)
+
+    assert seg.custom_mopping_route == -1
+    assert seg.cleaning_route == 1  # values[2] == 2 maps to cleaning_route 1
+    assert map_data.cleanset["1"][5] == seg.mopping_settings
+    assert result is not None
+
+
+def test_set_segment_custom_mopping_route_positive_sets_route(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, custom_mopping_route=0, mopping_settings=0, water_volume=2)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0, 2, 0]})
+    manager._map_data = map_data
+    manager._selected_map_id = 5
+    manager._saved_map_data = {5: map_data}
+
+    editor.set_segment_custom_mopping_route(1, 2)
+
+    assert seg.custom_mopping_route == 2
+    assert seg.cleaning_route == 3  # values[0] = custom_mopping_route + 1
+    assert manager._saved_map_data[5].cleanset == map_data.cleanset
+
+
+def test_set_segment_custom_mopping_route_noop_when_never_initialized(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, custom_mopping_route=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0]})
+    manager._map_data = map_data
+
+    result = editor.set_segment_custom_mopping_route(1, 2, refresh_map=False)
+
+    assert seg.custom_mopping_route is None
+    assert result is None
+
+
+def test_set_segment_cleaning_route_updates_when_already_set(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, cleaning_route=1, mopping_settings=0)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0, 2, 0]})
+    manager._map_data = map_data
+    manager._selected_map_id = 3
+    manager._saved_map_data = {3: map_data}
+
+    result = editor.set_segment_cleaning_route(1, 4)
+
+    assert seg.cleaning_route == 4
+    assert seg.custom_mopping_route == -1
+    assert manager._saved_map_data[3].cleanset == map_data.cleanset
+    assert result is not None
+
+
+def test_set_segment_cleaning_route_noop_when_never_initialized(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, cleaning_route=None)
+    map_data = _map_data(segments={1: seg}, cleanset={"1": [1, 3, 1, 0]})
+    manager._map_data = map_data
+
+    result = editor.set_segment_cleaning_route(1, 4, refresh_map=False)
+
+    assert seg.cleaning_route is None
+    assert result is None
+
+
+def test_set_segment_visibility_hides_segment_and_syncs_saved_map(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg1 = _segment(1, visibility=1)
+    seg2 = _segment(2, visibility=1)
+    saved_seg1 = _segment(1, visibility=1)
+    saved_seg2 = _segment(2, visibility=1)
+    map_data = _map_data(frame_id=1, segments={1: seg1, 2: seg2})
+    saved = _map_data(segments={1: saved_seg1, 2: saved_seg2})
+    manager._map_data = map_data
+    manager._selected_map_id = 4
+    manager._saved_map_data = {4: saved}
+
+    result = editor.set_segment_visibility(2, 0)
+
+    assert seg2.visibility == 0
+    assert map_data.hidden_segments == [2]
+    assert saved_seg2.visibility == 0
+    assert saved.hidden_segments == [2]
+    assert result == [2]
+    assert manager._updated_frame_id == 1
+
+
+def test_set_segment_visibility_returns_empty_list_for_temporary_map(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg = _segment(1, visibility=1)
+    map_data = _map_data(segments={1: seg}, temporary_map=True)
+    manager._map_data = map_data
+
+    assert editor.set_segment_visibility(1, 0) == []
+
+
+# ---------------------------------------------------------------------------
+# 16. set_segment_name: empty-string custom name and blank default entries
+# ---------------------------------------------------------------------------
+
+
+def test_set_segment_name_empty_string_becomes_none(editor: DreameMapVacuumMapEditor, manager: MagicMock) -> None:
+    seg = _segment(1, type=0, custom_name="Old")
+    saved_seg = _segment(1, type=0, custom_name="Old")
+    map_data = _map_data(segments={1: seg})
+    saved = _map_data(segments={1: saved_seg})
+    manager._map_data = map_data
+    manager._selected_map_id = 2
+    manager._saved_map_data = {2: saved}
+
+    result = editor.set_segment_name(1, 0, "")
+
+    assert seg.custom_name is None
+    assert result is not None
+
+
+def test_set_segment_name_includes_blank_entry_for_untouched_default_segments(
+    editor: DreameMapVacuumMapEditor, manager: MagicMock
+) -> None:
+    seg1 = _segment(1, type=0, custom_name=None)
+    seg2 = _segment(2, type=0, custom_name=None)  # untouched: no name, no type -> {}
+    saved = _map_data(
+        segments={
+            1: _segment(1, type=0, custom_name=None),
+            2: _segment(2, type=0, custom_name=None),
+        }
+    )
+    map_data = _map_data(segments={1: seg1, 2: seg2})
+    manager._map_data = map_data
+    manager._selected_map_id = 3
+    manager._saved_map_data = {3: saved}
+
+    result = editor.set_segment_name(1, 0, "Office")
+
+    assert result[1]["name"]
+    assert result[2] == {}

@@ -5,7 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [6.6.1] - 2026-07-02
+## [Unreleased]
+
+### Changed
+- **Cloud HTTP now runs on an async-native aiohttp transport** — `requests`
+  is gone from the requirements. The new `dreame/http_client.py` hosts the
+  async core (ready for Home Assistant's injected websession) behind a
+  blocking facade with a private event loop, so the proven worker-thread
+  protocol layer is untouched and Home Assistant's loop is never involved.
+  This is step 1 of the incremental async migration (see ARCHITECTURE.md).
+- Icon translations completed (Gold `icon-translations`): the 143 static
+  `icon=` fields were removed from the entity descriptions — they were
+  silently overriding the `icons.json` mechanism. Icons are unchanged
+  visually; dynamic state-dependent icons stay in code.
+- All user-facing command errors are now translatable (Gold
+  `exception-translations`): the last raw `HomeAssistantError(str(exc))`
+  sites raise `invalid_command` / `command_failed` with the device error as
+  a placeholder (English + French shipped).
+- `strings.json` is now sorted like the translation files; `strings.json`
+  and `en.json` are structurally identical at full 957-key parity.
+- Large internal modules split into focused mixins (no behaviour change):
+  `device_status/_core.py` (2858 → 1489 lines) and
+  `map_renderer/_core.py` (3920 → 2035 lines); the camera HTTP proxy views
+  moved to `camera_views.py`; the per-room entity add/remove logic is now
+  shared between the number and select platforms.
+- Dev/CI environment aligned with HA 2026.7 (Python 3.14); the ruff ignore
+  debt was paid off (F841/B006/B008/F507/F634/E712 re-enabled at zero
+  violations, ~80 mechanical fixes for SIM118/B007/RET503 and friends).
+
+### Removed
+- Dead commented-out map fields (`walls_info`/`ai_outborders_*`) in the map
+  decoder and renderer.
 
 ### Changed
 - Faster startup on warm boots: the integration now persists the device's

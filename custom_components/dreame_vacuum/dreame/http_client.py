@@ -21,7 +21,7 @@ Design constraints:
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 import json
 import threading
@@ -232,7 +232,9 @@ class BlockingHttpClient:
                 self._loop_thread = thread
             return self._loop
 
-    def _run(self, coro: Any, timeout: float) -> Any:
+    def _run(self, coro_factory: Callable[[], Any], timeout: float) -> Any:
+        # The coroutine is only created after the running-loop guard so that a
+        # misuse from the event loop does not leave an un-awaited coroutine.
         try:
             asyncio.get_running_loop()
         except RuntimeError:
@@ -242,7 +244,7 @@ class BlockingHttpClient:
         loop = self._ensure_loop()
         # Margin over the aiohttp timeout so the transport error (not a bare
         # concurrent.futures.TimeoutError) is what callers see.
-        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        future = asyncio.run_coroutine_threadsafe(coro_factory(), loop)
         try:
             return future.result(timeout=timeout + 5.0)
         except TimeoutError as ex:
@@ -262,7 +264,7 @@ class BlockingHttpClient:
     ) -> HttpResponse:
         """Blocking HTTP GET (worker threads only)."""
         return self._run(
-            self._async_client.get(
+            lambda: self._async_client.get(
                 url,
                 headers=headers,
                 params=params,
@@ -285,7 +287,7 @@ class BlockingHttpClient:
     ) -> HttpResponse:
         """Blocking HTTP POST (worker threads only)."""
         return self._run(
-            self._async_client.post(
+            lambda: self._async_client.post(
                 url,
                 headers=headers,
                 data=data,

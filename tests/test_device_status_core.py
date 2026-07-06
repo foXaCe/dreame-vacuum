@@ -16,6 +16,27 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from custom_components.dreame_vacuum.dreame.const import (
+    ATTR_AUTO_EMPTY_MODE,
+    ATTR_CLEANED_AREA,
+    ATTR_CLEANING_MODE,
+    ATTR_CLEANING_TIME,
+    ATTR_CLEANUP_METHOD,
+    ATTR_COMPLETED,
+    ATTR_CRUISING_TIME,
+    ATTR_CRUISING_TYPE,
+    ATTR_DID,
+    ATTR_DRAINING,
+    ATTR_INTERRUPT_REASON,
+    ATTR_LOW_WATER,
+    ATTR_MAP_INDEX,
+    ATTR_MAP_NAME,
+    ATTR_MOP_PAD,
+    ATTR_MULTIPLE_CLEANING_TIME,
+    ATTR_NEGLECTED_SEGMENTS,
+    ATTR_SHORTCUTS,
+    ATTR_STATUS,
+    ATTR_SUCTION_LEVEL,
+    ATTR_WATER_TANK,
     AUTO_EMPTY_MODE_TO_NAME,
     AUTO_EMPTY_STATUS_TO_NAME,
     CARPET_CLEANING_CODE_TO_NAME,
@@ -26,17 +47,23 @@ from custom_components.dreame_vacuum.dreame.const import (
     CLEANGENIUS_TO_NAME,
     CLEANING_MODE_CODE_TO_NAME,
     CLEANING_ROUTE_TO_NAME,
+    CONSUMABLE_TO_LIFE_WARNING_DESCRIPTION,
     CUSTOM_MOPPING_ROUTE_TO_NAME,
     DETERGENT_STATUS_TO_NAME,
     DIRTY_WATER_TANK_STATUS_TO_NAME,
     DRAINAGE_STATUS_TO_NAME,
     DUST_BAG_STATUS_TO_NAME,
     DUST_COLLECTION_TO_NAME,
+    ERROR_CODE_TO_ERROR_DESCRIPTION,
     ERROR_CODE_TO_ERROR_NAME,
     HOT_WATER_STATUS_TO_NAME,
+    LOW_WATER_WARNING_CODE_TO_DESCRIPTION,
     LOW_WATER_WARNING_TO_NAME,
+    MAP_BACKUP_STATUS_TO_NAME,
+    MAP_RECOVERY_STATUS_TO_NAME,
     MOP_CLEAN_FREQUENCY_TO_NAME,
     MOP_EXTEND_FREQUENCY_TO_NAME,
+    MOP_PAD_HUMIDITY_CODE_TO_NAME,
     MOP_PAD_SWING_TO_NAME,
     MOP_WASH_LEVEL_TO_NAME,
     MOPPING_TYPE_TO_NAME,
@@ -48,6 +75,7 @@ from custom_components.dreame_vacuum.dreame.const import (
     STATE_UNKNOWN,
     STATION_DRAINAGE_STATUS_TO_NAME,
     STATUS_CODE_TO_NAME,
+    STREAM_STATUS_TO_NAME,
     SUCTION_LEVEL_CODE_TO_NAME,
     TASK_STATUS_CODE_TO_NAME,
     TASK_TYPE_TO_NAME,
@@ -60,6 +88,14 @@ from custom_components.dreame_vacuum.dreame.const import (
 )
 from custom_components.dreame_vacuum.dreame.device_status import DreameVacuumDeviceStatus
 from custom_components.dreame_vacuum.dreame.vacuum_types import (
+    ATTR_ACTIVE_AREAS,
+    ATTR_ACTIVE_CRUISE_POINTS,
+    ATTR_ACTIVE_POINTS,
+    ATTR_ACTIVE_SEGMENTS,
+    ATTR_PREDEFINED_POINTS,
+    CleaningHistory,
+    CleanupMethod,
+    Coordinate,
     DreameVacuumAIProperty,
     DreameVacuumAutoEmptyMode,
     DreameVacuumAutoEmptyStatus,
@@ -97,6 +133,7 @@ from custom_components.dreame_vacuum.dreame.vacuum_types import (
     DreameVacuumStateOld,
     DreameVacuumStationDrainageStatus,
     DreameVacuumStatus,
+    DreameVacuumStreamStatus,
     DreameVacuumSuctionLevel,
     DreameVacuumTaskStatus,
     DreameVacuumTaskType,
@@ -106,6 +143,12 @@ from custom_components.dreame_vacuum.dreame.vacuum_types import (
     DreameVacuumWaterTemperature,
     DreameVacuumWaterVolume,
     DreameVacuumWiderCornerCoverage,
+    GoToZoneSettings,
+    MapData,
+    Segment,
+    SegmentNeglectReason,
+    Shortcut,
+    TaskInterruptReason,
 )
 
 # ---------------------------------------------------------------------------
@@ -122,6 +165,17 @@ def _make_capability(**overrides: Any) -> DreameVacuumDeviceCapability:
     can selectively override, instead of relying on an auto-truthy ``MagicMock``.
     """
     capability = DreameVacuumDeviceCapability(MagicMock())
+    # `custom_cleaning_mode` and `map` are *computed* properties that consult the
+    # capability's own throwaway device (passed above) rather than the device this
+    # capability gets attached to. Left untouched, `current_segments` auto-mocks to a
+    # truthy-but-not-iterable MagicMock, which crashes `custom_cleaning_mode` with a
+    # StopIteration the moment it's read. Pin both to deterministic, safe defaults here;
+    # individual tests still control `custom_cleaning_mode` via `auto_switch_settings`
+    # + `mop_pad_lifting` (its documented fast path) and `map` via `map_manager=...`
+    # on `_make_status`, just like `cruising`/`mop_extend` already rely on this same
+    # throwaway device's auto-truthy attributes elsewhere in this file.
+    capability._device.status.current_segments = {}
+    capability._device._map_manager = None
     for key, value in overrides.items():
         setattr(capability, key, value)
     return capability
@@ -134,6 +188,7 @@ def _make_status(
     auto_switch_properties: dict[Any, Any] | None = None,
     ai_properties: dict[Any, Any] | None = None,
     device_connected: bool = True,
+    map_manager: Any | None = None,
 ) -> DreameVacuumDeviceStatus:
     """Build a DreameVacuumDeviceStatus backed by fully controlled device mocks."""
     props = properties or {}
@@ -146,10 +201,18 @@ def _make_status(
     device.get_ai_property = MagicMock(side_effect=lambda prop: ai_props.get(prop))
     device.capability = capability if capability is not None else _make_capability()
     device.device_connected = device_connected
-    # Deterministic: no map manager means current_map/has_saved_map/etc. resolve predictably.
-    device._map_manager = None
+    # Deterministic by default: no map manager means current_map/has_saved_map/etc. resolve
+    # predictably. Pass `map_manager=` (e.g. a MagicMock with get_map/selected_map/map_list/
+    # map_data_list/cleaning_sequence configured) to exercise the map-manager-backed branches.
+    device._map_manager = map_manager
 
-    return DreameVacuumDeviceStatus(device)
+    status = DreameVacuumDeviceStatus(device)
+    # PROPERTY_AVAILABILITY lambdas (used by attributes/_format_property_value) read
+    # device.status.* - wire it back to the real status object so those checks reflect
+    # the same properties/capability this status was built from, instead of an
+    # auto-truthy MagicMock child.
+    device.status = status
+    return status
 
 
 def _not_started_properties(extra: dict[Any, Any] | None = None) -> dict[Any, Any]:
@@ -2288,3 +2351,1097 @@ def test_battery_level_passthrough() -> None:
 def test_wetness_level_passthrough() -> None:
     status = _make_status({DreameVacuumProperty.WETNESS_LEVEL: 17})
     assert status.wetness_level == 17
+
+
+# ---------------------------------------------------------------------------
+# _named_props.py - additional gap coverage
+# ---------------------------------------------------------------------------
+
+
+def test_mop_pad_humidity_name_known_value() -> None:
+    status = _make_status({})
+    status.mop_pad_humidity = 2
+    assert status.mop_pad_humidity_name == MOP_PAD_HUMIDITY_CODE_TO_NAME[DreameVacuumMopPadHumidity(2)]
+
+
+def test_water_volume_wetness_level_capability_off_is_unknown() -> None:
+    """self_wash_base + mop_pad_humidity None + wetness_level capability off resolves to
+    UNKNOWN without ever executing the buggy ``self.status.wetness_level`` line exercised
+    by the dedicated bug-documenting test above (wetness_level capability on)."""
+    capability = _make_capability(self_wash_base=True, wetness_level=False)
+    status = _make_status(capability=capability)
+    status.mop_pad_humidity = None
+    assert status.water_volume == DreameVacuumMopPadHumidity.UNKNOWN
+
+
+def test_state_idle_docked_washing_becomes_washing() -> None:
+    capability = _make_capability(self_wash_base=True)
+    status = _make_status(
+        _not_started_properties(
+            {
+                DreameVacuumProperty.STATE: DreameVacuumState.IDLE.value,
+                DreameVacuumProperty.SELF_WASH_BASE_STATUS: DreameVacuumSelfWashBaseStatus.WASHING.value,
+            }
+        ),
+        capability=capability,
+    )
+    assert status.docked is True
+    assert status.washing is True
+    assert status.state == DreameVacuumState.WASHING
+
+
+def test_state_idle_docked_washing_paused_becomes_washing_paused() -> None:
+    capability = _make_capability(self_wash_base=True)
+    status = _make_status(
+        _not_started_properties(
+            {
+                DreameVacuumProperty.STATE: DreameVacuumState.IDLE.value,
+                DreameVacuumProperty.SELF_WASH_BASE_STATUS: DreameVacuumSelfWashBaseStatus.PAUSED.value,
+            }
+        ),
+        capability=capability,
+    )
+    assert status.washing_paused is True
+    assert status.state == DreameVacuumState.WASHING_PAUSED
+
+
+def test_state_idle_docked_drying_becomes_drying() -> None:
+    capability = _make_capability(self_wash_base=True)
+    status = _make_status(
+        _not_started_properties(
+            {
+                DreameVacuumProperty.STATE: DreameVacuumState.IDLE.value,
+                DreameVacuumProperty.SELF_WASH_BASE_STATUS: DreameVacuumSelfWashBaseStatus.DRYING.value,
+            }
+        ),
+        capability=capability,
+    )
+    assert status.drying is True
+    assert status.state == DreameVacuumState.DRYING
+
+
+def test_stream_status_name_known_value() -> None:
+    status = _make_status()
+    status.stream_status = DreameVacuumStreamStatus.RECORDING
+    assert status.stream_status_name == STREAM_STATUS_TO_NAME[DreameVacuumStreamStatus.RECORDING]
+
+
+def test_custom_mopping_route_negative_clamps_to_standard() -> None:
+    capability = _make_capability(custom_mopping_route=True, mopping_settings=True)
+    status = _make_status(
+        {DreameVacuumAutoSwitchProperty.CUSTOM_MOPPING_MODE: 1},
+        capability=capability,
+        auto_switch_properties={DreameVacuumAutoSwitchProperty.MOPPING_TYPE: -5},
+    )
+    assert status.custom_mopping_mode is True
+    assert status.custom_mopping_route == DreameVacuumCustomMoppingRoute.STANDARD
+
+
+def test_washing_mode_negative_mop_wash_level_clamps_to_standard() -> None:
+    """cleangenius_mode on but self_wash_base off: mop_wash_level is UNKNOWN(-1), which
+    washing_mode clamps to 1 (STANDARD) before the membership check."""
+    capability = _make_capability(cleangenius_mode=True)
+    status = _make_status(capability=capability)
+    assert status.mop_wash_level == DreameVacuumMopWashLevel.UNKNOWN
+    assert status.washing_mode == DreameVacuumWashingMode.STANDARD
+
+
+def test_self_clean_frequency_negative_value_clamps_to_by_room() -> None:
+    capability = _make_capability(self_clean_frequency=True)
+    status = _make_status(
+        capability=capability, auto_switch_properties={DreameVacuumAutoSwitchProperty.SELF_CLEAN_FREQUENCY: -3}
+    )
+    status.self_clean_value = 20
+    assert status.self_clean_frequency == DreameVacuumSelfCleanFrequency.BY_ROOM
+
+
+def test_self_clean_frequency_by_room_without_saved_map_becomes_by_area() -> None:
+    map_data = MapData()
+    map_data.saved_map_status = 0  # anything other than 2 makes has_saved_map False
+    manager = MagicMock(get_map=MagicMock(return_value=map_data))
+    capability = _make_capability(self_clean_frequency=True)
+    status = _make_status(
+        capability=capability,
+        map_manager=manager,
+        auto_switch_properties={DreameVacuumAutoSwitchProperty.SELF_CLEAN_FREQUENCY: 0},
+    )
+    status.self_clean_value = 20
+    assert status.current_map is map_data
+    assert status.has_saved_map is False
+    assert status.self_clean_frequency == DreameVacuumSelfCleanFrequency.BY_AREA
+
+
+def test_low_water_warning_name_description_known_value() -> None:
+    status = _make_status({DreameVacuumProperty.LOW_WATER_WARNING: DreameVacuumLowWaterWarning.LOW_WATER.value})
+    assert (
+        status.low_water_warning_name_description
+        == LOW_WATER_WARNING_CODE_TO_DESCRIPTION[DreameVacuumLowWaterWarning.LOW_WATER]
+    )
+
+
+def test_low_water_warning_name_description_missing_falls_back() -> None:
+    status = _make_status({})
+    assert status.low_water_warning_name_description == [STATE_UNKNOWN, ""]
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [(0, 0), (1, 2), (2, 2), (3, 3)],
+)
+def test_map_backup_status_remaps_one_to_two(raw: int, expected: int) -> None:
+    status = _make_status({DreameVacuumProperty.MAP_BACKUP_STATUS: raw})
+    assert status.map_backup_status == expected
+
+
+def test_map_backup_status_missing_is_none() -> None:
+    status = _make_status({})
+    assert status.map_backup_status is None
+    assert status.map_backup_status_name == STATE_UNKNOWN
+
+
+def test_map_backup_status_name_known_value() -> None:
+    status = _make_status({DreameVacuumProperty.MAP_BACKUP_STATUS: 3})
+    assert status.map_backup_status_name == MAP_BACKUP_STATUS_TO_NAME[3]
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [(0, 0), (1, 2), (4, 4)],
+)
+def test_map_recovery_status_remaps_one_to_two(raw: int, expected: int) -> None:
+    status = _make_status({DreameVacuumProperty.MAP_RECOVERY_STATUS: raw})
+    assert status.map_recovery_status == expected
+
+
+def test_map_recovery_status_missing_is_none() -> None:
+    status = _make_status({})
+    assert status.map_recovery_status is None
+    assert status.map_recovery_status_name == STATE_UNKNOWN
+
+
+def test_map_recovery_status_name_known_value() -> None:
+    status = _make_status({DreameVacuumProperty.MAP_RECOVERY_STATUS: 3})
+    assert status.map_recovery_status_name == MAP_RECOVERY_STATUS_TO_NAME[3]
+
+
+def test_dnd_start_end_none_when_capability_off() -> None:
+    status = _make_status({})
+    assert status.dnd_start is None
+    assert status.dnd_end is None
+
+
+def test_dnd_task_uses_first_task_start_end_and_enabled() -> None:
+    capability = _make_capability(dnd=True, dnd_task=True)
+    status = _make_status(capability=capability)
+    status.dnd_tasks = [{"id": "t1", "st": "20:00", "et": "06:00", "en": True}]
+    assert status.dnd_start == "20:00"
+    assert status.dnd_end == "06:00"
+    assert status.dnd is True
+
+
+def test_dnd_task_defaults_when_no_tasks() -> None:
+    capability = _make_capability(dnd=True, dnd_task=True)
+    status = _make_status(capability=capability)
+    status.dnd_tasks = None
+    assert status.dnd_start == "22:00"
+    assert status.dnd_end == "08:00"
+    assert status.dnd is False
+
+
+def test_off_peak_charging_start_end_none_when_capability_off() -> None:
+    status = _make_status({})
+    assert status.off_peak_charging_start is None
+    assert status.off_peak_charging_end is None
+
+
+def test_off_peak_charging_start_end_from_config() -> None:
+    capability = _make_capability(off_peak_charging=True)
+    status = _make_status(capability=capability)
+    status.off_peak_charging_config = {"startTime": "23:15", "endTime": "07:45", "enable": True}
+    assert status.off_peak_charging_start == "23:15"
+    assert status.off_peak_charging_end == "07:45"
+
+
+# ---------------------------------------------------------------------------
+# _core.py - error_description / error_image / robot_status / station_status
+# ---------------------------------------------------------------------------
+
+
+def test_error_description_known_value() -> None:
+    status = _make_status({DreameVacuumProperty.ERROR: DreameVacuumErrorCode.DROP.value})
+    assert status.error_description == ERROR_CODE_TO_ERROR_DESCRIPTION[DreameVacuumErrorCode.DROP]
+
+
+def test_error_description_missing_falls_back() -> None:
+    status = _make_status({})
+    assert status.error == DreameVacuumErrorCode.UNKNOWN
+    assert status.error_description == [STATE_UNKNOWN, ""]
+
+
+def test_error_image_returns_base64_when_has_error() -> None:
+    status = _make_status({DreameVacuumProperty.ERROR: DreameVacuumErrorCode.DROP.value})
+    assert status.has_error is True
+    image = status.error_image
+    assert isinstance(image, str)
+    assert len(image) > 0
+
+
+def test_error_image_none_when_no_error() -> None:
+    status = _make_status({DreameVacuumProperty.ERROR: DreameVacuumErrorCode.NO_ERROR.value})
+    assert status.has_error is False
+    assert status.error_image is None
+
+
+def test_robot_status_zero_baseline() -> None:
+    status = _make_status({})
+    assert status.robot_status == 0
+
+
+def test_robot_status_running_only() -> None:
+    status = _make_status({DreameVacuumProperty.STATUS: DreameVacuumStatus.CLEANING.value})
+    assert status.robot_status == 1
+
+
+def test_robot_status_charging() -> None:
+    status = _make_status(
+        {
+            DreameVacuumProperty.CHARGING_STATUS: DreameVacuumChargingStatus.CHARGING.value,
+            DreameVacuumProperty.BATTERY_LEVEL: 50,
+        }
+    )
+    assert status.robot_status == 2
+
+
+def test_robot_status_sleeping() -> None:
+    status = _make_status({DreameVacuumProperty.STATUS: DreameVacuumStatus.SLEEPING.value})
+    assert status.robot_status == 3
+
+
+def test_robot_status_has_error_adds_ten() -> None:
+    status = _make_status(
+        {
+            DreameVacuumProperty.STATUS: DreameVacuumStatus.CLEANING.value,
+            DreameVacuumProperty.ERROR: DreameVacuumErrorCode.DROP.value,
+        }
+    )
+    assert status.has_error is True
+    assert status.robot_status == 11
+
+
+def test_robot_status_started_and_sweeping_adds_hundred() -> None:
+    status = _make_status({DreameVacuumProperty.STATUS: DreameVacuumStatus.CLEANING.value})
+    status.cleaning_mode = DreameVacuumCleaningMode.SWEEPING
+    assert status.started is True
+    assert status.sweeping is True
+    assert status.robot_status == 101
+
+
+def test_station_status_zero_without_capabilities() -> None:
+    status = _make_status({})
+    assert status.station_status == 0
+
+
+def test_station_status_auto_emptying() -> None:
+    capability = _make_capability(auto_empty_base=True)
+    status = _make_status(
+        {DreameVacuumProperty.AUTO_EMPTY_STATUS: DreameVacuumAutoEmptyStatus.ACTIVE.value}, capability=capability
+    )
+    assert status.auto_emptying is True
+    assert status.station_status == 1
+
+
+def test_station_status_washing() -> None:
+    capability = _make_capability(self_wash_base=True)
+    status = _make_status(
+        {DreameVacuumProperty.SELF_WASH_BASE_STATUS: DreameVacuumSelfWashBaseStatus.WASHING.value},
+        capability=capability,
+    )
+    assert status.station_status == 2
+
+
+def test_station_status_washing_paused() -> None:
+    capability = _make_capability(self_wash_base=True)
+    status = _make_status(
+        {DreameVacuumProperty.SELF_WASH_BASE_STATUS: DreameVacuumSelfWashBaseStatus.PAUSED.value}, capability=capability
+    )
+    assert status.washing_paused is True
+    assert status.station_status == 3
+
+
+def test_station_status_drying() -> None:
+    capability = _make_capability(self_wash_base=True)
+    status = _make_status(
+        {DreameVacuumProperty.SELF_WASH_BASE_STATUS: DreameVacuumSelfWashBaseStatus.DRYING.value}, capability=capability
+    )
+    assert status.station_status == 4
+
+
+def test_station_status_washing_with_hot_washing_adds_ten() -> None:
+    capability = _make_capability(self_wash_base=True, water_temperature=True)
+    status = _make_status(
+        {
+            DreameVacuumProperty.SELF_WASH_BASE_STATUS: DreameVacuumSelfWashBaseStatus.WASHING.value,
+            DreameVacuumProperty.HOT_WATER_STATUS: DreameVacuumHotWaterStatus.ENABLED.value,
+        },
+        capability=capability,
+    )
+    assert status.hot_washing is True
+    assert status.station_status == 12
+
+
+# ---------------------------------------------------------------------------
+# _core.py - water_tank_or_mop_installed (mop_pad_unmounting branch) / carpet_avoidance
+# ---------------------------------------------------------------------------
+
+
+def test_water_tank_or_mop_installed_mop_pad_unmounting_value_zero_is_true() -> None:
+    capability = _make_capability(mop_pad_unmounting=True)
+    status = _make_status(
+        {
+            DreameVacuumProperty.WATER_TANK: DreameVacuumWaterTank.NOT_INSTALLED.value,
+            DreameVacuumProperty.MOP_PAD_INSTALLED: 0,
+        },
+        capability=capability,
+    )
+    assert status.water_tank_or_mop_installed is True
+
+
+def test_water_tank_or_mop_installed_mop_pad_unmounting_value_nonzero_follows_water_tank() -> None:
+    capability = _make_capability(mop_pad_unmounting=True)
+    status = _make_status(
+        {
+            DreameVacuumProperty.WATER_TANK: DreameVacuumWaterTank.NOT_INSTALLED.value,
+            DreameVacuumProperty.MOP_PAD_INSTALLED: 1,
+        },
+        capability=capability,
+    )
+    assert status.water_tank_or_mop_installed is False
+
+
+def test_carpet_avoidance_true_when_avoidance_mode() -> None:
+    capability = _make_capability(carpet_recognition=True)
+    status = _make_status(
+        {DreameVacuumProperty.CARPET_CLEANING: DreameVacuumCarpetCleaning.AVOIDANCE.value}, capability=capability
+    )
+    assert status.carpet_avoidance is True
+
+
+def test_carpet_avoidance_false_without_capability() -> None:
+    status = _make_status({DreameVacuumProperty.CARPET_CLEANING: DreameVacuumCarpetCleaning.AVOIDANCE.value})
+    assert status.carpet_avoidance is False
+
+
+# ---------------------------------------------------------------------------
+# _core.py - last_cleaning_time / last_cruising_time / cleaning_history / cruising_history
+# ---------------------------------------------------------------------------
+
+
+def test_last_cleaning_time_none_without_history() -> None:
+    status = _make_status({})
+    assert status.last_cleaning_time is None
+
+
+def test_last_cleaning_time_returns_cached_value_when_history_present() -> None:
+    status = _make_status({})
+    now = datetime(2024, 3, 1, 8, 0, tzinfo=UTC)
+    status._cleaning_history = [MagicMock()]
+    status._last_cleaning_time = now
+    assert status.last_cleaning_time is now
+
+
+def test_last_cruising_time_none_without_history() -> None:
+    status = _make_status({})
+    assert status.last_cruising_time is None
+
+
+def test_last_cruising_time_returns_cached_value_when_history_present() -> None:
+    status = _make_status({})
+    now = datetime(2024, 3, 1, 8, 0, tzinfo=UTC)
+    status._cruising_history = [MagicMock()]
+    status._last_cruising_time = now
+    assert status.last_cruising_time is now
+
+
+def test_cleaning_history_none_when_unset() -> None:
+    status = _make_status({})
+    assert status._cleaning_history is None
+    assert status.cleaning_history is None
+
+
+def test_cruising_history_none_when_unset() -> None:
+    status = _make_status({})
+    assert status._cruising_history is None
+    assert status.cruising_history is None
+
+
+def test_cleaning_history_builds_and_caches_localized_dict() -> None:
+    status = _make_status({})
+    history = CleaningHistory([], {})
+    history.date = datetime(2024, 5, 1, 10, 30, tzinfo=UTC)
+    history.cleaning_time = 12
+    history.cleaned_area = 8
+    history.status = DreameVacuumStatus.STANDBY
+    history.suction_level = DreameVacuumSuctionLevel.STRONG
+    history.completed = True
+    history.water_tank_or_mop = DreameVacuumWaterTank.INSTALLED
+    history.neglected_segments = {1: SegmentNeglectReason.BLOCKED_BY_DOOR}
+    history.cleanup_method = CleanupMethod.CLEANGENIUS
+    history.task_interrupt_reason = TaskInterruptReason.ROBOT_LIFTED
+    history.multiple_cleaning_time = "2"
+    status._cleaning_history = [history]
+
+    result = status.cleaning_history
+    assert result is not None
+    entry = next(iter(result.values()))
+    assert entry[ATTR_CLEANING_TIME] == "12 min"
+    assert entry[ATTR_CLEANED_AREA] == "8 m²"
+    assert (
+        entry[ATTR_STATUS]
+        == STATUS_CODE_TO_NAME.get(DreameVacuumStatus.STANDBY, STATE_UNKNOWN).replace("_", " ").capitalize()
+    )
+    assert (
+        entry[ATTR_SUCTION_LEVEL]
+        == SUCTION_LEVEL_CODE_TO_NAME.get(DreameVacuumSuctionLevel.STRONG, STATE_UNKNOWN).replace("_", " ").capitalize()
+    )
+    assert entry[ATTR_COMPLETED] is True
+    assert (
+        entry[ATTR_WATER_TANK]
+        == WATER_TANK_CODE_TO_NAME.get(DreameVacuumWaterTank.INSTALLED, STATE_UNKNOWN).replace("_", " ").capitalize()
+    )
+    assert entry[ATTR_NEGLECTED_SEGMENTS] == {1: "Blocked by door"}
+    assert entry[ATTR_CLEANUP_METHOD] == "Cleangenius"
+    assert entry[ATTR_INTERRUPT_REASON] == "Robot lifted"
+    assert entry[ATTR_MULTIPLE_CLEANING_TIME] == "2"
+    # Cached: repeated access returns the identical dict object without rebuilding.
+    assert status.cleaning_history is result
+
+
+def test_cleaning_history_uses_mop_pad_key_for_self_wash_base() -> None:
+    capability = _make_capability(self_wash_base=True)
+    status = _make_status({}, capability=capability)
+    history = CleaningHistory([], {})
+    history.date = datetime(2024, 5, 1, 10, 30, tzinfo=UTC)
+    history.water_tank_or_mop = DreameVacuumWaterTank.INSTALLED
+    status._cleaning_history = [history]
+    entry = next(iter(status.cleaning_history.values()))
+    assert ATTR_MOP_PAD in entry
+    assert ATTR_WATER_TANK not in entry
+
+
+def test_cruising_history_builds_and_caches_localized_dict() -> None:
+    status = _make_status({})
+    history = CleaningHistory([], {})
+    history.date = datetime(2024, 6, 1, 9, 0, tzinfo=UTC)
+    history.cleaning_time = 20
+    history.status = DreameVacuumStatus.CRUISING_PATH
+    history.cruise_type = 1
+    history.map_index = 2
+    history.map_name = "Living Room"
+    history.completed = False
+    status._cruising_history = [history]
+
+    result = status.cruising_history
+    assert result is not None
+    entry = next(iter(result.values()))
+    assert entry[ATTR_CRUISING_TIME] == "20 min"
+    assert (
+        entry[ATTR_STATUS]
+        == STATUS_CODE_TO_NAME.get(DreameVacuumStatus.CRUISING_PATH, STATE_UNKNOWN).replace("_", " ").capitalize()
+    )
+    assert entry[ATTR_CRUISING_TYPE] == 1
+    assert entry[ATTR_MAP_INDEX] == 2
+    assert entry[ATTR_MAP_NAME] == "Living Room"
+    assert entry[ATTR_COMPLETED] is False
+    assert status.cruising_history is result
+
+
+# ---------------------------------------------------------------------------
+# _core.py - water_draining_available / floor_direction_cleaning_available
+# ---------------------------------------------------------------------------
+
+
+def test_water_draining_available_true_when_all_conditions_met() -> None:
+    capability = _make_capability(drainage=True)
+    status = _make_status(
+        _not_started_properties(
+            {
+                DreameVacuumProperty.DRAINAGE_STATUS: DreameVacuumDrainageStatus.IDLE.value,
+                DreameVacuumProperty.AUTO_WATER_REFILLING: 1,
+                DreameVacuumProperty.CHARGING_STATUS: DreameVacuumChargingStatus.CHARGING.value,
+                DreameVacuumProperty.BATTERY_LEVEL: 50,
+            }
+        ),
+        capability=capability,
+    )
+    assert status.docked is True
+    assert status.started is False
+    assert status.draining is False
+    assert status.water_draining_available is True
+
+
+def test_water_draining_available_false_without_capability() -> None:
+    status = _make_status({DreameVacuumProperty.AUTO_WATER_REFILLING: 1})
+    assert status.water_draining_available is False
+
+
+def test_floor_direction_cleaning_available_false_without_map() -> None:
+    capability = _make_capability(floor_direction_cleaning=True)
+    status = _make_status(_not_started_properties(), capability=capability)
+    assert status.floor_direction_cleaning_available is False
+
+
+def test_floor_direction_cleaning_available_true_with_direction_segment() -> None:
+    seg = Segment(1)
+    seg.floor_material_direction = 1
+    map_data = MapData()
+    map_data.segments = {1: seg}
+    manager = MagicMock(selected_map=map_data, get_map=MagicMock(return_value=map_data))
+    capability = _make_capability(floor_direction_cleaning=True)
+    status = _make_status(_not_started_properties(), capability=capability, map_manager=manager)
+    assert status.segments == {1: seg}
+    assert status.floor_direction_cleaning_available is True
+
+
+# ---------------------------------------------------------------------------
+# _core.py - consumable_life_warning_description
+# ---------------------------------------------------------------------------
+
+
+def test_consumable_life_warning_description_not_configured_returns_none() -> None:
+    status = _make_status({})
+    assert status.consumable_life_warning_description(DreameVacuumProperty.STATUS) is None
+
+
+def test_consumable_life_warning_description_missing_value_returns_none() -> None:
+    status = _make_status({})
+    assert status.consumable_life_warning_description(DreameVacuumProperty.MAIN_BRUSH_LEFT) is None
+
+
+def test_consumable_life_warning_description_zero_uses_first_entry() -> None:
+    status = _make_status({DreameVacuumProperty.MAIN_BRUSH_LEFT: 0})
+    description = CONSUMABLE_TO_LIFE_WARNING_DESCRIPTION[DreameVacuumProperty.MAIN_BRUSH_LEFT]
+    assert status.consumable_life_warning_description(DreameVacuumProperty.MAIN_BRUSH_LEFT) == description[0]
+
+
+def test_consumable_life_warning_description_nonzero_uses_second_entry() -> None:
+    status = _make_status({DreameVacuumProperty.MAIN_BRUSH_LEFT: 3})
+    description = CONSUMABLE_TO_LIFE_WARNING_DESCRIPTION[DreameVacuumProperty.MAIN_BRUSH_LEFT]
+    assert status.consumable_life_warning_description(DreameVacuumProperty.MAIN_BRUSH_LEFT) == description[1]
+
+
+def test_consumable_life_warning_description_out_of_range_returns_none() -> None:
+    status = _make_status({DreameVacuumProperty.MAIN_BRUSH_LEFT: 10})
+    assert status.consumable_life_warning_description(DreameVacuumProperty.MAIN_BRUSH_LEFT) is None
+
+
+def test_consumable_life_warning_description_negative_returns_none() -> None:
+    status = _make_status({DreameVacuumProperty.MAIN_BRUSH_LEFT: -1})
+    assert status.consumable_life_warning_description(DreameVacuumProperty.MAIN_BRUSH_LEFT) is None
+
+
+# ---------------------------------------------------------------------------
+# _core.py - job property
+# ---------------------------------------------------------------------------
+
+
+def test_job_reports_status_name_and_cloud_did() -> None:
+    status = _make_status({DreameVacuumProperty.STATUS: DreameVacuumStatus.CLEANING.value})
+    status._device._protocol.cloud.device_id = "device-123"
+    job = status.job
+    assert job is not None
+    assert job[ATTR_STATUS] == DreameVacuumStatus.CLEANING.name
+    assert job[ATTR_DID] == "device-123"
+
+
+def test_job_no_cloud_omits_did() -> None:
+    status = _make_status({})
+    status._device._protocol.cloud = None
+    job = status.job
+    assert ATTR_DID not in job
+
+
+def test_job_water_tank_key_switches_with_self_wash_base() -> None:
+    status_no_wash = _make_status({DreameVacuumProperty.WATER_TANK: DreameVacuumWaterTank.INSTALLED.value})
+    status_no_wash._device._protocol.cloud = None
+    job_no_wash = status_no_wash.job
+    assert job_no_wash[ATTR_WATER_TANK] is True
+    assert ATTR_MOP_PAD not in job_no_wash
+
+    capability = _make_capability(self_wash_base=True)
+    status_wash = _make_status(capability=capability)
+    status_wash._device._protocol.cloud = None
+    job_wash = status_wash.job
+    assert ATTR_MOP_PAD in job_wash
+    assert ATTR_WATER_TANK not in job_wash
+
+
+def test_job_cleaning_mode_included_when_custom_cleaning_mode_and_set() -> None:
+    # auto_switch_settings + mop_pad_lifting is capability.custom_cleaning_mode's documented
+    # fast path (see _make_capability's docstring) - forces it True deterministically.
+    capability = _make_capability(auto_switch_settings=True, mop_pad_lifting=True)
+    status = _make_status(capability=capability)
+    status._device._protocol.cloud = None
+    status.cleaning_mode = DreameVacuumCleaningMode.MOPPING
+    job = status.job
+    assert job[ATTR_CLEANING_MODE] == DreameVacuumCleaningMode.MOPPING.name
+
+
+def test_job_cleaning_mode_omitted_when_none() -> None:
+    capability = _make_capability(auto_switch_settings=True, mop_pad_lifting=True)
+    status = _make_status(capability=capability)
+    status._device._protocol.cloud = None
+    assert status.cleaning_mode is None
+    assert ATTR_CLEANING_MODE not in status.job
+
+
+def test_job_not_completed_when_cleanup_not_completed() -> None:
+    status = _make_status({})
+    status._device._protocol.cloud = None
+    assert status.cleanup_completed is False
+    job = status.job
+    assert job[ATTR_COMPLETED] is False
+    assert ATTR_CLEANED_AREA not in job
+
+
+def test_job_completed_includes_cleaned_area_and_time() -> None:
+    status = _make_status({DreameVacuumProperty.CLEANED_AREA: 12, DreameVacuumProperty.CLEANING_TIME: 34})
+    status._device._protocol.cloud = None
+    status.cleanup_completed = True
+    job = status.job
+    assert job[ATTR_COMPLETED] is True
+    assert job[ATTR_CLEANED_AREA] == 12
+    assert job[ATTR_CLEANING_TIME] == 34
+
+
+def test_job_active_segments_from_map() -> None:
+    map_data = MapData()
+    map_data.active_segments = [1, 2]
+    manager = MagicMock(get_map=MagicMock(return_value=map_data))
+    status = _make_status({}, map_manager=manager)
+    status._device._protocol.cloud = None
+    assert status.job[ATTR_ACTIVE_SEGMENTS] == [1, 2]
+
+
+def test_job_active_areas_without_go_to_zone() -> None:
+    map_data = MapData()
+    map_data.active_areas = [[0, 0, 100, 100]]
+    manager = MagicMock(get_map=MagicMock(return_value=map_data))
+    status = _make_status({}, map_manager=manager)
+    status._device._protocol.cloud = None
+    assert status.go_to_zone is None
+    assert status.job[ATTR_ACTIVE_AREAS] == [[0, 0, 100, 100]]
+
+
+def test_job_active_areas_with_go_to_zone_becomes_cruise_point() -> None:
+    map_data = MapData()
+    map_data.active_areas = [[0, 0, 100, 100]]
+    manager = MagicMock(get_map=MagicMock(return_value=map_data))
+    status = _make_status({}, map_manager=manager)
+    status._device._protocol.cloud = None
+    status.go_to_zone = GoToZoneSettings(x=150, y=250)
+    job = status.job
+    assert ATTR_ACTIVE_AREAS not in job
+    point = job[ATTR_ACTIVE_CRUISE_POINTS][1]
+    assert (point.x, point.y) == (150, 250)
+
+
+def test_job_active_points_from_map() -> None:
+    map_data = MapData()
+    map_data.active_points = [[10, 20]]
+    manager = MagicMock(get_map=MagicMock(return_value=map_data))
+    status = _make_status({}, map_manager=manager)
+    status._device._protocol.cloud = None
+    assert status.job[ATTR_ACTIVE_POINTS] == [[10, 20]]
+
+
+def test_job_predefined_points_from_map() -> None:
+    map_data = MapData()
+    map_data.predefined_points = [[5, 5]]
+    manager = MagicMock(get_map=MagicMock(return_value=map_data))
+    status = _make_status({}, map_manager=manager)
+    status._device._protocol.cloud = None
+    assert status.job[ATTR_PREDEFINED_POINTS] == [[5, 5]]
+
+
+def test_job_active_cruise_points_from_map() -> None:
+    map_data = MapData()
+    map_data.active_cruise_points = {1: Coordinate(1, 2, False, 0)}
+    manager = MagicMock(get_map=MagicMock(return_value=map_data))
+    status = _make_status({}, map_manager=manager)
+    status._device._protocol.cloud = None
+    assert status.job[ATTR_ACTIVE_CRUISE_POINTS] == {1: Coordinate(1, 2, False, 0)}
+
+
+def test_job_no_map_data_omits_active_keys() -> None:
+    status = _make_status({})
+    status._device._protocol.cloud = None
+    job = status.job
+    assert ATTR_ACTIVE_SEGMENTS not in job
+    assert ATTR_ACTIVE_AREAS not in job
+    assert ATTR_ACTIVE_POINTS not in job
+    assert ATTR_PREDEFINED_POINTS not in job
+    assert ATTR_ACTIVE_CRUISE_POINTS not in job
+
+
+# ---------------------------------------------------------------------------
+# _core.py - attributes / _build_property_list / _format_property_value /
+# _add_state_attributes (large dict-building integration surface)
+# ---------------------------------------------------------------------------
+
+
+def test_attributes_bare_bones_device() -> None:
+    """A bare-bones capability (only the lidar_navigation/multi_floor_map defaults) still
+    builds a complete attributes dict without crashing, and reports the handful of
+    properties that were actually populated."""
+    capability = _make_capability()
+    status = _make_status(
+        {
+            DreameVacuumProperty.STATUS: DreameVacuumStatus.PAUSED.value,
+            DreameVacuumProperty.SUCTION_LEVEL: DreameVacuumSuctionLevel.STRONG.value,
+        },
+        capability=capability,
+    )
+    status._device._protocol.cloud = None
+    status._device.info = None
+
+    attributes = status.attributes
+    assert attributes is not None
+    assert attributes["status"] == DreameVacuumStatus.PAUSED.name.replace("_", " ").capitalize()
+    assert attributes["suction_level"] == SUCTION_LEVEL_CODE_TO_NAME[DreameVacuumSuctionLevel.STRONG].capitalize()
+    # A missing WATER_TANK property reads as "not NOT_INSTALLED" -> considered installed.
+    assert attributes["water_tank"] is True
+    assert attributes["battery"] is None
+    # TASK_STATUS is unset, so started defaults True -> mapping_available requires "not started".
+    assert status.started is True
+    assert attributes["mapping_available"] is False
+    assert attributes["has_saved_map"] is False  # no map manager configured
+    assert attributes["capabilities"] is None
+
+
+def test_attributes_self_wash_base_mop_wash_level_path() -> None:
+    """self_wash_base without smart_mop_washing takes the MOP_WASH_LEVEL property path
+    (rather than SMART_MOP_WASHING), and exercises several capability-gated appends at once."""
+    capability = _make_capability(
+        self_wash_base=True,
+        auto_empty_base=True,
+        drainage=True,
+        hot_washing=True,
+        cleaning_route=True,
+        camera_streaming=True,
+        max_suction_power=True,
+        uv_sterilization=True,
+        off_peak_charging=True,
+        dnd=True,
+        auto_recleaning=True,
+        auto_rewashing=True,
+        self_clean_frequency=True,
+        auto_switch_settings=True,
+        mop_pad_lifting=True,
+        floor_direction_cleaning=True,
+        deodorizer=True,
+        wheel=True,
+        scale_inhibitor=True,
+        backup_map=True,
+        carpet_recognition=True,
+        mop_pad_unmounting=True,
+        clean_carpets_first=True,
+        ultra_clean_mode=True,
+        large_particles_boost=True,
+        cleangenius_mode=True,
+        water_temperature=True,
+        silent_drying=True,
+        hair_compression=True,
+        side_brush_carpet_rotate=True,
+        auto_lds_lifting=True,
+        dnd_functions=True,
+        intensive_carpet_cleaning=True,
+        mop_pad_swing_plus=True,
+        # mop_pad_swing=True makes capability.mop_extend resolve True too, since its own
+        # throwaway device auto-mocks a non-None auto-switch value (documented on
+        # _make_capability / the dedicated mop_extend test above) - this exercises the
+        # MOP_EXTEND(+FREQUENCY) append branch instead of the plain MOP_PAD_SWING one.
+        mop_pad_swing=True,
+    )
+    properties = {
+        DreameVacuumProperty.STATUS: DreameVacuumStatus.CLEANING.value,
+        DreameVacuumProperty.SUCTION_LEVEL: DreameVacuumSuctionLevel.STRONG.value,
+        DreameVacuumProperty.ERROR: DreameVacuumErrorCode.NO_ERROR.value,
+        DreameVacuumProperty.LOW_WATER_WARNING: DreameVacuumLowWaterWarning.NO_WARNING.value,
+        DreameVacuumProperty.CLEANING_TIME: 15,
+        DreameVacuumProperty.CLEANED_AREA: 20,
+        DreameVacuumProperty.CLEAN_WATER_TANK_STATUS: 1,
+        DreameVacuumProperty.DIRTY_WATER_TANK_STATUS: 1,
+        DreameVacuumProperty.HOT_WATER_STATUS: DreameVacuumHotWaterStatus.ENABLED.value,
+        DreameVacuumProperty.AUTO_DUST_COLLECTING: 1,
+        DreameVacuumProperty.AUTO_EMPTY_STATUS: DreameVacuumAutoEmptyStatus.ACTIVE.value,
+        DreameVacuumProperty.SELF_WASH_BASE_STATUS: DreameVacuumSelfWashBaseStatus.IDLE.value,
+        DreameVacuumProperty.MOP_WASH_LEVEL: DreameVacuumMopWashLevel.DAILY.value,
+        DreameVacuumProperty.CUSTOMIZED_CLEANING: 1,
+        DreameVacuumProperty.SCHEDULED_CLEAN: 1,
+        DreameVacuumProperty.MULTI_FLOOR_MAP: 1,
+        DreameVacuumProperty.MAP_RECOVERY_STATUS: DreameVacuumStationDrainageStatus.IDLE.value,
+        DreameVacuumProperty.MAP_BACKUP_STATUS: 0,
+        DreameVacuumProperty.DETERGENT_STATUS: 0,
+        DreameVacuumProperty.STATION_DRAINAGE_STATUS: DreameVacuumStationDrainageStatus.IDLE.value,
+        DreameVacuumProperty.DUST_BAG_STATUS: DreameVacuumDustBagStatus.INSTALLED.value,
+        DreameVacuumProperty.AUTO_WATER_REFILLING: 1,
+        DreameVacuumProperty.CARPET_RECOGNITION: 1,
+        DreameVacuumProperty.CARPET_CLEANING: DreameVacuumCarpetCleaning.AVOIDANCE.value,
+        DreameVacuumProperty.AUTO_MOUNT_MOP: 1,
+        DreameVacuumProperty.CLEANGENIUS_MODE: DreameVacuumCleanGeniusMode.MOP_AFTER_VACUUM.value,
+        DreameVacuumProperty.WATER_TEMPERATURE: DreameVacuumWaterTemperature.HOT.value,
+        # Auto-switch-backed properties are still resolved through the plain get_property
+        # dispatch inside the attributes loop (see _format_property_value), so they must
+        # also be present here, in addition to auto_switch_properties (used by the
+        # matching *_name computation that reads them via get_auto_switch_property).
+        DreameVacuumAutoSwitchProperty.CLEANING_ROUTE: DreameVacuumCleaningRoute.STANDARD.value,
+        DreameVacuumAutoSwitchProperty.AUTO_RECLEANING: 1,
+        DreameVacuumAutoSwitchProperty.AUTO_REWASHING: 1,
+        DreameVacuumAutoSwitchProperty.MAX_SUCTION_POWER: 1,
+        DreameVacuumAutoSwitchProperty.UV_STERILIZATION: 1,
+        DreameVacuumAutoSwitchProperty.SELF_CLEAN_FREQUENCY: 2,
+        DreameVacuumAutoSwitchProperty.MOP_EXTEND_FREQUENCY: DreameVacuumMopExtendFrequency.HIGH.value,
+    }
+    auto_switch_properties = {
+        DreameVacuumAutoSwitchProperty.CLEANING_ROUTE: DreameVacuumCleaningRoute.STANDARD.value,
+        DreameVacuumAutoSwitchProperty.AUTO_RECLEANING: 1,
+        DreameVacuumAutoSwitchProperty.AUTO_REWASHING: 1,
+        DreameVacuumAutoSwitchProperty.SELF_CLEAN_FREQUENCY: 2,
+        DreameVacuumAutoSwitchProperty.MOP_EXTEND_FREQUENCY: DreameVacuumMopExtendFrequency.HIGH.value,
+    }
+    status = _make_status(properties, capability=capability, auto_switch_properties=auto_switch_properties)
+    status._device._protocol.cloud = None
+    status._device.info = None
+    status.cleaning_mode = DreameVacuumCleaningMode.SWEEPING
+    status.self_clean_value = 20  # combined with SELF_CLEAN_FREQUENCY=BY_TIME(2) -> self_clean_by_time True
+
+    attributes = status.attributes
+    assert attributes is not None
+    assert attributes["status"] == "Cleaning"
+    assert attributes["mop_pad"] is True
+    assert ATTR_WATER_TANK not in attributes
+    assert (
+        attributes["mop_wash_level"]
+        == MOP_WASH_LEVEL_TO_NAME[DreameVacuumMopWashLevel.DAILY].replace("_", " ").capitalize()
+    )
+    assert (
+        attributes["cleaning_route"]
+        == CLEANING_ROUTE_TO_NAME[DreameVacuumCleaningRoute.STANDARD].replace("_", " ").capitalize()
+    )
+    assert (
+        attributes["auto_recleaning"]
+        == SECOND_CLEANING_TO_NAME[DreameVacuumSecondCleaning.IN_DEEP_MODE].replace("_", " ").capitalize()
+    )
+    assert attributes["max_suction_power"] is True
+    assert attributes["uv_sterilization"] is True
+    assert attributes["dust_collection_available"] is False
+    assert attributes["washing_available"] is True
+    assert attributes["draining_available"] is False
+    assert attributes["floor_direction_cleaning_available"] is False
+    assert attributes["off_peak_charging"] is False
+    assert attributes["off_peak_charging_start"] == "22:00"
+    assert attributes["cleaning_time"] == 15
+    assert attributes["cleaned_area"] == 20
+    assert attributes["self_clean_time"] == 20
+    assert attributes["carpet_recognition"] is True
+    assert (
+        attributes["carpet_cleaning"]
+        == CARPET_CLEANING_CODE_TO_NAME[DreameVacuumCarpetCleaning.AVOIDANCE].replace("_", " ").capitalize()
+    )
+    assert attributes["auto_mount_mop"] is True
+    assert (
+        attributes["cleangenius_mode"]
+        == CLEANGENIUS_MODE_TO_NAME[DreameVacuumCleanGeniusMode.MOP_AFTER_VACUUM].replace("_", " ").capitalize()
+    )
+    assert (
+        attributes["water_temperature"]
+        == WATER_TEMPERATURE_TO_NAME[DreameVacuumWaterTemperature.HOT].replace("_", " ").capitalize()
+    )
+    assert (
+        attributes["mop_extend_frequency"]
+        == MOP_EXTEND_FREQUENCY_TO_NAME[DreameVacuumMopExtendFrequency.HIGH].replace("_", " ").capitalize()
+    )
+    assert (
+        attributes["dust_bag_status"]
+        == DUST_BAG_STATUS_TO_NAME[DreameVacuumDustBagStatus.INSTALLED].replace("_", " ").capitalize()
+    )
+    # AUTO_WATER_REFILLING=1 -> auto_water_refilling_enabled True -> the ATTR_DRAINING branch
+    # is taken instead of ATTR_LOW_WATER.
+    assert ATTR_LOW_WATER not in attributes
+    assert attributes[ATTR_DRAINING] is False
+    assert attributes["capabilities"] is None
+
+
+def test_attributes_bare_bones_extra_property_formatting_branches() -> None:
+    """Fills in _format_property_value branches that only fire for a non-self_wash_base,
+    non-carpet_recognition, non-mop_pad_swing device (the true "bare-bones" defaults)."""
+    capability = _make_capability()
+    status = _make_status(
+        {
+            DreameVacuumProperty.STATUS: DreameVacuumStatus.PAUSED.value,
+            DreameVacuumProperty.WATER_VOLUME: DreameVacuumWaterVolume.HIGH.value,
+            DreameVacuumProperty.CLEANING_MODE: DreameVacuumCleaningMode.SWEEPING.value,
+            DreameVacuumProperty.VOICE_ASSISTANT_LANGUAGE: "EN",
+            DreameVacuumProperty.CARPET_SENSITIVITY: DreameVacuumCarpetSensitivity.MEDIUM.value,
+            DreameVacuumProperty.SCHEDULE: 1,
+            # The attributes() loop resolves every listed property (including
+            # AutoSwitchProperty ones) through the plain get_property dispatch, so this
+            # must be duplicated below in auto_switch_properties (used by
+            # wider_corner_coverage_name's own get_auto_switch_property lookup).
+            DreameVacuumAutoSwitchProperty.WIDER_CORNER_COVERAGE: 1,
+        },
+        capability=capability,
+        auto_switch_properties={DreameVacuumAutoSwitchProperty.WIDER_CORNER_COVERAGE: 1},
+    )
+    status._device._protocol.cloud = None
+    status._device.info = None
+    status.cleaning_mode = DreameVacuumCleaningMode.SWEEPING
+    status.schedule = [{"id": 1}]
+
+    attributes = status.attributes
+    assert attributes is not None
+    assert attributes["water_volume"] == WATER_VOLUME_CODE_TO_NAME[DreameVacuumWaterVolume.HIGH].capitalize()
+    assert (
+        attributes["cleaning_mode"]
+        == CLEANING_MODE_CODE_TO_NAME[DreameVacuumCleaningMode.SWEEPING].replace("_", " ").capitalize()
+    )
+    # capability.voice_assistant is off: _format_property_value returns (None, None) for
+    # VOICE_ASSISTANT_LANGUAGE, so the "continue" branch in attributes() skips the key entirely.
+    assert "voice_assistant_language" not in attributes
+    assert (
+        attributes["carpet_sensitivity"]
+        == CARPET_SENSITIVITY_CODE_TO_NAME[DreameVacuumCarpetSensitivity.MEDIUM].replace("_", " ").capitalize()
+    )
+    assert attributes["schedule"] == [{"id": 1}]
+    assert (
+        attributes["wider_corner_coverage"]
+        == WIDER_CORNER_COVERAGE_TO_NAME[DreameVacuumWiderCornerCoverage.HIGH_FREQUENCY].replace("_", " ").capitalize()
+    )
+
+
+def test_mop_pad_swing_append_and_format_when_mop_extend_forced_off() -> None:
+    """mop_extend is a *computed* capability property whose own throwaway device normally
+    auto-mocks a truthy auto-switch value (see _make_capability); forcing that specific
+    lookup to None here isolates the plain MOP_PAD_SWING append/format branch from it."""
+    capability = _make_capability(mop_pad_swing=True)
+    capability._device.get_auto_switch_property = MagicMock(return_value=None)
+    assert capability.mop_extend is False
+    status = _make_status(
+        {
+            DreameVacuumProperty.STATUS: DreameVacuumStatus.PAUSED.value,
+            # The attributes() loop resolves every listed property (including
+            # AutoSwitchProperty ones) through the plain get_property dispatch, so the
+            # value must be duplicated here in addition to auto_switch_properties (used
+            # by mop_pad_swing_name's own get_auto_switch_property lookup).
+            DreameVacuumAutoSwitchProperty.MOP_PAD_SWING: DreameVacuumMopPadSwing.WEEKLY.value,
+        },
+        capability=capability,
+        auto_switch_properties={DreameVacuumAutoSwitchProperty.MOP_PAD_SWING: DreameVacuumMopPadSwing.WEEKLY.value},
+    )
+    status._device._protocol.cloud = None
+    status._device.info = None
+
+    attributes = status.attributes
+    assert attributes is not None
+    assert (
+        attributes["mop_pad_swing"]
+        == MOP_PAD_SWING_TO_NAME[DreameVacuumMopPadSwing.WEEKLY].replace("_", " ").capitalize()
+    )
+
+
+def test_attributes_smart_mop_washing_map_and_dnd_task_path() -> None:
+    """self_wash_base + smart_mop_washing takes the SMART_MOP_WASHING/washing_mode path
+    (instead of MOP_WASH_LEVEL), dnd_task exercises the per-task ATTR_DND dict shape, and a
+    configured map manager exercises the ATTR_ROOMS/active_segments/selected_map block."""
+    capability = _make_capability(
+        self_wash_base=True,
+        smart_mop_washing=True,
+        mop_washing_with_detergent=True,
+        mop_clean_frequency=True,
+        dnd=True,
+        dnd_task=True,
+        cleangenius=True,
+        voice_assistant=True,
+        wifi_map=True,
+        auto_empty_mode=True,
+        shortcuts=True,
+    )
+    # Segment.__init__ always finishes with set_name(), which derives .name/.icon from
+    # .type/.custom_name/.segment_id - passing name=/icon= directly is a no-op, so
+    # custom_name= is used here and the expected room entry is read back off the segment.
+    segment = Segment(1, custom_name="Living Room")
+    selected_map = MapData()
+    selected_map.map_id = 5
+    selected_map.map_name = "Home"
+    selected_map.segments = {1: segment}
+    current_map = MapData()
+    current_map.map_id = 5
+    current_map.map_index = 0
+    current_map.segments = {1: segment}
+    current_map.robot_segment = 1
+    manager = MagicMock()
+    manager.get_map = MagicMock(return_value=current_map)
+    manager.selected_map = selected_map
+    manager.map_list = [5]
+    manager.map_data_list = {5: selected_map}
+    manager.cleaning_sequence = [1]
+
+    properties = {
+        DreameVacuumProperty.STATUS: DreameVacuumStatus.CLEANING.value,
+        DreameVacuumProperty.SUCTION_LEVEL: DreameVacuumSuctionLevel.STRONG.value,
+        DreameVacuumProperty.ERROR: DreameVacuumErrorCode.NO_ERROR.value,
+        DreameVacuumProperty.LOW_WATER_WARNING: DreameVacuumLowWaterWarning.NO_WARNING.value,
+        DreameVacuumProperty.CLEAN_WATER_TANK_STATUS: 1,
+        DreameVacuumProperty.DIRTY_WATER_TANK_STATUS: 1,
+        DreameVacuumProperty.SMART_MOP_WASHING: 1,
+        DreameVacuumProperty.VOICE_ASSISTANT_LANGUAGE: "EN",
+        DreameVacuumProperty.AUTO_DUST_COLLECTING: 1,
+        DreameVacuumProperty.SCHEDULE: 1,
+        DreameVacuumAutoSwitchProperty.CLEANGENIUS: 1,
+        DreameVacuumAutoSwitchProperty.MOPPING_TYPE: DreameVacuumMoppingType.ACCURATE.value,
+    }
+    auto_switch_properties = {
+        DreameVacuumAutoSwitchProperty.CLEANGENIUS: 1,
+        DreameVacuumAutoSwitchProperty.MOPPING_TYPE: DreameVacuumMoppingType.ACCURATE.value,
+    }
+    status = _make_status(
+        properties, capability=capability, auto_switch_properties=auto_switch_properties, map_manager=manager
+    )
+    status._device._protocol.cloud = None
+    status._device.info = None
+    status.dnd_tasks = [{"id": "t1", "st": "20:00", "et": "06:00", "en": True}]
+    status.shortcuts = {1: Shortcut(id=1, name="Morning", map_id=5, running=True, tasks=None)}
+    status.schedule = [{"id": 1}]
+
+    attributes = status.attributes
+    assert attributes is not None
+    assert attributes["mop_pad"] is True
+    assert attributes["smart_mop_washing"] == 1
+    assert attributes["washing_mode"] == STATE_UNKNOWN.capitalize()  # cleangenius_mode capability off
+    assert attributes["dnd"] == {"t1": {"enabled": True, "start": "20:00", "end": "06:00"}}
+    assert (
+        attributes["mopping_type"]
+        == MOPPING_TYPE_TO_NAME[DreameVacuumMoppingType.ACCURATE].replace("_", " ").capitalize()
+    )
+    assert (
+        attributes[ATTR_AUTO_EMPTY_MODE]
+        == AUTO_EMPTY_MODE_TO_NAME[DreameVacuumAutoEmptyMode.STANDARD].replace("_", " ").capitalize()
+    )
+    assert attributes["schedule"] == [{"id": 1}]
+    assert attributes[ATTR_SHORTCUTS] == {1: {"name": "Morning", "map_id": 5, "running": True, "tasks": None}}
+    assert attributes["shortcut_task"] is True
+    assert (
+        attributes["voice_assistant_language"]
+        == VOICE_ASSISTANT_LANGUAGE_TO_NAME[DreameVacuumVoiceAssistantLanguage.ENGLISH].replace("_", " ").capitalize()
+    )
+    assert (
+        attributes["cleangenius"]
+        == CLEANGENIUS_TO_NAME[DreameVacuumCleanGenius.ROUTINE_CLEANING].replace("_", " ").capitalize()
+    )
+    assert attributes["active_segments"] == [1]
+    assert attributes["current_segment"] == 1
+    assert attributes["selected_map"] == "Home"
+    assert attributes["selected_map_id"] == 5
+    assert attributes["selected_map_index"] == 0
+    assert attributes["rooms"] == {"Home": [{"id": 1, "name": segment.name, "icon": segment.icon}]}
+    assert segment.name == "Living Room"
