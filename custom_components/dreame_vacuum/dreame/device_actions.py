@@ -1164,9 +1164,10 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
                 new_shortcuts = {}
                 for shortcut in shortcuts:
                     id = shortcut["id"]
-                    running = (
-                        False if "state" not in shortcut else bool(shortcut["state"] == "0" or shortcut["state"] == "1")
-                    )
+                    # "state" follows this codebase's usual TRUE/FALSE string convention
+                    # ("1" == running, "0" == stopped); see device_setters.py's
+                    # `value == "TRUE" or value == "1"` / `value == "FALSE" or value == "0"`.
+                    running = False if "state" not in shortcut else shortcut["state"] == "1"
                     name = base64.decodebytes(shortcut["name"].encode("utf8")).decode("utf-8")
                     new_shortcuts[id] = Shortcut(id=id, name=name, running=running)
                 self.status.shortcuts = new_shortcuts
@@ -1184,11 +1185,7 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
                     new_shortcuts = {}
                     for shortcut in shortcuts:
                         id = shortcut["id"]
-                        running = (
-                            False
-                            if "state" not in shortcut
-                            else bool(shortcut["state"] == "0" or shortcut["state"] == "1")
-                        )
+                        running = False if "state" not in shortcut else shortcut["state"] == "1"
                         name = base64.decodebytes(shortcut["name"].encode("utf8")).decode("utf-8")
                         map_id = detail[id] if id in detail else None
                         tasks = None
