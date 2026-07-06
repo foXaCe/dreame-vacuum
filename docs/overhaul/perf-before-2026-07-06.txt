@@ -1,0 +1,18 @@
+=== BASELINE PERF dreame_vacuum — 2026-07-06 ===
+HA dev: 2026.7.0 — boot 2026-07-05 23:15:48
+Setup of domain dreame_vacuum took 0.01 seconds
+
+=== importtime (venv HA 2026.2.3, py3.13) — top cumulés ===
+import time:      4072 |     152400 |     homeassistant.helpers.event
+import time:       961 |     175303 |       custom_components.dreame_vacuum.dreame.device
+import time:       547 |     175850 |     custom_components.dreame_vacuum.dreame
+import time:       772 |     208802 |               hass_nabucasa
+import time:       327 |     209595 |             homeassistant.helpers.network
+import time:      6799 |     342216 |           homeassistant.components.http
+import time:       956 |     344163 |         homeassistant.components.websocket_api.http
+import time:      2875 |     387924 |   homeassistant.config_entries
+import time:       358 |     393745 |       homeassistant.components.websocket_api
+import time:      1540 |     395284 |     homeassistant.components.persistent_notification
+import time:       811 |     573074 |   custom_components.dreame_vacuum.coordinator
+import time:       367 |     972032 | custom_components.dreame_vacuum
+     645122
