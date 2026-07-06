@@ -1,0 +1,126 @@
+{
+  "charger_position": {
+    "a": 183,
+    "x": 421,
+    "y": 43
+  },
+  "dimensions": {
+    "grid_size": 50,
+    "height": 270,
+    "left": -12450,
+    "top": -8400,
+    "width": 270
+  },
+  "empty_map": false,
+  "frame_type": 73,
+  "robot_position": {
+    "a": 183,
+    "x": 421,
+    "y": 43
+  },
+  "saved_map": false,
+  "segments": {
+    "10": {
+      "index": 0,
+      "name": "Primary Bedroom",
+      "neighbors": [
+        7,
+        11
+      ],
+      "type": 2
+    },
+    "11": {
+      "index": 1,
+      "name": "Primary Bedroom 2",
+      "neighbors": [
+        7,
+        9,
+        10
+      ],
+      "type": 2
+    },
+    "2": {
+      "index": 0,
+      "name": "Kitchen",
+      "neighbors": [
+        5
+      ],
+      "type": 4
+    },
+    "3": {
+      "index": 0,
+      "name": "Living Room",
+      "neighbors": [
+        4,
+        5
+      ],
+      "type": 1
+    },
+    "4": {
+      "index": 0,
+      "name": "Room 4",
+      "neighbors": [
+        3,
+        5,
+        6
+      ],
+      "type": 0
+    },
+    "5": {
+      "index": 0,
+      "name": "Dining Hall",
+      "neighbors": [
+        2,
+        3,
+        4,
+        6,
+        7,
+        8,
+        9
+      ],
+      "type": 5
+    },
+    "6": {
+      "index": 0,
+      "name": "Utility Room",
+      "neighbors": [
+        4,
+        5,
+        8
+      ],
+      "type": 9
+    },
+    "7": {
+      "index": 0,
+      "name": "Corridor",
+      "neighbors": [
+        5,
+        8,
+        9,
+        10,
+        11
+      ],
+      "type": 8
+    },
+    "8": {
+      "index": 0,
+      "name": "Room 8",
+      "neighbors": [
+        5,
+        6,
+        7
+      ],
+      "type": 0
+    },
+    "9": {
+      "index": 0,
+      "name": "Bathroom",
+      "neighbors": [
+        5,
+        7,
+        11
+      ],
+      "type": 6
+    }
+  }
+}
