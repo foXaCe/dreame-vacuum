@@ -25,5 +25,5 @@
     "mini-racer>=0.12.0",
     "paho-mqtt>=2.0.0,<3.0"
   ],
-  "version": "6.7.0"
+  "version": "6.8.0"
 }

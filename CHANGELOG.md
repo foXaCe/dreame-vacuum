@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.0] - 2026-07-07
+
+### Added
+- **Schedule write services**: `vacuum_set_schedule` (create/edit, only the
+  targeted task is touched, siblings stay byte-identical) and
+  `vacuum_delete_schedule`. Round-tripped against a real device — note that
+  some recent firmwares silently ignore the delete operation (documented in
+  `docs/services.md` and `docs/dev/schedule-format.md`; deleting from the
+  official app still works).
+- **Multi-window Do-Not-Disturb services**: `vacuum_set_dnd_task` (upsert by
+  id) and `vacuum_delete_dnd_task`, gated on the `dnd_task` capability. The
+  per-task `weekday_mask` is exposed and accepted as a raw opaque int (only
+  `127` = all days is confirmed).
+- **Doorway markers on the rendered map**: `walls_info` door segments render
+  as a subtle dashed line (new `DOOR` layer, hideable via Hidden map
+  objects → *Doors*). Only door-sized segments (500-2000 mm) are drawn —
+  on real data, longer type-1 segments are app partition lines, not doors.
+- **Robot overlay support for the companion card**: the camera exposes
+  `robot_icon` (the real device asset), `robot_beam_icon` (warm translucent
+  fill-light cone, present only while the fill light is on) and
+  `robot_in_map`; new installs hide the robot from the PNG by default so
+  the card can drive a smooth client-side marker instead.
+- **Map rendering options**: configurable render resolution (×1/2/3), floor
+  relief, `wall_lines`/`door_lines` map attributes, and self-wash station
+  sensors.
+- **MQTT TOFU hardening**: broker certificate fingerprints are persisted
+  across restarts and a repair issue is raised when one changes.
+- **Golden decoder fixtures from a real device**: redacted saved + live map
+  payloads (`tests/fixtures/maps/r95285-*.b64`) now pin the full
+  decode pipeline; capture/redaction procedure in
+  `docs/dev/capture-map-payload.md`.
+
+### Changed
+- No-go / no-mop zones, virtual walls and thresholds are now anti-aliased
+  (localized per-shape smoothing, ~3.5 % render-time cost on a real map).
+- Camera state attributes are memoized by input signature (heavy rebuilds
+  ~15.6× faster on unchanged data).
+- Bulky data URIs (`robot_icon`, `robot_beam_icon`) and structured
+  `schedule`/`dnd` state are excluded from recorder history.
+- `vacuum_types.py` split into focused `types_*` modules behind a
+  compatibility shim (no behaviour change); `select.py` reuses the shared
+  entity resolvers.
+
+### Fixed
+- **HA boot: robot no longer drawn in the top-left corner** — the camera
+  published `vacuum_position`/`charger_position` before its first render
+  produced calibration points; positions are now stripped until calibration
+  exists (calibration is atomic with the image, contract §3.2).
+- Fill light: the camera serves a real beam cone next to the normal robot
+  body instead of a whitened body variant (white robots became an
+  unreadable blob).
+- Robot/segment icons are warmed lazily off the event loop (no PIL work at
+  camera construction).
+- Engine anomalies: `RecoveryMapInfo.__eq__` inverted logic,
+  `Furniture` dropping legitimate `x0=0`/`y0=0` origins,
+  `reload_shortcuts` always-true running flag, missing None-guard in
+  `protocol.py`; ~100 lines of unreachable code purged
+  (`docs/overhaul/known-issues-2026-07-06.md` updated).
+- Lazy `__getattr__` re-raises real `ImportError`s instead of masking them
+  as missing attributes.
+- `vacuum_set_custom_carpet_cleaning` accepts carpet type 2 (room carpet)
+  in `services.yaml`, matching the engine validator.
+
+### Security
+- Pre-signed cloud URLs are redacted from debug logs; documentation example
+  tokens redacted; third-party GitHub Actions pinned to commit SHAs.
+
 ## [6.7.0] - 2026-07-06
 
 ### Added
