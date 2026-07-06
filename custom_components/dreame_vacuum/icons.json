@@ -513,6 +513,9 @@
     "vacuum_delete_map": {
       "service": "mdi:map-minus"
     },
+    "vacuum_delete_schedule": {
+      "service": "mdi:calendar-remove"
+    },
     "vacuum_discard_temporary_map": {
       "service": "mdi:map-remove"
     },
@@ -587,6 +590,9 @@
     },
     "vacuum_set_router_position": {
       "service": "mdi:router-wireless"
+    },
+    "vacuum_set_schedule": {
+      "service": "mdi:calendar-edit"
     },
     "vacuum_set_virtual_threshold": {
       "service": "mdi:door"

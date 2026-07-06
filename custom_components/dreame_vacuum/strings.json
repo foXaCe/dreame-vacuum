@@ -1590,6 +1590,16 @@
       },
       "name": "Clean Zone"
     },
+    "vacuum_delete_dnd_task": {
+      "description": "Delete a single multi-window DnD task by id. (Only on supported devices)",
+      "fields": {
+        "task_id": {
+          "description": "ID of the DnD task to delete.",
+          "name": "Task ID"
+        }
+      },
+      "name": "Delete DnD Task"
+    },
     "vacuum_delete_map": {
       "description": "Delete a map.",
       "fields": {
@@ -1599,6 +1609,16 @@
         }
       },
       "name": "Delete map"
+    },
+    "vacuum_delete_schedule": {
+      "description": "Delete a scheduled cleaning task.",
+      "fields": {
+        "schedule_id": {
+          "description": "ID of the scheduled task to be deleted.",
+          "name": "Schedule ID"
+        }
+      },
+      "name": "Delete schedule"
     },
     "vacuum_discard_temporary_map": {
       "description": "Discard the temporary map.",
@@ -1862,6 +1882,32 @@
       },
       "name": "Set Custom Cleaning"
     },
+    "vacuum_set_dnd_task": {
+      "description": "Create or update a single multi-window DnD task by id. (Only on supported devices)",
+      "fields": {
+        "task_id": {
+          "description": "ID of the DnD task to update. Omit to create a new task.",
+          "name": "Task ID"
+        },
+        "enabled": {
+          "description": "Whether the DnD task is enabled.",
+          "name": "Enabled"
+        },
+        "start": {
+          "description": "Start time of the DnD window (HH:MM).",
+          "name": "Start Time"
+        },
+        "end": {
+          "description": "End time of the DnD window (HH:MM).",
+          "name": "End Time"
+        },
+        "weekday_mask": {
+          "description": "Raw weekday bitmask reported by the device firmware. The bit-to-day mapping is not confirmed; only 127 (all 7 bits set) is known to mean all days. Omit to preserve the existing task's mask, or default to all days for a new task.",
+          "name": "Weekday Mask"
+        }
+      },
+      "name": "Set DnD Task"
+    },
     "vacuum_set_obstacle_ignore": {
       "description": "Set ignore status of an obstacle. (Only supported on vacuums with AI Obstacle detection feature)",
       "fields": {
@@ -1935,6 +1981,48 @@
         }
       },
       "name": "Set router position"
+    },
+    "vacuum_set_schedule": {
+      "description": "Create or update a scheduled cleaning task. Omit schedule_id to create a new task.",
+      "fields": {
+        "schedule_id": {
+          "description": "ID of the scheduled task to update. Omit to create a new task.",
+          "name": "Schedule ID"
+        },
+        "enabled": {
+          "description": "Whether the scheduled task is enabled.",
+          "name": "Enabled"
+        },
+        "time": {
+          "description": "Time of day the task runs, as HH:MM.",
+          "name": "Time"
+        },
+        "repeats": {
+          "description": "Raw repeat pattern as understood by the device (opaque, not decoded by this integration). Keeps the previous value when updating an existing task if omitted.",
+          "name": "Repeats"
+        },
+        "once": {
+          "description": "Run the task once instead of repeating.",
+          "name": "Once"
+        },
+        "map_id": {
+          "description": "ID of the map this task applies to. Keeps the previous value when updating an existing task if omitted.",
+          "name": "Map ID"
+        },
+        "suction_level": {
+          "description": "Suction level for the task. Required when creating a new task; keeps the previous value when updating an existing task if omitted.",
+          "name": "Suction Level"
+        },
+        "water_volume": {
+          "description": "Water volume for the task. Required when creating a new task; keeps the previous value when updating an existing task if omitted.",
+          "name": "Water Volume"
+        },
+        "options": {
+          "description": "Raw list of option codes as understood by the device (opaque, not decoded by this integration). Keeps the previous value when updating an existing task if omitted.",
+          "name": "Options"
+        }
+      },
+      "name": "Set schedule"
     },
     "vacuum_set_virtual_threshold": {
       "description": "Define virtual thresholds.",

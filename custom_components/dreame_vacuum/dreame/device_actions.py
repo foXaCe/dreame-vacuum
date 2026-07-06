@@ -1164,9 +1164,10 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
                 new_shortcuts = {}
                 for shortcut in shortcuts:
                     id = shortcut["id"]
-                    running = (
-                        False if "state" not in shortcut else bool(shortcut["state"] == "0" or shortcut["state"] == "1")
-                    )
+                    # "state" follows this codebase's usual TRUE/FALSE string convention
+                    # ("1" == running, "0" == stopped); see device_setters.py's
+                    # `value == "TRUE" or value == "1"` / `value == "FALSE" or value == "0"`.
+                    running = False if "state" not in shortcut else shortcut["state"] == "1"
                     name = base64.decodebytes(shortcut["name"].encode("utf8")).decode("utf-8")
                     new_shortcuts[id] = Shortcut(id=id, name=name, running=running)
                 self.status.shortcuts = new_shortcuts
@@ -1184,11 +1185,7 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
                     new_shortcuts = {}
                     for shortcut in shortcuts:
                         id = shortcut["id"]
-                        running = (
-                            False
-                            if "state" not in shortcut
-                            else bool(shortcut["state"] == "0" or shortcut["state"] == "1")
-                        )
+                        running = False if "state" not in shortcut else shortcut["state"] == "1"
                         name = base64.decodebytes(shortcut["name"].encode("utf8")).decode("utf-8")
                         map_id = detail[id] if id in detail else None
                         tasks = None
@@ -1338,20 +1335,18 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
         return None
 
     def recovery_map(self, map_id: Any, index: Any) -> Any:
+        # The `map_id` truthiness check in the guard below already rules out
+        # None/"" here, so a "fall back to the selected map" branch on that
+        # condition can never run - removed as dead code.
         mgr: Any = self._map_manager
         if self.capability.map and map_id and index and str(index).isnumeric() and mgr:
-            if (map_id is None or map_id == "") and self.status.selected_map:
-                map_id = self.status.selected_map.map_id
-
             return mgr.get_recovery_map(map_id, index)
         return None
 
     def recovery_map_file(self, map_id: Any, index: Any) -> Any:
+        # See recovery_map() above: same redundant guard removed.
         mgr: Any = self._map_manager
         if self.capability.map and map_id and index and str(index).isnumeric() and mgr:
-            if (map_id is None or map_id == "") and self.status.selected_map:
-                map_id = self.status.selected_map.map_id
-
             return mgr.get_recovery_map_file(map_id, index)
         return None
 

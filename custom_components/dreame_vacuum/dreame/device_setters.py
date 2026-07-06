@@ -56,6 +56,32 @@ from .vacuum_types import (
 
 _LOGGER = logging.getLogger(__name__)
 
+_DND_TIME_PATTERN = re.compile("([0-1][0-9]|2[0-3]):[0-5][0-9]$")
+
+
+def _validate_dnd_window(dnd_start: str | None, dnd_end: str | None) -> tuple[str, str]:
+    """Normalize and validate a DnD HH:MM start/end pair.
+
+    Shared by ``set_dnd_task`` and ``set_dnd_task_entry``: same blank-value
+    defaults ("22:00"/"08:00"), same HH:MM regex, same start != end check.
+    """
+    if dnd_start is None or dnd_start == "":
+        dnd_start = "22:00"
+    if dnd_end is None or dnd_end == "":
+        dnd_end = "08:00"
+
+    if not re.match(_DND_TIME_PATTERN, dnd_start):
+        raise InvalidValueException("DnD start time is not valid: (%s).", dnd_start)
+    if not re.match(_DND_TIME_PATTERN, dnd_end):
+        raise InvalidValueException("DnD end time is not valid: (%s).", dnd_end)
+    if dnd_start == dnd_end:
+        raise InvalidValueException(
+            "DnD Start time must be different from DnD end time: (%s == %s).",
+            dnd_start,
+            dnd_end,
+        )
+    return dnd_start, dnd_end
+
 
 class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
     """Mixin providing property getters, setters, and update helpers for DreameVacuumDevice."""
@@ -750,23 +776,7 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
 
     def set_dnd_task(self, enabled: bool | None, dnd_start: str | None, dnd_end: str | None) -> bool:
         """Set do not disturb task"""
-        if dnd_start is None or dnd_start == "":
-            dnd_start = "22:00"
-
-        if dnd_end is None or dnd_end == "":
-            dnd_end = "08:00"
-
-        time_pattern = re.compile("([0-1][0-9]|2[0-3]):[0-5][0-9]$")
-        if not re.match(time_pattern, dnd_start):
-            raise InvalidValueException("DnD start time is not valid: (%s).", dnd_start)
-        if not re.match(time_pattern, dnd_end):
-            raise InvalidValueException("DnD end time is not valid: (%s).", dnd_end)
-        if dnd_start == dnd_end:
-            raise InvalidValueException(
-                "DnD Start time must be different from DnD end time: (%s == %s).",
-                dnd_start,
-                dnd_end,
-            )
+        dnd_start, dnd_end = _validate_dnd_window(dnd_start, dnd_end)
 
         if self.status.dnd_tasks is None:
             self.status.dnd_tasks = []
@@ -790,6 +800,114 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
         return self.set_property(
             DreameVacuumProperty.DND_TASK,
             str(json.dumps(dnd_tasks, separators=(",", ":"))).replace(" ", ""),
+        )
+
+    def set_dnd_task_entry(
+        self,
+        task_id: int | None,
+        enabled: bool,
+        dnd_start: str | None,
+        dnd_end: str | None,
+        weekday_mask: int | None = None,
+    ) -> bool:
+        """Create or update a single multi-window DnD task by id.
+
+        Only meaningful on devices reporting the ``dnd_task`` capability: the
+        firmware's ``DND_TASK`` property already holds a JSON array of named
+        windows, but ``set_dnd_task`` above only ever reads/writes index 0.
+        This is the multi-window entry point that can target any task by id.
+
+        - ``task_id`` is ``None``, or does not match any existing task: a new
+          task is appended. When ``task_id`` is given but doesn't match, the
+          new task is created with that exact id ("create with this specific
+          id"); when ``task_id`` is ``None``, a fresh id is assigned as
+          ``max(existing ids, default 0) + 1``, mirroring the ``id=1``
+          ``set_dnd_task`` assigns to the very first task.
+        - ``task_id`` matches an existing task: ``en``/``st``/``et`` (and
+          ``wk``, only if ``weekday_mask`` is given) are updated in place,
+          preserving every other key already on that task's dict — in
+          particular ``ss``, whose meaning is unknown and must never be
+          overwritten.
+        - ``weekday_mask``: raw weekday bitmask exactly as reported by the
+          device firmware. The bit-to-day mapping is **not confirmed** on a
+          live device — only ``127`` (all 7 bits set) is known to mean "all
+          days" (see ``docs/dev/dnd-tasks-design.md``). The value is passed
+          through opaquely, never decoded/encoded here. If omitted, the
+          existing task's ``wk`` is preserved, or defaults to ``127`` for a
+          brand-new task, matching ``set_dnd_task``'s current behavior.
+        - Reuses the exact HH:MM validation (``_validate_dnd_window``) and
+          the exact compact-JSON serialization ``set_dnd_task`` uses today.
+
+        Raises ``InvalidActionException`` if ``capability.dnd_task`` is not
+        set — single-window devices must keep using ``set_dnd``/
+        ``set_dnd_start``/``set_dnd_end``.
+        """
+        if not self.capability.dnd_task:
+            raise InvalidActionException("Multi-window DnD tasks are not supported on this device")
+
+        dnd_start, dnd_end = _validate_dnd_window(dnd_start, dnd_end)
+
+        if self.status.dnd_tasks is None:
+            self.status.dnd_tasks = []
+        dnd_tasks = self.status.dnd_tasks
+
+        existing_task = None
+        if task_id is not None:
+            for task in dnd_tasks:
+                if task.get("id") == task_id:
+                    existing_task = task
+                    break
+
+        if existing_task is not None:
+            existing_task["en"] = enabled
+            existing_task["st"] = dnd_start
+            existing_task["et"] = dnd_end
+            if weekday_mask is not None:
+                existing_task["wk"] = weekday_mask
+        else:
+            new_id = task_id
+            if new_id is None:
+                existing_ids = [task.get("id") for task in dnd_tasks if isinstance(task.get("id"), int)]
+                new_id = (max(existing_ids) if existing_ids else 0) + 1
+            dnd_tasks.append(
+                {
+                    "id": new_id,
+                    "en": enabled,
+                    "st": dnd_start,
+                    "et": dnd_end,
+                    "wk": weekday_mask if weekday_mask is not None else 127,
+                    "ss": 0,
+                }
+            )
+
+        return self.set_property(
+            DreameVacuumProperty.DND_TASK,
+            str(json.dumps(dnd_tasks, separators=(",", ":"))).replace(" ", ""),
+        )
+
+    def delete_dnd_task(self, task_id: int) -> bool:
+        """Remove a single multi-window DnD task by id.
+
+        Raises ``InvalidActionException`` if ``capability.dnd_task`` is not
+        set, or if ``task_id`` does not match any task in
+        ``status.dnd_tasks`` — mirrors the existence check used by the
+        analogous per-id action ``rename_shortcut``
+        (``device_actions.py``, which raises
+        ``InvalidActionException(f"Shortcut {id} not found")`` for the same
+        shape of problem).
+        """
+        if not self.capability.dnd_task:
+            raise InvalidActionException("Multi-window DnD tasks are not supported on this device")
+
+        dnd_tasks = self.status.dnd_tasks or []
+        if not any(task.get("id") == task_id for task in dnd_tasks):
+            raise InvalidActionException(f"DnD task {task_id} not found")
+
+        remaining_tasks = [task for task in dnd_tasks if task.get("id") != task_id]
+        self.status.dnd_tasks = remaining_tasks
+        return self.set_property(
+            DreameVacuumProperty.DND_TASK,
+            str(json.dumps(remaining_tasks, separators=(",", ":"))).replace(" ", ""),
         )
 
     def set_dnd(self, enabled: bool) -> bool:
@@ -863,6 +981,123 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
             self.status.off_peak_charging_start,
             str(off_peak_charging_end),
         )
+
+    def set_schedule_task(
+        self,
+        schedule_id: int | None,
+        enabled: bool,
+        time: str,
+        repeats: str | None = None,
+        once: bool = False,
+        map_id: str | None = None,
+        suction_level: int | None = None,
+        water_volume: int | None = None,
+        options: list[str] | None = None,
+    ) -> bool:
+        """Create or update a scheduled cleaning task.
+
+        Rebuilds the ``;``/``-``-joined ``SCHEDULE`` wire string (see
+        docs/dev/schedule-format.md and the parser at ``device.py``'s
+        ``_schedule_changed``) by replacing only the target task (or
+        appending a new one when ``schedule_id`` is ``None``) and leaving
+        every sibling task byte-identical, so fields this integration does
+        not decode (``repeats``, ``options``) are never corrupted for tasks
+        that are not being edited.
+
+        Wire-format caveats (see docs/dev/schedule-format.md for the full
+        derivation):
+
+        - The enabled/status field has two confirmed-enabled wire values
+          (``"1"`` and ``"2"``); what distinguishes them is unconfirmed from
+          static analysis, so this integration always writes ``"1"`` for
+          ``enabled=True`` (a confirmed round-trippable value) and ``"0"``
+          for ``enabled=False``.
+        - ``repeats`` and ``options`` are opaque pass-through values: this
+          method never encodes/decodes them. When omitted on an edit, the
+          previous task's raw value is preserved; when omitted on create, a
+          neutral ``"0"`` placeholder is sent (its acceptance by firmware for
+          a repeating task is unconfirmed - pass an explicit ``repeats``
+          value if you need a specific repeat pattern).
+        - ``suction_level``/``water_volume`` have no confirmed default value,
+          so they are required when creating a new task; they remain
+          optional when editing an existing task, where the previous
+          task's value is kept if omitted.
+        """
+        if not time or not re.match(r"([0-1][0-9]|2[0-3]):[0-5][0-9]$", time):
+            raise InvalidValueException("Schedule time is not valid: (%s).", time)
+
+        if schedule_id is not None and not int(schedule_id):
+            raise InvalidValueException("Schedule id must be a positive integer: (%s).", schedule_id)
+
+        raw_schedule = self.get_property(DreameVacuumProperty.SCHEDULE) or ""
+        tasks = raw_schedule.split(";") if raw_schedule else []
+
+        target_index: int | None = None
+        existing_props: list[str] | None = None
+        existing_ids: list[int] = []
+        for index, task in enumerate(tasks):
+            props = task.split("-")
+            if len(props) < 9:
+                continue
+            try:
+                props_id = int(props[0])
+            except ValueError:
+                continue
+            existing_ids.append(props_id)
+            if schedule_id is not None and props_id == int(schedule_id):
+                target_index = index
+                existing_props = props
+
+        if schedule_id is None:
+            task_id = max(existing_ids, default=0) + 1
+        else:
+            if target_index is None:
+                raise InvalidActionException("Schedule not found! (%s)", schedule_id)
+            task_id = int(schedule_id)
+
+        if repeats is None:
+            repeats = existing_props[3] if existing_props else "0"
+        if map_id is None:
+            map_id = existing_props[5] if existing_props else "0"
+
+        if suction_level is None:
+            if existing_props is None:
+                raise InvalidValueException("Schedule suction_level is required when creating a new task.")
+            suction_level = int(existing_props[6])
+
+        if water_volume is None:
+            if existing_props is None:
+                raise InvalidValueException("Schedule water_volume is required when creating a new task.")
+            water_volume = int(existing_props[7])
+
+        if options is None:
+            # Options is the last field, so join any trailing fragments back
+            # together in case it legitimately contains a "-" (unconfirmed,
+            # but this avoids silently dropping data if it ever does).
+            options_value = "-".join(existing_props[8:]) if existing_props else "0"
+        else:
+            options_value = ",".join(str(option) for option in options) if options else "0"
+
+        new_task = "-".join(
+            [
+                str(task_id),
+                "1" if enabled else "0",
+                str(time),
+                str(repeats),
+                "0" if once else "1",
+                str(map_id),
+                str(int(suction_level)),
+                str(int(water_volume)),
+                options_value,
+            ]
+        )
+
+        if target_index is not None:
+            tasks[target_index] = new_task
+        else:
+            tasks.append(new_task)
+
+        return self.set_property(DreameVacuumProperty.SCHEDULE, ";".join(tasks))
 
     def set_voice_assistant_language(self, voice_assistant_language: str) -> bool:
         if (

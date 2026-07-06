@@ -2548,6 +2548,35 @@ def test_dnd_task_defaults_when_no_tasks() -> None:
     assert status.dnd is False
 
 
+def test_attributes_dnd_task_weekday_mask_passthrough() -> None:
+    """ATTR_DND's per-task dict exposes the raw `wk` bitmask verbatim under
+    `weekday_mask` — no bit-to-day decoding is performed anywhere; the
+    bit-to-day mapping is unconfirmed on a live device (see
+    docs/dev/dnd-tasks-design.md). Only the literal 127 (all bits set) is
+    known to mean "all days"; any other value must round-trip untouched."""
+    capability = _make_capability(dnd=True, dnd_task=True)
+    status = _make_status(
+        {
+            DreameVacuumProperty.STATUS: DreameVacuumStatus.PAUSED.value,
+            DreameVacuumProperty.SUCTION_LEVEL: DreameVacuumSuctionLevel.STRONG.value,
+        },
+        capability=capability,
+    )
+    status._device._protocol.cloud = None
+    status._device.info = None
+    status.dnd_tasks = [
+        {"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0},
+        {"id": 2, "en": False, "st": "12:00", "et": "13:00", "wk": 21, "ss": 0},
+        {"id": 3, "en": True, "st": "01:00", "et": "02:00"},  # no "wk" key at all
+    ]
+
+    attributes = status.attributes
+    assert attributes is not None
+    assert attributes["dnd"][1]["weekday_mask"] == 127
+    assert attributes["dnd"][2]["weekday_mask"] == 21
+    assert attributes["dnd"][3]["weekday_mask"] is None
+
+
 def test_off_peak_charging_start_end_none_when_capability_off() -> None:
     status = _make_status({})
     assert status.off_peak_charging_start is None
@@ -3418,7 +3447,7 @@ def test_attributes_smart_mop_washing_map_and_dnd_task_path() -> None:
     assert attributes["mop_pad"] is True
     assert attributes["smart_mop_washing"] == 1
     assert attributes["washing_mode"] == STATE_UNKNOWN.capitalize()  # cleangenius_mode capability off
-    assert attributes["dnd"] == {"t1": {"enabled": True, "start": "20:00", "end": "06:00"}}
+    assert attributes["dnd"] == {"t1": {"enabled": True, "start": "20:00", "end": "06:00", "weekday_mask": None}}
     assert (
         attributes["mopping_type"]
         == MOPPING_TYPE_TO_NAME[DreameVacuumMoppingType.ACCURATE].replace("_", " ").capitalize()

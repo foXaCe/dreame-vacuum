@@ -31,9 +31,15 @@ def test_exclude_attributes_contains_known_camera_and_vacuum_attributes() -> Non
     # Vectorized wall/door geometry from the saved map — large map data too.
     assert "wall_lines" in result
     assert "door_lines" in result
+    # Data-URI icons served through camera attributes (several KB each).
+    assert "robot_icon" in result
+    assert "robot_beam_icon" in result
     # A vacuum attribute duplicated by a dedicated sensor entity.
     assert ATTR_STATUS in result
     assert "battery_level" in result
+    # Structured schedule/DND state — bulky and duplicated by dedicated entities.
+    assert "schedule" in result
+    assert "dnd" in result
 
 
 def test_exclude_attributes_does_not_depend_on_hass_argument() -> None:

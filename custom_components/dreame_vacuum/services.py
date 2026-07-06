@@ -39,6 +39,8 @@ from .const import (
     INPUT_CONSUMABLE,
     INPUT_CUSTOM_MOPPING_ROUTE,
     INPUT_CYCLE,
+    INPUT_ENABLED,
+    INPUT_END,
     INPUT_FILE_URL,
     INPUT_ID,
     INPUT_IGNORED_CARPET_ARRAY,
@@ -50,10 +52,13 @@ from .const import (
     INPUT_MD5,
     INPUT_MOP_ARRAY,
     INPUT_OBSTACLE_IGNORED,
+    INPUT_ONCE,
+    INPUT_OPTIONS,
     INPUT_POINTS,
     INPUT_RECOVERY_MAP_INDEX,
     INPUT_REPEATS,
     INPUT_ROTATION,
+    INPUT_SCHEDULE_ID,
     INPUT_SEGMENT,
     INPUT_SEGMENT_ID,
     INPUT_SEGMENT_NAME,
@@ -61,7 +66,10 @@ from .const import (
     INPUT_SHORTCUT_ID,
     INPUT_SHORTCUT_NAME,
     INPUT_SIZE,
+    INPUT_START,
     INPUT_SUCTION_LEVEL,
+    INPUT_TASK_ID,
+    INPUT_TIME,
     INPUT_TYPE,
     INPUT_URL,
     INPUT_VALUE,
@@ -69,6 +77,7 @@ from .const import (
     INPUT_VIRTUAL_THRESHOLD_ARRAY,
     INPUT_WALL_ARRAY,
     INPUT_WATER_VOLUME,
+    INPUT_WEEKDAY_MASK,
     INPUT_WETNESS_LEVEL,
     INPUT_X,
     INPUT_Y,
@@ -79,7 +88,9 @@ from .const import (
     SERVICE_CLEAN_SEGMENT,
     SERVICE_CLEAN_SPOT,
     SERVICE_CLEAN_ZONE,
+    SERVICE_DELETE_DND_TASK,
     SERVICE_DELETE_MAP,
+    SERVICE_DELETE_SCHEDULE,
     SERVICE_DISCARD_TEMPORARY_MAP,
     SERVICE_FOLLOW_PATH,
     SERVICE_GOTO,
@@ -104,11 +115,13 @@ from .const import (
     SERVICE_SET_CLEANING_SEQUENCE,
     SERVICE_SET_CUSTOM_CARPET_CLEANING,
     SERVICE_SET_CUSTOM_CLEANING,
+    SERVICE_SET_DND_TASK,
     SERVICE_SET_OBSTACLE_IGNORE,
     SERVICE_SET_PREDEFINED_POINTS,
     SERVICE_SET_PROPERTY,
     SERVICE_SET_RESTRICTED_ZONE,
     SERVICE_SET_ROUTER_POSITION,
+    SERVICE_SET_SCHEDULE,
     SERVICE_SET_VIRTUAL_THRESHOLD,
     SERVICE_SPLIT_SEGMENTS,
     SERVICE_START_SHORTCUT,
@@ -564,6 +577,26 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
 
     register(
+        SERVICE_SET_DND_TASK,
+        {
+            vol.Optional(INPUT_TASK_ID): cv.positive_int,
+            vol.Required(INPUT_ENABLED): cv.boolean,
+            vol.Required(INPUT_START): cv.string,
+            vol.Required(INPUT_END): cv.string,
+            vol.Optional(INPUT_WEEKDAY_MASK): cv.positive_int,
+        },
+        "async_set_dnd_task",
+    )
+
+    register(
+        SERVICE_DELETE_DND_TASK,
+        {
+            vol.Required(INPUT_TASK_ID): cv.positive_int,
+        },
+        "async_delete_dnd_task",
+    )
+
+    register(
         SERVICE_SET_OBSTACLE_IGNORE,
         {
             vol.Required(INPUT_X): vol.All(vol.Coerce(float)),
@@ -595,6 +628,30 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_CALL_ACTION,
         {vol.Required(INPUT_KEY): cv.string, vol.Optional(INPUT_VALUE): cv.string},
         "async_call_action",
+    )
+
+    register(
+        SERVICE_DELETE_SCHEDULE,
+        {
+            vol.Required(INPUT_SCHEDULE_ID): cv.positive_int,
+        },
+        "async_delete_schedule",
+    )
+
+    register(
+        SERVICE_SET_SCHEDULE,
+        {
+            vol.Optional(INPUT_SCHEDULE_ID): cv.positive_int,
+            vol.Required(INPUT_ENABLED): cv.boolean,
+            vol.Required(INPUT_TIME): cv.string,
+            vol.Optional(INPUT_REPEATS): cv.string,
+            vol.Optional(INPUT_ONCE, default=False): cv.boolean,
+            vol.Optional(INPUT_MAP_ID): cv.string,
+            vol.Optional(INPUT_SUCTION_LEVEL): cv.positive_int,
+            vol.Optional(INPUT_WATER_VOLUME): cv.positive_int,
+            vol.Optional(INPUT_OPTIONS): vol.All(cv.ensure_list, [cv.string]),
+        },
+        "async_set_schedule",
     )
 
     register(

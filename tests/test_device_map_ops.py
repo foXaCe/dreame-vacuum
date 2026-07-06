@@ -2380,23 +2380,22 @@ def test_set_custom_cleaning_delegates_cleaning_route_per_segment(host: _MapOpsH
     host._map_manager.editor.set_segment_cleaning_route.assert_called_once_with(1, 2, False)
 
 
-def test_set_custom_cleaning_legacy_path_crashes_on_unbound_segments(host: _MapOpsHost) -> None:
-    """Documents a real bug: when capability.map is False (or current_map is
-    falsy), the function falls through to the legacy cleanset-building
-    branch, which references the local variable `segments` -- but that
-    variable is only ever assigned inside the
+def test_set_custom_cleaning_legacy_path_raises_explicit_error(host: _MapOpsHost) -> None:
+    """Regression test for a real bug: when capability.map is False (or
+    current_map is falsy), the function used to fall through to a legacy
+    cleanset-building branch that referenced the local variable `segments` --
+    but that variable was only ever assigned inside the
     `if self.capability.map: if current_map:` block above, which always
-    `return`s before falling through. So any invocation that reaches the
-    legacy branch with a fully-populated parameter set (the only way to
-    reach the `if segments:` check) crashes with UnboundLocalError instead
-    of building the legacy cleanset. This makes the "legacy" code path (the
-    one meant for devices without map support) permanently dead/unreachable
-    in its current form."""
+    `return`s before falling through. Any invocation reaching that branch with
+    a fully-populated parameter set (the only way to reach the `if segments:`
+    check) crashed with UnboundLocalError instead of building a legacy
+    cleanset, making the dead code permanently unreachable in a working
+    state. The dead branch has been removed in favor of an explicit error."""
     host.capability.map = False
     host.capability.custom_cleaning_mode = False
     host.capability.wetness_level = False
 
-    with pytest.raises(UnboundLocalError):
+    with pytest.raises(InvalidActionException, match="Customized cleaning without a map is not supported"):
         host.set_custom_cleaning([1, 2], [1, 2], [1, 2], [1, 2])
 
 

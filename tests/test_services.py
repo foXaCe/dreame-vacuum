@@ -19,11 +19,11 @@ def _register_all() -> list:
 
 
 def test_registers_expected_service_count() -> None:
-    """34 vacuum + 4 select + 1 camera services are registered."""
+    """38 vacuum + 4 select + 1 camera services are registered."""
     calls = _register_all()
-    assert len(calls) == 39
+    assert len(calls) == 43
     domains = [c.kwargs["entity_domain"] for c in calls]
-    assert domains.count("vacuum") == 34
+    assert domains.count("vacuum") == 38
     assert domains.count("select") == 4
     assert domains.count("camera") == 1
 
@@ -44,6 +44,10 @@ def test_anchor_service_names_and_methods() -> None:
         "vacuum_merge_segments": ("vacuum", "async_merge_segments"),
         "vacuum_set_property": ("vacuum", "async_set_property"),
         "vacuum_call_action": ("vacuum", "async_call_action"),
+        "vacuum_delete_schedule": ("vacuum", "async_delete_schedule"),
+        "vacuum_set_schedule": ("vacuum", "async_set_schedule"),
+        "vacuum_set_dnd_task": ("vacuum", "async_set_dnd_task"),
+        "vacuum_delete_dnd_task": ("vacuum", "async_delete_dnd_task"),
         "select_select_first": ("select", "async_first"),
         "select_select_next": ("select", "async_next"),
         "update": ("camera", "async_update"),

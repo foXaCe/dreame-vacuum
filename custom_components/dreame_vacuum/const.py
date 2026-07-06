@@ -98,6 +98,7 @@ MAP_OBJECTS: Final = {
     "ramp": "Ramp",
     "curtain": "Curtain",
     "cruise_point": "Cruise Points",
+    "door": "Doors",
 }
 NOTIFICATION: Final = {
     "cleanup_completed": "Cleanup Completed",
@@ -160,10 +161,14 @@ SERVICE_SET_CUSTOM_CARPET_CLEANING: Final = "vacuum_set_custom_carpet_cleaning"
 SERVICE_INSTALL_VOICE_PACK: Final = "vacuum_install_voice_pack"
 SERVICE_RESET_CONSUMABLE: Final = "vacuum_reset_consumable"
 SERVICE_RENAME_SHORTCUT: Final = "vacuum_rename_shortcut"
+SERVICE_SET_DND_TASK: Final = "vacuum_set_dnd_task"
+SERVICE_DELETE_DND_TASK: Final = "vacuum_delete_dnd_task"
 SERVICE_SET_OBSTACLE_IGNORE: Final = "vacuum_set_obstacle_ignore"
 SERVICE_SET_ROUTER_POSITION: Final = "vacuum_set_router_position"
 SERVICE_SET_PROPERTY: Final = "vacuum_set_property"
 SERVICE_CALL_ACTION: Final = "vacuum_call_action"
+SERVICE_DELETE_SCHEDULE: Final = "vacuum_delete_schedule"
+SERVICE_SET_SCHEDULE: Final = "vacuum_set_schedule"
 
 SERVICE_SELECT_NEXT: Final = "select_select_next"
 SERVICE_SELECT_PREVIOUS: Final = "select_select_previous"
@@ -207,6 +212,15 @@ INPUT_CYCLE: Final = "cycle"
 INPUT_POINTS: Final = "points"
 INPUT_SHORTCUT_ID: Final = "shortcut_id"
 INPUT_SHORTCUT_NAME: Final = "shortcut_name"
+INPUT_TASK_ID: Final = "task_id"
+INPUT_ENABLED: Final = "enabled"
+INPUT_START: Final = "start"
+INPUT_END: Final = "end"
+# Raw device weekday bitmask (see docs/dev/dnd-tasks-design.md): the
+# bit-to-day mapping is unconfirmed on a live device, so this is never
+# decoded into weekday names — only 127 (all 7 bits set) is known to mean
+# "all days". Passed through opaquely end-to-end.
+INPUT_WEEKDAY_MASK: Final = "weekday_mask"
 INPUT_X: Final = "x"
 INPUT_Y: Final = "y"
 INPUT_OBSTACLE_IGNORED: Final = "obstacle_ignored"
@@ -216,6 +230,10 @@ INPUT_ID: Final = "id"
 INPUT_TYPE: Final = "type"
 INPUT_CARPET_CLEANING: Final = "carpet_cleaning"
 INPUT_CARPET_SETTINGS: Final = "carpet_settings"
+INPUT_SCHEDULE_ID: Final = "schedule_id"
+INPUT_TIME: Final = "time"
+INPUT_ONCE: Final = "once"
+INPUT_OPTIONS: Final = "options"
 
 CONSUMABLE_MAIN_BRUSH = "main_brush"
 CONSUMABLE_SIDE_BRUSH = "side_brush"

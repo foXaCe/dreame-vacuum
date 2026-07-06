@@ -2,9 +2,18 @@
 
 ## Status
 
-Design only. No code in this change. Written to scope a follow-up
-implementation and to correct the README To-Do wording, which currently
-implies DnD support doesn't exist at all.
+**Implemented**, with the `weekdays`-as-names proposal deliberately *not*
+shipped. `set_dnd_task_entry`/`delete_dnd_task` (`device_setters.py`), the
+`vacuum_set_dnd_task`/`vacuum_delete_dnd_task` services, and the read-side
+`ATTR_DND["weekday_mask"]` addition are all in place — but per the
+"Unknowns" section below, the bit-to-day mapping was never confirmed on a
+live device, so `weekday_mask` is a **raw pass-through int** (never
+decoded/encoded into weekday names) everywhere: the service field, the
+engine methods, and the read-side attribute. See `docs/services.md` for the
+shipped service contract. The design discussion below (wire format,
+unknowns, rationale) still applies as-is; only the "weekday names" service
+field shape was replaced with the raw-int approach it flagged as the
+fallback.
 
 ## What already works today
 

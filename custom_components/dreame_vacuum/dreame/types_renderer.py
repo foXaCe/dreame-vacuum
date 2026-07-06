@@ -39,6 +39,10 @@ class MapRendererConfig:
     curtain: bool = True
     ramp: bool = True
     cruise_point: bool = True
+    # Subtle dashed marker for walls_info door segments (MapData.door_lines).
+    # Independent of any wall_lines pixel-replacement (see docs/dev/wall-lines-render-spike.md):
+    # doors are additive information the pixel grid cannot express on its own.
+    door: bool = True
 
 
 @dataclass
@@ -338,6 +342,7 @@ class MapRendererLayer(IntEnum):
     OBSTACLE = 23
     CRUISE_POINTS = 24
     CRUISE_POINT = 25
+    DOOR = 26
 
 
 @dataclass

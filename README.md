@@ -329,6 +329,9 @@ attributes:
 - Map rendering is CPU-intensive on first load (cached afterward)
 - Cloud API calls are async-native (aiohttp); the local python-miio backend and some `device.py` worker threads are not fully async yet (see `ARCHITECTURE.md`'s async migration roadmap)
 - Some older Dreame models may not expose all entities
+- Multi-window DnD editing (`vacuum_set_dnd_task`/`vacuum_delete_dnd_task`, see `docs/services.md`) passes
+  the device's weekday bitmask through raw (`weekday_mask`): the bit-to-day mapping is not confirmed on a
+  live device, so only `127` (all days) is documented — see `docs/dev/dnd-tasks-design.md`
 
 
 ## Troubleshooting
@@ -341,10 +344,8 @@ attributes:
 
 ## To Do
 
-- Shortcut editing
-- Schedule editing
-- Furniture editing
-- Multi-window DnD editing (single-window done; design: docs/dev/dnd-tasks-design.md)
+- Shortcut editing (rename done; create/delete/task-edit blocked on wire format — design: docs/dev/shortcut-editing-design.md)
+- Furniture editing (read/render done, no write path — design: docs/dev/furniture-editing-design.md)
 - Live camera streaming (spike: see docs/dev/streaming-spike.md — size L-or-never, blocked on proprietary transport)
 
 

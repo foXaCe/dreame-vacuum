@@ -447,12 +447,12 @@ vacuum_set_custom_carpet_cleaning:
       selector:
         object:
     type:
-      example: "[0,1] or 1"
+      example: "[0,2] or 1"
       required: true
       selector:
         number:
           min: 0
-          max: 1
+          max: 2
     carpet_cleaning:
       example: "[0,3] or 5"
       required: false
@@ -531,6 +531,53 @@ vacuum_rename_shortcut:
       required: true
       selector:
         text:
+
+vacuum_set_dnd_task:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    task_id:
+      example: "1"
+      required: false
+      selector:
+        number:
+          mode: box
+    enabled:
+      example: "true"
+      required: true
+      selector:
+        boolean:
+    start:
+      example: "22:00"
+      required: true
+      selector:
+        text:
+    end:
+      example: "08:00"
+      required: true
+      selector:
+        text:
+    weekday_mask:
+      example: "127"
+      required: false
+      selector:
+        number:
+          mode: box
+
+vacuum_delete_dnd_task:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    task_id:
+      example: "1"
+      required: true
+      selector:
+        number:
+          mode: box
 
 vacuum_set_carpet_area:
   target:
@@ -682,3 +729,72 @@ vacuum_call_action:
       required: false
       selector:
         text:
+
+vacuum_delete_schedule:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    schedule_id:
+      example: 5
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+
+vacuum_set_schedule:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    schedule_id:
+      example: 5
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    enabled:
+      example: true
+      required: true
+      selector:
+        boolean:
+    time:
+      example: "08:00"
+      required: true
+      selector:
+        text:
+    repeats:
+      required: false
+      selector:
+        text:
+    once:
+      default: false
+      selector:
+        boolean:
+    map_id:
+      required: false
+      selector:
+        text:
+    suction_level:
+      example: 1
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    water_volume:
+      example: 1
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    options:
+      required: false
+      selector:
+        text:
+          multiple: true

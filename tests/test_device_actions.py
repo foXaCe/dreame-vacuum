@@ -2446,9 +2446,11 @@ class TestReloadShortcuts:
         shortcut = host.status.shortcuts[40]
         assert shortcut.map_id is None
         assert shortcut.tasks is None
-        # NOTE: ``running`` is True for state "0" *and* "1" (bool(x == "0" or x == "1")) —
-        # likely meant to distinguish "stopped" vs "running" but both map to True.
-        assert shortcut.running is True
+        # Regression test for a real bug: ``running`` used to be True for state "0"
+        # *and* "1" (bool(x == "0" or x == "1")), so the flag was always True whenever
+        # "state" was present. Fixed to follow the codebase's TRUE/FALSE string
+        # convention: only "1" means running.
+        assert shortcut.running is False
 
 
 # ===========================================================================

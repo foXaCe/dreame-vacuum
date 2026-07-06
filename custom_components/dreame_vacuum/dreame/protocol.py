@@ -1749,7 +1749,7 @@ class DreameVacuumProtocol:
                 # Use different session for device cloud
                 self.device_cloud.login()
                 if self.device_cloud.logged_in and not self.device_cloud.device_id:
-                    if self.cloud.device_id:
+                    if self.cloud and self.cloud.device_id:
                         self.device_cloud._did = self.cloud.device_id
                     elif self._mac:
                         self.device_cloud.get_info(self._mac)
@@ -1777,7 +1777,7 @@ class DreameVacuumProtocol:
                 # Use different session for device cloud
                 self.device_cloud.login()
                 if self.device_cloud.logged_in and not self.device_cloud.device_id:
-                    if self.cloud.device_id:
+                    if self.cloud and self.cloud.device_id:
                         self.device_cloud._did = self.cloud.device_id
                     elif self._mac:
                         self.device_cloud.get_info(self._mac)

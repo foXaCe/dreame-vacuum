@@ -2,15 +2,43 @@
 
 ## Status
 
-**Read path: already shipped, undocumented. Write services: design only, no code
-in this change.**
+**Read path: already shipped, undocumented. Write services: implemented —
+`vacuum_delete_schedule` and `vacuum_set_schedule`, see `docs/services.md`.**
 
 Plan 019 set out to (1) document the `SCHEDULE` wire format, (2) expose
 `status.schedule` as a new HA attribute, and (3) scope the write services. Step
 2 hit one of the plan's own STOP conditions during verification — see
 [Finding: the read attribute already exists](#finding-the-read-attribute-already-exists)
-— so this change only delivers (1) and (3). No `custom_components/` code was
-touched.
+— so that step is still undone; no code changed as a result of it. A
+follow-up change implemented (3) — `set_schedule_task`/`delete_schedule` in
+`device_setters.py`/`device_actions.py` and the two HA services below — using
+the design captured in this document; the sections describing that design
+are kept as-is for reference (the "why this was deliberately not built yet"
+rationale documents the conservative choices actually shipped, e.g. opaque
+pass-through of `repeats`/`options`, `suction_level`/`water_volume` required
+on create).
+
+## Live-device round-trip (2026-07-06, Aqua10 Ultra r95285, firmware 3397)
+
+Exercised through the shipped HA services against a real device:
+
+- **Create via `vacuum_set_schedule`: ✅ works.** Wrote
+  `1-0-03:00-0-0-0-1-1-0`; the device accepted it and pushed back
+  `1-0-03:00-0000000-0-0-1-1-0`. **Discovery: the device normalizes
+  `repeats` `"0"` to `"0000000"`** — `repeats` is a 7-character `0`/`1`
+  per-day mask string (which day maps to which position is still
+  unconfirmed). The parser round-trips it fine either way.
+- **Delete via `vacuum_delete_schedule`: ❌ does NOT delete on this
+  firmware.** The engine's two-step delete (rewrite the `SCHEDULE` property
+  without the task, then `DELETE_SCHEDULE` action `8.1` with
+  `{piid: 3, value: <int id>}`) is silently ignored: the task survives a
+  config-entry reload (so it is device state, not a stale HA echo). A bare
+  `SCHEDULE` property write of `""` is also ignored. **Working hypothesis:
+  this firmware treats `SCHEDULE` property writes as an upsert-by-id, never
+  as a full-list replace** — which is consistent with create working and
+  both delete strategies being no-ops. Next step: capture the official
+  app's delete traffic to learn the real wire operation before touching
+  the engine delete path.
 
 ## Wire format (confirmed from the parser)
 
@@ -268,10 +296,12 @@ not a HA service`):
   there is no `set_schedule(...)` helper analogous to `delete_schedule`;
   callers must build the full `;`/`-` string themselves today.
 
-## Proposed write services (design only — not built in this change)
+## Write services (implemented)
 
-Two services, following the plan's scoping. Neither is implemented here;
-`services.py` / `services.yaml` / translations are untouched.
+Two services, following the plan's scoping below. Both are now registered in
+`services.py`/`services.yaml`/translations and documented for end users in
+`docs/services.md`; this section is kept as the design record for *why* they
+look the way they do.
 
 ### `dreame_vacuum.vacuum_delete_schedule` — lowest risk, engine method exists
 
@@ -292,9 +322,12 @@ service to ship, precisely because it reuses a code path that already
 round-trips against the device correctly (delete is exercised by
 `tests/test_device_actions.py`).
 
-### `dreame_vacuum.vacuum_set_schedule` (add/edit) — needs a live-device round-trip before shipping
+### `dreame_vacuum.vacuum_set_schedule` (add/edit)
 
-Proposed schema, derived from the parser/validator above:
+Schema actually shipped, derived from the parser/validator above (an
+`options` field was added over the original proposal below, and
+`suction_level`/`water_volume` were made engine-required on create — see
+"Deviations from the original proposal" further down):
 
 ```yaml
 vacuum_set_schedule:
@@ -346,11 +379,33 @@ ever writing to the wire:
   to avoid corrupting fields this integration doesn't understand (e.g.
   `repeats`, `options`) for *other* tasks in the same list.
 
-**Why this is deliberately not built yet:** a malformed string written to
-`DreameVacuumProperty.SCHEDULE` can clear *all* schedules (the setter
-accepts `""` as "valid" specifically to support clearing — see above), and
-the exact encoding of `repeats`/`options` is unconfirmed from static
-analysis alone. Shipping `vacuum_set_schedule` needs a live-device
-round-trip test (write a known task, read back the raw property, confirm
-byte-for-byte reconstruction of untouched sibling tasks) before it's safe to
-expose as a public HA service.
+**Why this was risky, and how the shipped implementation stays conservative:**
+a malformed string written to `DreameVacuumProperty.SCHEDULE` can clear *all*
+schedules (the setter accepts `""` as "valid" specifically to support
+clearing — see above), and the exact encoding of `repeats`/`options` is
+unconfirmed from static analysis alone. `set_schedule_task`
+(`device_setters.py`) mitigates this by never touching sibling tasks (it
+splices only the target task into the existing `;`-joined string) and by
+treating `repeats`/`options` as pure opaque pass-through — it never
+encodes/decodes them, so it cannot corrupt a value it doesn't understand.
+This has **not** been verified against a live device (no round-trip capture
+against real firmware was performed as part of shipping the service); it is
+a static-analysis-only implementation of the confirmed parts of the format.
+
+**Deviations from the original proposal above:**
+- An `options` field (list of raw option-code strings, `,`-joined on the
+  wire, `"0"` meaning "no options") was added; the original proposal omitted
+  it.
+- `suction_level`/`water_volume` are optional in the HA schema (matching the
+  proposal), but `set_schedule_task` itself raises `InvalidValueException`
+  if either is missing **and** there is no existing task to inherit them
+  from (i.e. when creating a new task) — there is no confirmed default
+  value for either field, so the engine refuses to guess one. Both remain
+  optional when editing an existing task, where the omitted field keeps its
+  previous value.
+- The enabled/status wire field always writes `"1"` for `enabled=True`
+  (`"0"` for `False`) — the meaning of the second confirmed-enabled value
+  (`"2"`) is still unknown, so it is never produced by this integration.
+- `once=True` writes wire value `"0"`; `once=False` writes `"1"` as a
+  neutral non-zero placeholder (any value != `"0"` should read back as
+  `once=False` per the parser).

@@ -16,6 +16,7 @@ are set explicitly to simulate that bookkeeping.
 
 from __future__ import annotations
 
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -617,14 +618,15 @@ def test_add_map_data_p_out_of_order_with_no_timestamp_watermark_skips_request_e
 
 
 def test_w_frame_passes_validation_but_produces_no_map_update(
-    manager: DreameMapVacuumMapManager, monkeypatch: pytest.MonkeyPatch
+    manager: DreameMapVacuumMapManager, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """
     A W-type frame (MapFrameType.W) that otherwise passes every top-level guard (correct
     map_id, correct next frame_id, newer timestamp) is *not* handled by either the P or
-    the I branch in _add_map_data (there is no `elif frame_type == W` case). Documented
-    here as observed behavior: the frame is silently accepted (returns True) with no
-    decoder call and no state change, rather than raising or logging an explicit warning.
+    the I branch in _add_map_data (there is no `elif frame_type == W` case). The frame is
+    silently accepted (returns True) with no decoder call and no state change - this is
+    left unchanged, but an explicit debug log now records that it was ignored instead of
+    staying completely silent.
     """
     manager._latest_map_id = 1
     manager._current_map_id = 1
@@ -640,13 +642,15 @@ def test_w_frame_passes_validation_but_produces_no_map_update(
     monkeypatch.setattr(DreameVacuumMapDecoder, "decode_map_data_from_partial", decode_i)
 
     partial_w = _partial(map_id=1, frame_id=5, frame_type=MapFrameType.W.value, timestamp_ms=5000)
-    result = manager._add_map_data(partial_w)
+    with caplog.at_level(logging.DEBUG, logger="custom_components.dreame_vacuum.dreame.map_manager"):
+        result = manager._add_map_data(partial_w)
 
     assert result is True
     decode_p.assert_not_called()
     decode_i.assert_not_called()
     assert manager._current_frame_id == 4  # NOT advanced to 5
     assert manager._map_data is existing_map_data  # untouched
+    assert "no decoder for this type" in caplog.text
 
 
 def test_add_map_data_p_frame_invalid_decode_result_leaves_state_unchanged(

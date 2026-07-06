@@ -78,6 +78,34 @@ def _host(**attrs: Any) -> Any:
     return host
 
 
+def _parse_schedule(raw: str) -> list[dict[str, Any]]:
+    """Independent mirror of device.py's ``_schedule_changed`` parser
+    (device.py:1484-1517 / docs/dev/schedule-format.md), used to verify that
+    ``set_schedule_task`` produces a wire string the read path can decode
+    back to the expected fields, without instantiating the full
+    ``DreameVacuumDevice``."""
+    tasks: list[dict[str, Any]] = []
+    if raw and raw != "":
+        for task in raw.split(";"):
+            props = task.split("-")
+            if len(props) >= 9:
+                tasks.append(
+                    {
+                        "id": int(props[0]),
+                        "enabled": bool(props[1] == "1" or props[1] == "2"),
+                        "invalid": bool(props[1] == "3"),
+                        "time": props[2],
+                        "repeats": props[3],
+                        "once": bool(props[4] == "0"),
+                        "map_id": props[5],
+                        "suction_level": int(props[6]),
+                        "water_volume": int(props[7]),
+                        "options": props[8].split(",") if props[8] != "0" else None,
+                    }
+                )
+    return tasks
+
+
 # ===========================================================================
 # set_property: optimistic update + rollback
 # ===========================================================================
@@ -1029,6 +1057,192 @@ class TestSetDndTaskParsing:
         host.status = SimpleNamespace(dnd_tasks=[])
         with pytest.raises(InvalidValueException):
             host.set_dnd_task(True, value, "12:00")
+
+
+# ===========================================================================
+# Multi-window DnD task editing: set_dnd_task_entry / delete_dnd_task
+# ===========================================================================
+
+
+class TestSetDndTaskEntry:
+    def test_requires_dnd_task_capability(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=False)
+        with pytest.raises(InvalidActionException, match="not supported on this device"):
+            host.set_dnd_task_entry(None, True, "07:30", "22:15")
+
+    def test_new_task_appended_with_id_1_when_list_empty(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        host.set_property = MagicMock(return_value=True)
+
+        result = host.set_dnd_task_entry(None, True, "07:30", "22:15")
+
+        assert result is True
+        assert host.status.dnd_tasks == [{"id": 1, "en": True, "st": "07:30", "et": "22:15", "wk": 127, "ss": 0}]
+        host.set_property.assert_called_once_with(
+            DreameVacuumProperty.DND_TASK,
+            '[{"id":1,"en":true,"st":"07:30","et":"22:15","wk":127,"ss":0}]',
+        )
+
+    def test_new_task_id_is_max_existing_plus_one(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[
+                {"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0},
+                {"id": 3, "en": False, "st": "12:00", "et": "13:00", "wk": 127, "ss": 0},
+            ]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(None, True, "09:00", "10:00")
+
+        assert len(host.status.dnd_tasks) == 3
+        assert host.status.dnd_tasks[2] == {"id": 4, "en": True, "st": "09:00", "et": "10:00", "wk": 127, "ss": 0}
+
+    def test_unmatched_task_id_appended_with_that_exact_id(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(9, False, "01:00", "02:00")
+
+        assert len(host.status.dnd_tasks) == 2
+        assert host.status.dnd_tasks[1] == {"id": 9, "en": False, "st": "01:00", "et": "02:00", "wk": 127, "ss": 0}
+
+    def test_existing_task_updated_in_place_preserves_ss(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 2, "en": False, "st": "01:00", "et": "02:00", "wk": 85, "ss": 7}]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(2, True, "09:00", "17:00")
+
+        assert len(host.status.dnd_tasks) == 1
+        task = host.status.dnd_tasks[0]
+        assert task["en"] is True
+        assert task["st"] == "09:00"
+        assert task["et"] == "17:00"
+        # wk and ss are untouched when weekday_mask is omitted.
+        assert task["wk"] == 85
+        assert task["ss"] == 7
+
+    def test_existing_task_wk_overwritten_only_when_weekday_mask_given(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(1, True, "22:00", "08:00", weekday_mask=5)
+
+        assert host.status.dnd_tasks[0]["wk"] == 5
+
+    def test_new_task_none_list_initializes_and_defaults_wk_127(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=None)
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(None, True, "", "")
+
+        assert host.status.dnd_tasks == [{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+
+    def test_new_task_weekday_mask_used_when_given(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(None, True, "07:00", "08:00", weekday_mask=42)
+
+        assert host.status.dnd_tasks[0]["wk"] == 42
+
+    def test_invalid_start_time_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        with pytest.raises(InvalidValueException, match="DnD start time is not valid"):
+            host.set_dnd_task_entry(None, True, "25:00", "08:00")
+
+    def test_start_equal_end_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        with pytest.raises(InvalidValueException, match="must be different"):
+            host.set_dnd_task_entry(None, True, "10:00", "10:00")
+
+
+class TestDeleteDndTask:
+    def test_requires_dnd_task_capability(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=False)
+        with pytest.raises(InvalidActionException, match="not supported on this device"):
+            host.delete_dnd_task(1)
+
+    def test_removes_matching_task_and_writes_remaining_list(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[
+                {"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0},
+                {"id": 2, "en": False, "st": "12:00", "et": "13:00", "wk": 127, "ss": 0},
+            ]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        result = host.delete_dnd_task(1)
+
+        assert result is True
+        assert host.status.dnd_tasks == [{"id": 2, "en": False, "st": "12:00", "et": "13:00", "wk": 127, "ss": 0}]
+        host.set_property.assert_called_once_with(
+            DreameVacuumProperty.DND_TASK,
+            '[{"id":2,"en":false,"st":"12:00","et":"13:00","wk":127,"ss":0}]',
+        )
+
+    def test_removing_last_task_writes_empty_list(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.delete_dnd_task(1)
+
+        assert host.status.dnd_tasks == []
+        host.set_property.assert_called_once_with(DreameVacuumProperty.DND_TASK, "[]")
+
+    def test_unknown_task_id_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+        )
+        with pytest.raises(InvalidActionException, match="DnD task 9 not found"):
+            host.delete_dnd_task(9)
+
+    def test_empty_task_list_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        with pytest.raises(InvalidActionException, match="not found"):
+            host.delete_dnd_task(1)
+
+    def test_none_task_list_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=None)
+        with pytest.raises(InvalidActionException, match="not found"):
+            host.delete_dnd_task(1)
 
 
 class TestSetOffPeakChargingParsing:
@@ -3331,3 +3545,314 @@ class TestSetRouterPosition:
         host.set_router_position(3, 4)
 
         host.update_map_data_async.assert_called_once_with({"wrp": [3, 4]})
+
+
+# ===========================================================================
+# set_schedule_task
+# ===========================================================================
+
+
+class TestSetScheduleTaskValidation:
+    def test_invalid_time_raises(self) -> None:
+        host = _host()
+        with pytest.raises(InvalidValueException, match="Schedule time is not valid"):
+            host.set_schedule_task(None, True, "25:00", suction_level=1, water_volume=1)
+
+    @pytest.mark.parametrize("value", ["24:00", "12:60", "1:00", "ab:cd", "", None])
+    def test_boundary_invalid_times_rejected(self, value: str | None) -> None:
+        host = _host()
+        with pytest.raises(InvalidValueException):
+            host.set_schedule_task(None, True, value, suction_level=1, water_volume=1)
+
+    @pytest.mark.parametrize("value", ["23:59", "00:00", "19:59", "20:00"])
+    def test_boundary_valid_times_accepted(self, value: str) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, value, suction_level=1, water_volume=1)
+
+        raw = host.set_property.call_args.args[1]
+        assert raw.split("-")[2] == value
+
+    def test_schedule_id_zero_raises(self) -> None:
+        host = _host()
+        with pytest.raises(InvalidValueException, match="positive integer"):
+            host.set_schedule_task(0, True, "08:00", suction_level=1, water_volume=1)
+
+    def test_schedule_id_not_found_raises(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="1-1-08:00-0-1-0-1-1-0")
+        with pytest.raises(InvalidActionException, match="Schedule not found"):
+            host.set_schedule_task(99, True, "09:00")
+
+    def test_create_missing_suction_level_raises(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        with pytest.raises(InvalidValueException, match="suction_level is required"):
+            host.set_schedule_task(None, True, "08:00", water_volume=1)
+
+    def test_create_missing_water_volume_raises(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        with pytest.raises(InvalidValueException, match="water_volume is required"):
+            host.set_schedule_task(None, True, "08:00", suction_level=1)
+
+
+class TestSetScheduleTaskCreate:
+    def test_empty_schedule_assigns_id_one(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        result = host.set_schedule_task(None, True, "08:00", suction_level=1, water_volume=2)
+
+        assert result is True
+        host.set_property.assert_called_once_with(DreameVacuumProperty.SCHEDULE, "1-1-08:00-0-1-0-1-2-0")
+
+    def test_assigns_id_after_max_existing(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="1-1-08:00-0-1-0-1-1-0;3-1-09:00-0-1-0-1-1-0")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "10:00", suction_level=2, water_volume=2)
+
+        tasks = host.set_property.call_args.args[1].split(";")
+        assert tasks[0] == "1-1-08:00-0-1-0-1-1-0"
+        assert tasks[1] == "3-1-09:00-0-1-0-1-1-0"
+        assert tasks[2].split("-")[0] == "4"
+
+    def test_ignores_non_numeric_id_for_max_computation(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="x-1-08:00-0-1-0-1-1-0")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "09:00", suction_level=1, water_volume=1)
+
+        tasks = host.set_property.call_args.args[1].split(";")
+        assert tasks[0] == "x-1-08:00-0-1-0-1-1-0"
+        assert tasks[1].split("-")[0] == "1"
+
+    def test_ignores_malformed_sibling_shorter_than_nine_fields(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="1-1-08:00-0-1-0-1-1-0;bad-task")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "09:00", suction_level=1, water_volume=1)
+
+        tasks = host.set_property.call_args.args[1].split(";")
+        assert "bad-task" in tasks
+        new_ids = [t.split("-")[0] for t in tasks if t != "bad-task"]
+        assert "2" in new_ids
+
+    def test_disabled_writes_status_field_zero(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, False, "08:00", suction_level=1, water_volume=1)
+
+        assert host.set_property.call_args.args[1].split("-")[1] == "0"
+
+    def test_enabled_writes_status_field_one(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "08:00", suction_level=1, water_volume=1)
+
+        assert host.set_property.call_args.args[1].split("-")[1] == "1"
+
+    def test_once_true_writes_once_field_zero(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "08:00", once=True, suction_level=1, water_volume=1)
+
+        assert host.set_property.call_args.args[1].split("-")[4] == "0"
+
+    def test_once_false_writes_nonzero_placeholder(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "08:00", once=False, suction_level=1, water_volume=1)
+
+        assert host.set_property.call_args.args[1].split("-")[4] != "0"
+
+    def test_options_list_joined_with_comma(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "08:00", suction_level=1, water_volume=1, options=["1", "2"])
+
+        assert host.set_property.call_args.args[1].split("-")[8] == "1,2"
+
+    def test_options_empty_list_is_none_marker(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "08:00", suction_level=1, water_volume=1, options=[])
+
+        assert host.set_property.call_args.args[1].split("-")[8] == "0"
+
+    def test_defaults_repeats_and_map_id_to_zero(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "08:00", suction_level=1, water_volume=1)
+
+        props = host.set_property.call_args.args[1].split("-")
+        assert props[3] == "0"
+        assert props[5] == "0"
+
+    def test_explicit_repeats_and_map_id_pass_through_unencoded(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, True, "08:00", repeats="127", map_id="5", suction_level=1, water_volume=1)
+
+        props = host.set_property.call_args.args[1].split("-")
+        assert props[3] == "127"
+        assert props[5] == "5"
+
+
+class TestSetScheduleTaskEdit:
+    def test_replaces_only_target_task_keeps_siblings_byte_identical(self) -> None:
+        host = _host()
+        raw_schedule = "1-1-08:00-127-1-0-1-1-0;2-1-09:00-63-1-0-2-2-3"
+        host.get_property = MagicMock(return_value=raw_schedule)
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(1, False, "07:30", suction_level=3, water_volume=3)
+
+        tasks = host.set_property.call_args.args[1].split(";")
+        assert tasks[1] == "2-1-09:00-63-1-0-2-2-3"
+        edited = tasks[0].split("-")
+        assert edited[0] == "1"
+        assert edited[1] == "0"
+        assert edited[2] == "07:30"
+        assert edited[6] == "3"
+        assert edited[7] == "3"
+
+    def test_preserves_omitted_fields_from_existing_task(self) -> None:
+        host = _host()
+        raw_schedule = "1-1-08:00-127-1-5-2-3-1,2"
+        host.get_property = MagicMock(return_value=raw_schedule)
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(1, True, "09:00")
+
+        props = host.set_property.call_args.args[1].split("-")
+        assert props[3] == "127"
+        assert props[5] == "5"
+        assert props[6] == "2"
+        assert props[7] == "3"
+        assert props[8] == "1,2"
+
+    def test_explicit_fields_override_previous_values(self) -> None:
+        host = _host()
+        raw_schedule = "1-1-08:00-127-1-5-2-3-1,2"
+        host.get_property = MagicMock(return_value=raw_schedule)
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(
+            1,
+            True,
+            "09:00",
+            repeats="63",
+            map_id="9",
+            suction_level=4,
+            water_volume=4,
+            options=["9"],
+        )
+
+        props = host.set_property.call_args.args[1].split("-")
+        assert props[3] == "63"
+        assert props[5] == "9"
+        assert props[6] == "4"
+        assert props[7] == "4"
+        assert props[8] == "9"
+
+    def test_options_empty_list_clears_previous_options(self) -> None:
+        host = _host()
+        raw_schedule = "1-1-08:00-127-1-0-1-1-1,2"
+        host.get_property = MagicMock(return_value=raw_schedule)
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(1, True, "09:00", options=[])
+
+        assert host.set_property.call_args.args[1].split("-")[8] == "0"
+
+
+class TestSetScheduleTaskRoundTrip:
+    def test_created_task_parses_back_to_expected_fields(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(
+            None,
+            True,
+            "08:30",
+            repeats="127",
+            once=False,
+            map_id="2",
+            suction_level=2,
+            water_volume=1,
+            options=["1", "3"],
+        )
+
+        raw = host.set_property.call_args.args[1]
+        parsed = _parse_schedule(raw)
+
+        assert len(parsed) == 1
+        task = parsed[0]
+        assert task["id"] == 1
+        assert task["enabled"] is True
+        assert task["invalid"] is False
+        assert task["time"] == "08:30"
+        assert task["repeats"] == "127"
+        assert task["once"] is False
+        assert task["map_id"] == "2"
+        assert task["suction_level"] == 2
+        assert task["water_volume"] == 1
+        assert task["options"] == ["1", "3"]
+
+    def test_disabled_once_task_with_no_options_parses_back(self) -> None:
+        host = _host()
+        host.get_property = MagicMock(return_value="")
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(None, False, "22:00", once=True, suction_level=0, water_volume=0)
+
+        raw = host.set_property.call_args.args[1]
+        task = _parse_schedule(raw)[0]
+
+        assert task["enabled"] is False
+        assert task["once"] is True
+        assert task["options"] is None
+
+    def test_edited_task_round_trips_alongside_untouched_sibling(self) -> None:
+        host = _host()
+        raw_schedule = "1-1-08:00-127-1-0-1-1-0;2-2-09:00-63-1-3-2-2-4,5"
+        host.get_property = MagicMock(return_value=raw_schedule)
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_schedule_task(1, True, "06:15", suction_level=1, water_volume=1)
+
+        raw = host.set_property.call_args.args[1]
+        parsed = _parse_schedule(raw)
+
+        assert len(parsed) == 2
+        edited, sibling = parsed
+        assert edited["id"] == 1
+        assert edited["time"] == "06:15"
+        assert sibling["id"] == 2
+        assert sibling["time"] == "09:00"
+        assert sibling["options"] == ["4", "5"]

@@ -72,6 +72,7 @@ from .dreame.const import (
 )
 from .dreame.map_data_json_renderer import DreameVacuumMapDataJsonRenderer
 from .dreame.map_renderer import DreameVacuumMapRenderer
+from .dreame.vacuum_types import ATTR_CHARGER, ATTR_ROBOT_POSITION
 from .entity import DreameVacuumEntity, DreameVacuumEntityDescription
 from .recorder import CAMERA_UNRECORDED_ATTRIBUTES
 
@@ -1039,9 +1040,19 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 if not attributes:
                     attributes = {}
 
-                attributes[ATTR_CALIBRATION] = (
+                calibration = (
                     self._calibration_points if self._calibration_points else self._renderer.calibration_points
                 )
+                attributes[ATTR_CALIBRATION] = calibration
+                if not calibration:
+                    # Contract §3.2: calibration is recalculated atomically with the
+                    # rendered image. Before the first successful render (HA boot,
+                    # ~10-20 s window) there is no calibration yet — publishing
+                    # positions anyway lets any consumer place overlays with an
+                    # identity/stale mapping (robot drawn in the top-left corner).
+                    # No calibration -> no positions.
+                    attributes.pop(ATTR_ROBOT_POSITION, None)
+                    attributes.pop(ATTR_CHARGER, None)
 
                 # Tells the companion card whether the robot icon is baked into the
                 # rendered PNG. When the robot is hidden from the image (Hidden map

@@ -22,6 +22,7 @@ from .dreame.const import (
     ATTR_CRUSING,
     ATTR_CURRENT_SEGMENT,
     ATTR_DID,
+    ATTR_DND,
     ATTR_DOCKED,
     ATTR_DRAINING_AVAILABLE,
     ATTR_DRYING_AVAILABLE,
@@ -41,8 +42,11 @@ from .dreame.const import (
     ATTR_PREVIOUS_SELF_CLEAN_TIME,
     ATTR_RECOVERY_MAP_FILE,
     ATTR_RECOVERY_MAP_PICTURE,
+    ATTR_ROBOT_BEAM_ICON,
+    ATTR_ROBOT_ICON,
     ATTR_ROOM_COLORS,
     ATTR_ROOMS,
+    ATTR_SCHEDULE,
     ATTR_SEGMENT_CLEANING,
     ATTR_SEGMENT_MAP,
     ATTR_SELECTED,
@@ -117,6 +121,10 @@ CAMERA_UNRECORDED_ATTRIBUTES = {
     ATTR_WIFI_MAP_PICTURE,
     ATTR_ROBOT_POSITION,
     ATTR_ROOM_ICON,
+    # Static per-device data-URI icons (several KB each), re-sent on every
+    # camera state change — never historize them.
+    ATTR_ROBOT_ICON,
+    ATTR_ROBOT_BEAM_ICON,
     ATTR_ROTATION,
     ATTR_UPDATED,
     ATTR_FRAME_ID,
@@ -203,6 +211,10 @@ VACUUM_UNRECORDED_ATTRIBUTES = {
     ATTR_CHARGING,
     ATTR_DOCKED,
     ATTR_BATTERY,
+    # Structured schedule/DND state — mutated rarely, bulky, and duplicated by
+    # dedicated entities; keep it out of the recorder DB.
+    ATTR_SCHEDULE,
+    ATTR_DND,
     "fan_speed_list",
     "fan_speed",
     "battery_level",

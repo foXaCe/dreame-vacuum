@@ -592,6 +592,41 @@ class DreameVacuum(DreameVacuumEntity, StateVacuumEntity):  # type: ignore[misc]
         if key is not None and key != "":
             await self._try_command("call_action failed: %s", self.device.call_action_value, key, value)
 
+    async def async_delete_schedule(self, schedule_id: Any) -> None:
+        """Delete a scheduled cleaning task."""
+        await self._try_command(
+            "Unable to call delete_schedule: %s",
+            self.device.delete_schedule,
+            schedule_id,
+        )
+
+    async def async_set_schedule(
+        self,
+        enabled: Any,
+        time: Any,
+        schedule_id: Any = None,
+        repeats: Any = None,
+        once: Any = False,
+        map_id: Any = None,
+        suction_level: Any = None,
+        water_volume: Any = None,
+        options: Any = None,
+    ) -> None:
+        """Create or update a scheduled cleaning task."""
+        await self._try_command(
+            "Unable to call set_schedule_task: %s",
+            self.device.set_schedule_task,
+            schedule_id,
+            enabled,
+            time,
+            repeats,
+            once,
+            map_id,
+            suction_level,
+            water_volume,
+            options,
+        )
+
     async def async_rename_map(self, map_id: Any, map_name: str = "") -> None:
         """Rename a map"""
         await self._try_command(
@@ -757,6 +792,33 @@ class DreameVacuum(DreameVacuumEntity, StateVacuumEntity):  # type: ignore[misc]
                 shortcut_id,
                 shortcut_name,
             )
+
+    async def async_set_dnd_task(
+        self,
+        enabled: Any,
+        start: Any,
+        end: Any,
+        task_id: Any = None,
+        weekday_mask: Any = None,
+    ) -> None:
+        """Create or update a single multi-window DnD task (only on supported devices)."""
+        await self._try_command(
+            "Unable to call set_dnd_task: %s",
+            self.device.set_dnd_task_entry,
+            task_id,
+            enabled,
+            start,
+            end,
+            weekday_mask,
+        )
+
+    async def async_delete_dnd_task(self, task_id: Any) -> None:
+        """Delete a single multi-window DnD task by id (only on supported devices)."""
+        await self._try_command(
+            "Unable to call delete_dnd_task: %s",
+            self.device.delete_dnd_task,
+            task_id,
+        )
 
     async def async_set_obstacle_ignore(self, x: Any, y: Any, obstacle_ignored: Any) -> None:
         """Set obstacle ignore status"""

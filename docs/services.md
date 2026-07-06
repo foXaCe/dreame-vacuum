@@ -154,7 +154,6 @@ Start selected zone cleaning with optional customized cleaning parameters.
         - 3
     target:
       entity_id: vacuum.vacuum
-    ```tity_id: vacuum.vacuum
     ```
 
 ### `dreame_vacuum.vacuum_clean_spot`
@@ -536,6 +535,99 @@ Send command service can be used to send raw api requests that are not available
             value: 0
     ```
 
+## Schedule Services
+Services for creating, editing and deleting scheduled cleaning tasks (`status.schedule` / the `schedule` entity attribute). See `docs/dev/schedule-format.md` for the full wire-format derivation these services are built on.
+
+> **Limitations (read before using `vacuum_set_schedule`):** the device's raw `SCHEDULE` property packs each task into an opaque, semicolon/dash-separated string. Several fields in that format are not fully understood from static analysis alone:
+> - The enabled/status field has two device-confirmed "enabled" wire values (`1` and `2`); what distinguishes them is unknown, so this integration always writes `1` for an enabled task.
+> - `repeats` (the day-of-week/repeat pattern) and `options` are passed through **as opaque raw values** — this integration does not decode or validate their meaning. If you need a specific repeat pattern, read back an existing task's `repeats` value (e.g. from the `schedule` attribute of a vacuum entity, once one has been configured from the official app) and reuse it verbatim; do not guess an encoding.
+> - `suction_level` and `water_volume` have no known default, so they are **required** when creating a new task (`schedule_id` omitted); they remain optional when editing an existing task, where the previous value is kept if omitted.
+> - When editing an existing task (`schedule_id` provided), any field left out keeps the previous value for that task. Passing `options: []` explicitly clears the previous options (sets it to "no options"), while omitting `options` entirely preserves whatever was there before.
+> - All other scheduled tasks are left byte-identical; only the targeted task is added, replaced, or removed.
+
+### `dreame_vacuum.vacuum_delete_schedule`
+
+Delete a scheduled cleaning task.
+
+> - You can acquire the schedule id from the vacuum entity's `schedule` attribute.
+> - ⚠️ **Known not to work on some recent firmwares** (verified on Aqua10 Ultra
+>   r95285 / firmware 3397, 2026-07-06): the device silently ignores both the
+>   property rewrite and the `DELETE_SCHEDULE` action — see
+>   `docs/dev/schedule-format.md` § "Live-device round-trip". Deleting from the
+>   official app still works.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `schedule_id` | yes | ID of the scheduled task to delete | `5` |
+
+**Example:**
+
+- Delete the scheduled task with id 5
+    ```yaml
+    service: dreame_vacuum.vacuum_delete_schedule
+    data:
+        schedule_id: 5
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+### `dreame_vacuum.vacuum_set_schedule`
+
+Create or update a scheduled cleaning task. Omit `schedule_id` to create a new task; pass an existing `schedule_id` to update it in place.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `schedule_id` | no | ID of the task to update. Omit to create a new task | `5` |
+| `enabled` | yes | Whether the task is enabled | `true` |
+| `time` | yes | Time of day the task runs, as `HH:MM` | `"08:00"` |
+| `repeats` | no | Raw, device-specific repeat pattern (opaque, not decoded by this integration). Keeps the previous value on edit if omitted | `"127"` |
+| `once` | no | Run once instead of repeating (default `false`) | `true` |
+| `map_id` | no | ID of the map this task applies to. Keeps the previous value on edit if omitted | `"1"` |
+| `suction_level` | no\* | Suction level for the task. \*Required when creating a new task | `1` |
+| `water_volume` | no\* | Water volume for the task. \*Required when creating a new task | `1` |
+| `options` | no | Raw list of option codes (opaque, not decoded by this integration). Keeps the previous value on edit if omitted; pass `[]` to explicitly clear | `["1", "2"]` |
+
+**Examples:**
+
+- Create a new, enabled, non-repeating task at 08:00
+    ```yaml
+    service: dreame_vacuum.vacuum_set_schedule
+    data:
+        enabled: true
+        time: "08:00"
+        once: true
+        suction_level: 1
+        water_volume: 1
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+- Update the time of the existing task with id 5, keeping every other field as-is
+    ```yaml
+    service: dreame_vacuum.vacuum_set_schedule
+    data:
+        schedule_id: 5
+        enabled: true
+        time: "07:30"
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+- Disable the existing task with id 5 without changing anything else
+    ```yaml
+    service: dreame_vacuum.vacuum_set_schedule
+    data:
+        schedule_id: 5
+        enabled: false
+        time: "07:30"
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
 ## Map Services
 Map editing services also uses the vacuum domain because all services are available even without cloud connection.
 
@@ -845,6 +937,72 @@ Rename a saved shortcut.
     data:
         shortcut_id: 32
         shortcut_name: "Mopping after sweeping"
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+### `dreame_vacuum.vacuum_set_dnd_task`
+
+Create or update a single multi-window Do Not Disturb (DnD) task by id.
+
+> - Only supported on devices reporting the `dnd_task` capability (devices whose firmware supports several
+>   named DnD windows). On other devices, keep using the `dnd` switch entity and the `dnd_start`/`dnd_end`
+>   time entities — this service is rejected on those devices.
+> - Omit `task_id` to create a new task; the device assigns the next free id.
+> - If `task_id` is given but doesn't match an existing task, a new task is created with that exact id.
+> - `weekday_mask` is the **raw** weekday bitmask reported by the device firmware. **The bit-to-day mapping
+>   is not confirmed on a live device** — only `127` (all 7 bits set) is known to mean "all days". This
+>   service never decodes or interprets the value; it is passed straight to the device. Omit it to preserve
+>   an existing task's mask, or to default a new task to `127` (all days). See
+>   `docs/dev/dnd-tasks-design.md` for the full wire-format writeup and open unknowns.
+> - All tasks (not just the first) are exposed read-only via the vacuum entity's `dnd` attribute, keyed by
+>   task id, including the raw `weekday_mask` for each task.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `task_id` | no | Id of the task to update; omit to create a new task | `1` |
+| `enabled` | yes | Whether the task is enabled | `true` |
+| `start` | yes | Window start time (`HH:MM`) | `"22:00"` |
+| `end` | yes | Window end time (`HH:MM`, must differ from `start`) | `"08:00"` |
+| `weekday_mask` | no | Raw device weekday bitmask; meaning unconfirmed, `127` = all days; omit to preserve/default | `127` |
+
+**Example:**
+
+- Create (or update) task 1 to run 22:00-08:00, enabled, on all days
+    ```yaml
+    service: dreame_vacuum.vacuum_set_dnd_task
+    data:
+        task_id: 1
+        enabled: true
+        start: "22:00"
+        end: "08:00"
+        weekday_mask: 127
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+### `dreame_vacuum.vacuum_delete_dnd_task`
+
+Delete a single multi-window DnD task by id.
+
+> - Only supported on devices reporting the `dnd_task` capability.
+> - Raises an error if `task_id` does not match any existing task.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `task_id` | yes | Id of the task to delete | `1` |
+
+**Example:**
+
+- Delete task 1
+    ```yaml
+    service: dreame_vacuum.vacuum_delete_dnd_task
+    data:
+        task_id: 1
     target:
         entity_id: vacuum.vacuum
     ```
