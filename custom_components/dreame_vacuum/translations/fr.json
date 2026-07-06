@@ -1600,6 +1600,16 @@
       },
       "name": "Supprimer la carte"
     },
+    "vacuum_delete_schedule": {
+      "description": "Supprimer une tâche planifiée.",
+      "fields": {
+        "schedule_id": {
+          "description": "ID de la tâche planifiée à supprimer.",
+          "name": "ID de la tâche planifiée"
+        }
+      },
+      "name": "Supprimer la tâche planifiée"
+    },
     "vacuum_discard_temporary_map": {
       "description": "Jetez la carte temporaire.",
       "name": "Supprimer la carte temporaire"
@@ -1935,6 +1945,48 @@
         }
       },
       "name": "Définir la position du routeur"
+    },
+    "vacuum_set_schedule": {
+      "description": "Créer ou modifier une tâche planifiée. Omettez schedule_id pour créer une nouvelle tâche.",
+      "fields": {
+        "enabled": {
+          "description": "Indique si la tâche planifiée est activée.",
+          "name": "Activée"
+        },
+        "map_id": {
+          "description": "ID de la carte à laquelle cette tâche s'applique. Conserve la valeur précédente lors de la modification d'une tâche existante si omis.",
+          "name": "ID de carte"
+        },
+        "once": {
+          "description": "Exécuter la tâche une seule fois au lieu de la répéter.",
+          "name": "Une seule fois"
+        },
+        "options": {
+          "description": "Liste brute de codes d'options tels que compris par l'appareil (opaque, non décodée par cette intégration). Conserve la valeur précédente lors de la modification d'une tâche existante si omis.",
+          "name": "Options"
+        },
+        "repeats": {
+          "description": "Motif de répétition brut tel que compris par l'appareil (opaque, non décodé par cette intégration). Conserve la valeur précédente lors de la modification d'une tâche existante si omis.",
+          "name": "Répétitions"
+        },
+        "schedule_id": {
+          "description": "ID de la tâche planifiée à modifier. Omettez ce champ pour créer une nouvelle tâche.",
+          "name": "ID de la tâche planifiée"
+        },
+        "suction_level": {
+          "description": "Niveau d'aspiration de la tâche. Obligatoire lors de la création d'une nouvelle tâche ; conserve la valeur précédente lors de la modification d'une tâche existante si omis.",
+          "name": "Niveau d'aspiration"
+        },
+        "time": {
+          "description": "Heure de déclenchement de la tâche, au format HH:MM.",
+          "name": "Heure"
+        },
+        "water_volume": {
+          "description": "Volume d'eau de la tâche. Obligatoire lors de la création d'une nouvelle tâche ; conserve la valeur précédente lors de la modification d'une tâche existante si omis.",
+          "name": "Volume d'eau"
+        }
+      },
+      "name": "Définir la tâche planifiée"
     },
     "vacuum_set_virtual_threshold": {
       "description": "Définir des seuils virtuels.",

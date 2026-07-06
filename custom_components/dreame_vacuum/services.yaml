@@ -682,3 +682,72 @@ vacuum_call_action:
       required: false
       selector:
         text:
+
+vacuum_delete_schedule:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    schedule_id:
+      example: 5
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+
+vacuum_set_schedule:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    schedule_id:
+      example: 5
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    enabled:
+      example: true
+      required: true
+      selector:
+        boolean:
+    time:
+      example: "08:00"
+      required: true
+      selector:
+        text:
+    repeats:
+      required: false
+      selector:
+        text:
+    once:
+      default: false
+      selector:
+        boolean:
+    map_id:
+      required: false
+      selector:
+        text:
+    suction_level:
+      example: 1
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    water_volume:
+      example: 1
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    options:
+      required: false
+      selector:
+        text:
+          multiple: true
