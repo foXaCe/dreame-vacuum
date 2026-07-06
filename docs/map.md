@@ -2,6 +2,8 @@
 
 Completely reverse engineered map data handling, decoding and rendering for live and multiple saved map support with all features provided with the official App.
 
+> For the underlying HTTP query parameters, JSON payload shapes and the camera attribute contract (e.g. for building a companion Lovelace card), see [Camera HTTP API](camera_http_api.md).
+
 <img src="https://raw.githubusercontent.com/foXaCe/dreame-vacuum/main/docs/media/live_map.jpg" width="400px">
 
 - High resolution image rendering with layer caching for improving performance.

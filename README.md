@@ -307,6 +307,7 @@ attributes:
 - [Entities](docs/entities.md) — Full entity list
 - [Supported Devices](docs/supported_devices.md) — Tested models and compatibility
 - [Map](docs/map.md) — Map configuration and usage
+- [Camera HTTP API](docs/camera_http_api.md) — Wire format for the 7 camera HTTP views and the map attribute contract (companion card integrators)
 - [Services](docs/services.md) — Available services
 - [Room Entities](docs/room_entities.md) — Per-room cleaning entities
 - [Notifications](docs/notifications.md) — Notification system
@@ -326,7 +327,7 @@ attributes:
 - Updates are pushed by the Dreame cloud over MQTT (`cloud_push`), backed by a
   periodic safety-net poll — a working cloud connection is required
 - Map rendering is CPU-intensive on first load (cached afterward)
-- The `requests` library is used for some cloud API calls (not fully async yet)
+- Cloud API calls are async-native (aiohttp); the local python-miio backend and some `device.py` worker threads are not fully async yet (see `ARCHITECTURE.md`'s async migration roadmap)
 - Some older Dreame models may not expose all entities
 
 
@@ -340,7 +341,6 @@ attributes:
 
 ## To Do
 
-- Integrated custom lovelace map card
 - Shortcut editing
 - Schedule editing
 - Furniture editing
