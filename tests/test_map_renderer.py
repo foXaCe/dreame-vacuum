@@ -1766,16 +1766,15 @@ class TestRenderMapRotation:
 
 
 class TestRenderMapExceptionHandling:
-    def test_invalid_color_index_is_caught_and_returns_none_on_first_render(self) -> None:
-        # BUG (pre-existing, documented not fixed): render_map is typed to return
-        # ``bytes`` but a rendering exception on the very first call leaves
-        # ``self._image`` at its initial ``None`` -> ``_to_buffer(None)`` returns
-        # ``None`` instead of falling back to ``default_map_image``.
+    def test_invalid_color_index_on_first_render_falls_back_to_default_image(self) -> None:
+        # render_map is typed to return ``bytes``: a rendering exception on the
+        # very first call (no image produced yet) falls back to the placeholder
+        # ``default_map_image`` instead of leaking ``None``.
         map_data = _make_small_map_data()
         map_data.segments[1].color_index = 999  # Out of range for color_scheme.segment -> IndexError.
         renderer = DreameVacuumMapRenderer(low_resolution=True)
         result = renderer.render_map(map_data, robot_status=0, station_status=0)
-        assert result is None
+        assert result == renderer.default_map_image
         assert renderer.render_complete is True
 
     def test_invalid_color_index_after_a_prior_successful_render_reuses_last_good_image(self) -> None:

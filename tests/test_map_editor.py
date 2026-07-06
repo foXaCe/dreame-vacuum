@@ -11,7 +11,7 @@ in-process fake so the debounce can be inspected/fired synchronously.
 from __future__ import annotations
 
 from typing import ClassVar
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -1498,23 +1498,23 @@ def test_restore_map_returns_when_decoded_map_is_none(
     assert _FakeTimer.instances == []
 
 
-def test_restore_map_swallows_missing_get_interim_file_data_helper(
+def test_restore_map_fetches_raw_map_through_the_manager_helper(
     editor: DreameMapVacuumMapEditor, manager: MagicMock
 ) -> None:
-    """Characterizes a real bug: DreameMapVacuumMapEditor has no
-    ``_get_interim_file_data`` method of its own (only the map manager
-    defines it), so whenever raw_map is missing and must be fetched by
-    object name, this call raises AttributeError. It is caught by the
-    surrounding ``except Exception`` and silently treated like a normal
-    "fetch failed" warning, meaning recovery silently no-ops instead of
-    surfacing a clear error."""
+    """When raw_map is missing, the editor fetches it by object name through
+    the map manager's ``_get_interim_file_data`` helper (the editor has no
+    helper of its own) and stores the decoded payload on the info object."""
     manager._map_list = [8]
     manager._saved_map_data = {8: _map_data(rotation=0)}
+    manager._get_interim_file_data = MagicMock(return_value=b"RAWMAP")
     info = RecoveryMapInfo(map_id=8, date=None, raw_map=None, map_object_name="obj-name", object_name="obj", map_type=0)
 
-    editor.restore_map(info)  # must not raise, despite the missing helper
+    with patch.object(map_editor_module.DreameVacuumMapDecoder, "decode_saved_map", return_value=None) as decode:
+        editor.restore_map(info)
 
-    assert _FakeTimer.instances == []
+    manager._get_interim_file_data.assert_called_once_with("obj-name")
+    assert info.raw_map == "RAWMAP"
+    decode.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

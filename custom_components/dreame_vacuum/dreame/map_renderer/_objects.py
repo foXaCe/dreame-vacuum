@@ -678,7 +678,7 @@ class _ObjectsMixin(_MapRendererState):
                 self._charger_icon = self._set_icon_color(
                     self._charger_icon,
                     icon_size,
-                    (0, 255, 126),
+                    (0, 255, 126, 255),
                 )
 
             if self.color_scheme.dark:

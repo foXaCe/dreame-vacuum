@@ -688,10 +688,12 @@ class _LayersMixin(_MapRendererState):
                         continue
                     if (
                         not self.config.stain
-                        and v.type != ObstacleType.LIQUID_STAIN
-                        and v.type != ObstacleType.DRIED_STAIN
-                        and v.type != ObstacleType.MIXED_STAIN
-                        and v.type != ObstacleType.DETECTED_STAIN
+                        and (
+                            v.type == ObstacleType.LIQUID_STAIN
+                            or v.type == ObstacleType.DRIED_STAIN
+                            or v.type == ObstacleType.MIXED_STAIN
+                            or v.type == ObstacleType.DETECTED_STAIN
+                        )
                     ) or (not self.config.pet and v.type == ObstacleType.PET):
                         continue
 

@@ -365,22 +365,18 @@ class TestSetPropertyValueAvailabilityGate:
 
 
 class TestSetPropertyValueSchedule:
-    def test_blank_schedule_is_rejected(self) -> None:
-        """NOTE: characterizes a subtlety/bug — the SCHEDULE branch sets ``valid = True``
-        for a blank value (skipping task validation) and writes it into ``string_value``,
-        but an empty string is falsy, so the later
-        ``not (isinstance(value, int) or string_value)`` check still rejects it. Clearing
-        the schedule via an empty string is therefore not actually possible through this
-        path, despite the code appearing to special-case it."""
+    def test_blank_schedule_clears_the_schedule(self) -> None:
+        """A blank value skips task validation and is accepted as-is: it is the
+        documented way to clear the schedule (``string_value`` is a flag, so the
+        falsy empty payload no longer trips the final validity check)."""
         host = _host(_read_write_properties=[DreameVacuumProperty.SCHEDULE])
         host.status = SimpleNamespace(started=False)
         host.data = {DreameVacuumProperty.SCHEDULE.value: "old"}
         host.set_property = MagicMock(return_value=True)
 
-        with pytest.raises(InvalidActionException, match="Invalid value"):
-            host.set_property_value("schedule", "")
+        host.set_property_value("schedule", "")
 
-        host.set_property.assert_not_called()
+        host.set_property.assert_called_once_with(DreameVacuumProperty.SCHEDULE, "")
 
     def test_wellformed_task_is_accepted(self) -> None:
         host = _host(_read_write_properties=[DreameVacuumProperty.SCHEDULE])

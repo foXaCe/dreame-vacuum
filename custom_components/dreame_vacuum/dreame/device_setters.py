@@ -407,7 +407,9 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
                             valid = False
                             break
                 if valid:
-                    string_value = value
+                    # Flag-only marker: an empty string is a valid payload here
+                    # (it clears the schedule), so do not store the falsy value.
+                    string_value = True
             elif prop is DreameVacuumProperty.CLEANGENIUS_MODE:
                 value = get_int_value(DreameVacuumCleanGeniusMode, value)
             elif prop is DreameVacuumProperty.WATER_TEMPERATURE:

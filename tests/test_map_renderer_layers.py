@@ -132,27 +132,23 @@ class TestRenderObjectsAllLayersEnabled:
         # No non-pet/non-stain obstacle qualifies, and pet is disabled -> nothing rendered.
         assert MapRendererLayer.OBSTACLES not in cached_layers
 
-    def test_stain_config_disabled_skips_regular_obstacles_not_stains(self) -> None:
-        # BUG (pre-existing, documented not fixed): the "stain" gate in
-        # render_objects reads ``not self.config.stain and v.type != LIQUID_STAIN
-        # and v.type != DRIED_STAIN and ...`` -- i.e. it skips the obstacle when
-        # it is *not* a stain type, the exact opposite of what "disable stain
-        # rendering" should do. With config.stain=False, a regular OBSTACLE is
-        # skipped while a LIQUID_STAIN obstacle survives untouched below.
+    def test_stain_config_disabled_skips_stains_and_keeps_regular_obstacles(self) -> None:
+        # Disabling stain rendering hides stain-type obstacles only; regular
+        # obstacles (governed by config.obstacle, enabled here) keep rendering.
         renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True, hidden_map_objects=["stain"])
         regular = _make_small_map_data()
         regular.obstacles = {"1": Obstacle(150, 150, type=ObstacleType.OBSTACLE.value, possibility=90)}
         map_image = Image.new("RGBA", (40, 40), (0, 0, 0, 0))
         cached_layers: dict = {}
         renderer.render_objects(cached_layers, regular, 0, 0, map_image, 2)
-        assert MapRendererLayer.OBSTACLES not in cached_layers
+        assert MapRendererLayer.OBSTACLES in cached_layers
 
         renderer2 = DreameVacuumMapRenderer(low_resolution=False, cache=True, hidden_map_objects=["stain"])
         stain = _make_small_map_data()
         stain.obstacles = {"1": Obstacle(150, 150, type=ObstacleType.LIQUID_STAIN.value, possibility=90)}
         cached_layers2: dict = {}
         renderer2.render_objects(cached_layers2, stain, 0, 0, map_image, 2)
-        assert MapRendererLayer.OBSTACLES in cached_layers2
+        assert MapRendererLayer.OBSTACLES not in cached_layers2
 
     def test_obstacle_config_disabled_skips_regular_type(self) -> None:
         renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True, hidden_map_objects=["obstacle"])
@@ -234,22 +230,18 @@ class TestChargerLayerOffsets:
         renderer.render_objects(cached_layers, map_data, 0, 0, map_image, 2)
         assert MapRendererLayer.CHARGER in cached_layers
 
-    def test_material_icon_set_charger_color_tint_crashes(self) -> None:
-        # BUG (pre-existing, documented not fixed): render_charger's icon_set==3
-        # (Material) branch calls ``self._set_icon_color(self._charger_icon,
-        # icon_size, (0, 255, 126))`` with a 3-channel RGB colour, but
-        # ``_set_icon_color`` assigns it into an RGBA numpy array
-        # (``arr[mask] = color``), which raises ValueError: shape mismatch.
-        # Under render_map's top-level try/except this is silently swallowed
-        # (falls back to the previous/default image); called directly it crashes.
+    def test_material_icon_set_charger_renders_with_color_tint(self) -> None:
+        # The Material (icon_set==3) branch tints the charger icon through
+        # ``_set_icon_color`` with a full RGBA colour, so the charger layer
+        # renders instead of crashing on an RGB/RGBA shape mismatch.
         map_data = _make_small_map_data()
         renderer = DreameVacuumMapRenderer(
             low_resolution=False, cache=True, icon_set="Material", robot_type=RobotType.VSLAM
         )
         map_image = Image.new("RGBA", (40, 40), (0, 0, 0, 0))
         cached_layers: dict = {}
-        with pytest.raises(ValueError, match="broadcast"):
-            renderer.render_objects(cached_layers, map_data, 0, 0, map_image, 2)
+        renderer.render_objects(cached_layers, map_data, 0, 0, map_image, 2)
+        assert MapRendererLayer.CHARGER in cached_layers
 
     def test_charger_layer_removed_when_disabled(self) -> None:
         renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)

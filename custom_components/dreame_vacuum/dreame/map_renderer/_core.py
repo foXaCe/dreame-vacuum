@@ -1991,7 +1991,13 @@ class DreameVacuumMapRenderer(
             _LOGGER.error("Map render Failed: %s", traceback.format_exc())
 
         self.render_complete = True
-        return cast(bytes, self._to_buffer(self._image if self._cache else image))
+        result = self._image if self._cache else image
+        if result is None:
+            # A failure during the very first render leaves no image at all;
+            # fall back to the placeholder like empty maps do instead of
+            # returning None from a bytes-typed API.
+            return self.default_map_image
+        return cast(bytes, self._to_buffer(result))
 
     def _calculate_render_sizes(self, map_data: Any, map_image: Any, scale: Any) -> Any:
         """Calculate icon sizes for rendering based on map dimensions."""

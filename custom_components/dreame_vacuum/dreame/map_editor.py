@@ -503,7 +503,7 @@ class DreameMapVacuumMapEditor:
 
             if recovery_map_info.raw_map is None and recovery_map_info.map_object_name is not None:
                 try:
-                    response = self._get_interim_file_data(recovery_map_info.map_object_name)
+                    response = self.map_manager._get_interim_file_data(recovery_map_info.map_object_name)
                     if response:
                         recovery_map_info.raw_map = response.decode()
                 except Exception as ex:

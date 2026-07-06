@@ -41,6 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   debt was paid off (F841/B006/B008/F507/F634/E712 re-enabled at zero
   violations, ~80 mechanical fixes for SIM118/B007/RET503 and friends).
 
+### Fixed
+- Map rendering: disabling the "stain" map object no longer hides every
+  regular obstacle while leaving stains visible (the filter was inverted).
+- Map rendering: the charger icon renders again with the Material icon set
+  (an RGB/RGBA mismatch crashed the tint step, silently freezing the map).
+- Map rendering: a failure during the very first render now falls back to
+  the placeholder image instead of returning no image at all.
+- Map recovery: restoring a saved map fetches the recovery file again — a
+  missing helper made the restore silently do nothing when the raw map was
+  not already cached.
+- Schedule: clearing the schedule with an empty value works again instead
+  of being rejected as invalid.
+
 ### Removed
 - Dead commented-out map fields (`walls_info`/`ai_outborders_*`) in the map
   decoder and renderer.

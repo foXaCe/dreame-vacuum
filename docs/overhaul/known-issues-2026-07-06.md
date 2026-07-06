@@ -1,31 +1,32 @@
 # Anomalies réelles découvertes par la campagne de tests du 2026-07-06
 
 La montée de couverture (66 % → 98,8 %, +2 063 tests) a mis au jour les
-anomalies suivantes dans le moteur `dreame/`. **Aucune n'a été corrigée dans
-cette passe** : la plupart sont héritées du fork upstream, et certaines
-« corrections » changeraient un comportement auquel les utilisateurs sont
-habitués. Chaque anomalie est épinglée par un test qui documente le
-comportement ACTUEL — corriger l'anomalie implique d'inverser le test associé.
+anomalies suivantes dans le moteur `dreame/`. Les 5 anomalies à impact
+utilisateur (section suivante) **ont été corrigées** dans la foulée, avec
+inversion des tests qui les épinglaient. Les autres restent documentées :
+la plupart sont héritées du fork upstream, et certaines « corrections »
+changeraient un comportement auquel les utilisateurs sont habitués. Chaque
+anomalie restante est épinglée par un test qui documente le comportement
+ACTUEL — la corriger implique d'inverser le test associé.
 
-## Impact utilisateur probable (à corriger en priorité)
+## Impact utilisateur — ✅ CORRIGÉES (commit « fix: five user-impacting engine bugs »)
 
-1. **`map_renderer/_layers.py` — filtre « stain » inversé** (`render_objects`,
-   boucle OBSTACLES) : `not config.stain and type != LIQUID_STAIN …` masque les
-   obstacles *non*-taches quand le rendu des taches est désactivé — l'inverse
-   de l'intention apparente.
-2. **`map_renderer/_objects.py` — crash silencieux du chargeur en icon set
-   Material** : `_set_icon_color(icon, size, (0, 255, 126))` passe un tuple RGB
-   à un tableau RGBA → `ValueError: shape mismatch`, avalé par le try/except de
-   `render_map` → rendu cassé/gelé sans erreur visible.
-3. **`map_editor.py::restore_map`** : appelle `self._get_interim_file_data(…)`
-   qui n'existe que sur `DreameMapVacuumMapManager` → `AttributeError` avalé →
-   la restauration de carte est silencieusement no-op quand `raw_map` est absent.
-4. **`map_renderer/_core.py::render_map`** : une exception pendant le tout
-   premier rendu laisse `self._image = None` et la méthode (typée `-> bytes`)
-   retourne `None` au lieu de `default_map_image`.
-5. **`device_setters.py::set_property_value`** (branche SCHEDULE) : une valeur
-   vide est validée mais stockée dans `string_value` (chaîne vide falsy) que le
-   contrôle final rejette → impossible d'effacer le planning par chaîne vide.
+1. ✅ **`map_renderer/_layers.py` — filtre « stain » inversé** : désactiver le
+   rendu des taches masquait tous les obstacles ordinaires et laissait les
+   taches affichées. La gate teste désormais `type in STAINS` (symétrique de
+   la clause pet).
+2. ✅ **`map_renderer/_objects.py` — crash silencieux du chargeur en icon set
+   Material** : le tuple RGB `(0, 255, 126)` passé à un tableau RGBA levait
+   `ValueError: shape mismatch` (avalé → rendu gelé). Couleur RGBA complète
+   `(0, 255, 126, 255)`, conforme aux autres appels.
+3. ✅ **`map_editor.py::restore_map`** : l'appel passe par
+   `self.map_manager._get_interim_file_data(…)` — la restauration de carte
+   récupère à nouveau le fichier au lieu d'être silencieusement no-op.
+4. ✅ **`map_renderer/_core.py::render_map`** : un échec du tout premier rendu
+   retombe sur `default_map_image` au lieu de retourner `None`.
+5. ✅ **`device_setters.py::set_property_value`** (branche SCHEDULE) :
+   `string_value` est maintenant un pur flag de validité — une chaîne vide
+   (effacement du planning) est acceptée et envoyée au device.
 
 ## Incohérences internes (comportement contre-intuitif, pas de crash)
 
