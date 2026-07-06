@@ -344,8 +344,8 @@ attributes:
 
 ## To Do
 
-- Shortcut editing
-- Furniture editing
+- Shortcut editing (rename done; create/delete/task-edit blocked on wire format — design: docs/dev/shortcut-editing-design.md)
+- Furniture editing (read/render done, no write path — design: docs/dev/furniture-editing-design.md)
 - Live camera streaming (spike: see docs/dev/streaming-spike.md — size L-or-never, blocked on proprietary transport)
 
 
