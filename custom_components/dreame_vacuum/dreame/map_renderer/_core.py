@@ -24,6 +24,7 @@ import numpy as np
 from PIL import (
     Image,
     ImageDraw,
+    ImageFilter,
     ImageFont,
     ImageOps,
 )
@@ -100,6 +101,9 @@ class DreameVacuumMapRenderer(
         # crisper under the card's pinch-zoom, at a memory/CPU cost that grows
         # with the square of the factor. Ignored in low-resolution mode.
         self._render_scale: int = max(1, min(3, int(render_scale)))
+        # Subtle inner-edge shading so the floor reads as a slightly raised panel
+        # over the transparent surround (relief vs the non-room zone).
+        self._map_relief: bool = True
         self._square: bool = square
         self._vector_rooms: bool = vector_rooms
         self._cache: bool = cache
@@ -1177,6 +1181,36 @@ class DreameVacuumMapRenderer(
             return buffer.getvalue()
         return None
 
+    def _apply_floor_relief(self, pixels: np.ndarray, scale: int) -> np.ndarray:
+        """Give the floor a subtle raised look against the transparent surround.
+
+        Darkens a thin band along the inner edge of the floor silhouette (an
+        inner shadow / bevel), so the rooms read as a slightly raised panel over
+        the non-room zone instead of a flat cut-out. Stays entirely within the
+        floor pixels — the outside remains fully transparent (contract 3.1), the
+        image size, calibration and the separate segment_map are untouched.
+        """
+        try:
+            alpha = pixels[..., 3]
+            if not alpha.any():
+                return pixels
+            # Blur the floor silhouette: inside stays ~1.0, it falls off only
+            # within ``radius`` of the boundary, which is exactly the edge band.
+            radius = max(2.0, float(scale) * 2.0)
+            silhouette = Image.fromarray(((alpha > 0).astype(np.uint8) * 255), "L")
+            blurred = np.asarray(silhouette.filter(ImageFilter.GaussianBlur(radius)), dtype=np.float32) / 255.0
+            silhouette.close()
+            # 1.0 in the interior, down to ~0.55 right at the edge.
+            factor = 0.55 + 0.45 * blurred
+            floor = alpha > 0
+            rgb = pixels[..., :3].astype(np.float32)
+            rgb[floor] *= factor[floor][:, None]
+            pixels[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+            return pixels
+        except Exception as ex:  # pragma: no cover - defensive, never break the raster path
+            _LOGGER.debug("Floor relief skipped: %s", ex)
+            return pixels
+
     def _smooth_upscale(self, pixels: np.ndarray, scale: int) -> np.ndarray:
         """Upscale the base raster with anti-aliasing instead of nearest-neighbour.
 
@@ -1656,6 +1690,9 @@ class DreameVacuumMapRenderer(
                     and self._map_data.dimensions.crop != map_data.dimensions.crop
                 ):
                     self._map_data = None
+
+                if self._map_relief and not map_data.wifi_map:
+                    pixels = self._apply_floor_relief(pixels, scale)
 
                 image = Image.fromarray(pixels)
                 if self._square and not map_data.wifi_map:  # and not map_data.saved_map:
