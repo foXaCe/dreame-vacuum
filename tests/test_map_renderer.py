@@ -1077,12 +1077,17 @@ class TestCalculateBounds:
         seg2 = Segment(2, x0=100, y0=100, x1=150, y1=150)
         bounds = DreameVacuumMapRenderer._calculate_bounds(dims, {1: seg1, 2: seg2})
         assert bounds is not None
-        min_x, min_y, max_x, _max_y_dup = bounds
-        # 4th element mirrors min_y (see implementation: [min_x, min_y, max_x, min_y]).
-        assert bounds[3] == min_y
+        min_x, min_y, max_x, max_y = bounds
+        # Regression test for a real bug: the 4th element used to mirror
+        # min_y instead of returning max_y (see test_map_renderer.py's
+        # test_dimensions_bounds_do_not_affect_crop_bug - the downstream
+        # narrowing math is a no-op either way, so this never affected
+        # rendered output, but the returned tuple itself was wrong).
+        assert max_y > min_y
         assert min_x <= max_x
         assert isinstance(min_x, int)
         assert isinstance(min_y, int)
+        assert isinstance(max_y, int)
 
 
 # ---------------------------------------------------------------------------
