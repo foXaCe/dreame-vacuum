@@ -344,7 +344,7 @@ attributes:
 - Shortcut editing
 - Schedule editing
 - Furniture editing
-- DnD editing
+- Multi-window DnD editing (single-window done; design: docs/dev/dnd-tasks-design.md)
 - Live camera streaming
 
 
