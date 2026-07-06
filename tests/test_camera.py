@@ -91,6 +91,7 @@ def _bare_camera() -> DreameVacuumCameraEntity:
     """
     entity = object.__new__(DreameVacuumCameraEntity)
     entity._segment_map_cache = (None, None, None)
+    entity._attributes_cache = (None, None)
     entity._should_poll = True
     entity._last_updated = -1
     entity._last_rendered = -1
@@ -2428,3 +2429,129 @@ class TestExtraStateAttributesBranches:
         assert "%87" in obstacle_key
         assert "(5)" in obstacle_key
         assert "(User Ignored)" in obstacle_key
+
+
+# ===========================================================================
+# extra_state_attributes: memoization cache (Plan 008)
+# ===========================================================================
+class TestAttributesCache:
+    """``extra_state_attributes`` is memoized by an input signature: an
+    unchanged signature must return the *same* dict object (proves the
+    rebuild was skipped); any signature input changing must produce a fresh
+    dict reflecting the new content.
+    """
+
+    def _build_entity(self):
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity.access_tokens = ["tok-a", "tok-b"]
+        entity.entity_id = "camera.test_map"
+        entity._segment_map_cache = (None, None, None)
+
+        renderer = MagicMock(spec=["calibration_points", "robot_icon_data_uri", "config"])
+        renderer.calibration_points = []
+        renderer.config = SimpleNamespace(robot=False)
+        renderer.robot_icon_data_uri = lambda light_on: f"icon-{'on' if light_on else 'off'}"
+        entity._renderer = renderer
+
+        map_data = SimpleNamespace(
+            empty_map=False,
+            pixel_type=None,
+            segments={},
+            last_updated=1000,
+            obstacles=None,
+            recovery_map_list=None,
+            wifi_map_data=None,
+        )
+        map_data.as_dict = lambda: {ATTR_ROOMS: {}}
+
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = True
+        device.status.selected_map = None
+        device.status._cleaning_history = None
+        device.status._cruising_history = None
+        device.status.fill_light = False
+        _set_device(entity, device)
+        return entity, map_data, device
+
+    def test_cache_hit_returns_same_object(self) -> None:
+        entity, map_data, _device = self._build_entity()
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs1 = entity.extra_state_attributes
+            attrs2 = entity.extra_state_attributes
+        assert attrs1 is attrs2
+
+    def test_cache_invalidates_on_last_updated_change(self) -> None:
+        entity, map_data, _device = self._build_entity()
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs1 = entity.extra_state_attributes
+            map_data.last_updated = 2000
+            attrs2 = entity.extra_state_attributes
+        assert attrs1 is not attrs2
+
+    def test_cache_invalidates_on_token_rotation(self) -> None:
+        entity, map_data, _device = self._build_entity()
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs1 = entity.extra_state_attributes
+            entity.access_tokens.append("tok-c")
+            attrs2 = entity.extra_state_attributes
+        assert attrs1 is not attrs2
+        assert attrs1 is not None
+        assert attrs2 is not None
+
+    def test_fill_light_toggle_changes_robot_icon(self) -> None:
+        from custom_components.dreame_vacuum.dreame.const import ATTR_ROBOT_ICON
+
+        entity, map_data, device = self._build_entity()
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs1 = entity.extra_state_attributes
+            device.status.fill_light = True
+            attrs2 = entity.extra_state_attributes
+        assert attrs1 is not None
+        assert attrs2 is not None
+        assert attrs1[ATTR_ROBOT_ICON] == "icon-off"
+        assert attrs2[ATTR_ROBOT_ICON] == "icon-on"
+        assert attrs1 is not attrs2
+
+    def test_cache_invalidates_on_segment_rename(self) -> None:
+        """A room rename mutates the ``Segment`` object in place without the
+        owning ``MapData`` gaining a new ``last_updated``/``frame_id`` (that
+        only happens ~0.5s later via the editor's deferred refresh timer --
+        see ``_segment_signature`` in camera.py). The attributes cache must
+        still pick up the rename immediately.
+        """
+        entity, map_data, _device = self._build_entity()
+        segment = SimpleNamespace(custom_name="Kitchen", type=0)
+        map_data.segments = {5: segment}
+        map_data.as_dict = lambda: {ATTR_ROOMS: {5: {"name": segment.custom_name}}}
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs1 = entity.extra_state_attributes
+            # Simulate the map editor's in-place rename (map_editor.py
+            # set_segment_name): the Segment object is mutated directly,
+            # last_updated/frame_id are untouched until the deferred timer.
+            segment.custom_name = "Living Room"
+            attrs2 = entity.extra_state_attributes
+        assert attrs1[ATTR_ROOMS][5]["name"] == "Kitchen"
+        assert attrs2[ATTR_ROOMS][5]["name"] == "Living Room"
+        assert attrs1 is not attrs2

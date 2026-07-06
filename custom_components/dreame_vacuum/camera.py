@@ -122,6 +122,45 @@ def _find_segment_at(pt: np.ndarray, cx: int, cy: int, w: int, h: int, radius: i
     return 0
 
 
+def _segment_signature(segment: Any) -> tuple[Any, ...]:
+    """Cheap, complete fingerprint of the ``Segment`` fields that ``Segment.as_dict()``
+    can expose AND that the map editor mutates *in place* (room rename, order,
+    suction level, water volume, floor material, visibility, ...).
+
+    Those edits do not replace the ``Segment`` object or bump the owning
+    ``MapData.last_updated``/``frame_id`` synchronously -- ``last_updated`` is
+    only bumped ~0.5s later by ``DreameMapVacuumMapEditor.refresh_map()`` (a
+    deferred ``Timer``). Relying on ``last_updated``/``frame_id`` alone for the
+    attributes cache below would therefore serve stale room data for that
+    window. Reading these scalars directly (not the object identity) closes
+    that gap. ``getattr(..., None)`` throughout because tests (and possibly
+    future callers) may pass lightweight stand-ins that only set a few fields.
+    """
+    return (
+        getattr(segment, "type", None),
+        getattr(segment, "custom_name", None),
+        getattr(segment, "index", None),
+        getattr(segment, "order", None),
+        getattr(segment, "suction_level", None),
+        getattr(segment, "water_volume", None),
+        getattr(segment, "wetness_level", None),
+        getattr(segment, "cleaning_mode", None),
+        getattr(segment, "custom_mopping_route", None),
+        getattr(segment, "cleaning_route", None),
+        getattr(segment, "floor_material", None),
+        getattr(segment, "floor_material_rotated_direction", None),
+        getattr(segment, "visibility", None),
+        getattr(segment, "color_index", None),
+        getattr(segment, "unique_id", None),
+        getattr(segment, "name", None),
+        getattr(segment, "icon", None),
+        getattr(segment, "x", None),
+        getattr(segment, "y", None),
+        getattr(segment, "carpet_cleaning", None),
+        getattr(segment, "carpet_settings", None),
+    )
+
+
 CAMERAS: tuple[DreameVacuumCameraEntityDescription, ...] = (
     DreameVacuumCameraEntityDescription(key="map", icon=MAP_ICON),
     DreameVacuumCameraEntityDescription(
@@ -276,6 +315,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
 
     __slots__ = (
         "_access_token_update_counter",
+        "_attributes_cache",
         "_calibration_points",
         "_color_scheme",
         "_default_map",
@@ -390,6 +430,10 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         # The third element lets Lovelace cards map a room back to its raw
         # pixel_type value (the one stored in the blue channel after remap).
         self._segment_map_cache: tuple[Any, Any, Any] = (None, None, None)
+        # (signature, attributes dict) -- memoizes extra_state_attributes so
+        # it is only rebuilt when one of its inputs actually changed. See
+        # _attributes_signature() for what "changed" means.
+        self._attributes_cache: tuple[Any, Any] = (None, None)
         self.map_index = map_index
         self._state: str | datetime = STATE_UNAVAILABLE
         # The default map image (PIL decode + resize) is warmed lazily in
@@ -904,12 +948,83 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
             int(map_data.last_updated) if map_data and map_data.last_updated else 0,
         )
 
+    def _attributes_signature(self) -> tuple[Any, ...]:
+        """Cheap fingerprint of every input ``extra_state_attributes`` reads.
+
+        LOUD WARNING: any new attribute or branch added to
+        ``extra_state_attributes`` (or to whatever it reads transitively)
+        MUST have its inputs added here too. A missing input means the cache
+        below can serve stale attributes forever -- that is strictly worse
+        than the rebuild cost we are trying to save. Only cheap scalars (ids,
+        ints, bools, strings) belong here; never deep-copy or re-serialize a
+        structure just to fingerprint it (see ``_segment_signature`` for the
+        one place that is unavoidable, and why).
+        """
+        map_data = self._map_data
+        device = self.device
+        status = device.status if device is not None else None
+        selected_map = getattr(status, "selected_map", None) if status is not None else None
+
+        recovery_map_list: Any = None
+        wifi_map_data: Any = None
+        if map_data is not None and not self.wifi_map:
+            if self.map_index == 0:
+                recovery_map_list = selected_map.recovery_map_list if selected_map is not None else None
+                wifi_map_data = selected_map.wifi_map_data if selected_map is not None else None
+            else:
+                recovery_map_list = getattr(map_data, "recovery_map_list", None)
+                wifi_map_data = getattr(map_data, "wifi_map_data", None)
+
+        segments = getattr(map_data, "segments", None) if map_data is not None else None
+        segments_signature = (
+            tuple((k, _segment_signature(v)) for k, v in sorted(segments.items())) if segments else None
+        )
+
+        renderer_config = getattr(self._renderer, "config", None)
+        obstacles = getattr(map_data, "obstacles", None) if map_data is not None else None
+        map_recovery_map_list = getattr(map_data, "recovery_map_list", None) if map_data is not None else None
+
+        return (
+            self.map_data_json,
+            id(map_data) if map_data is not None else None,
+            getattr(map_data, "last_updated", None) if map_data is not None else None,
+            getattr(map_data, "frame_id", None) if map_data is not None else None,
+            getattr(map_data, "empty_map", None) if map_data is not None else None,
+            device.cloud_connected if device is not None else None,
+            getattr(status, "located", None) if status is not None else None,
+            self.map_index,
+            self.wifi_map,
+            self._calibration_points,
+            getattr(self._renderer, "calibration_points", None),
+            getattr(self._renderer, "default_calibration_points", None),
+            self._segment_map_cache[0],
+            bool(getattr(status, "fill_light", False)) if status is not None else False,
+            self.access_tokens[-1] if self.access_tokens else None,
+            id(status._cleaning_history) if status is not None and status._cleaning_history is not None else None,
+            id(status._cruising_history) if status is not None and status._cruising_history is not None else None,
+            getattr(status, "ai_pet_detection", None) if status is not None else None,
+            getattr(status, "ai_fluid_detection", None) if status is not None else None,
+            getattr(device.capability, "fluid_detection", None) if device is not None else None,
+            id(obstacles) if obstacles else None,
+            len(obstacles) if obstacles else None,
+            selected_map.map_index if selected_map is not None else None,
+            id(recovery_map_list) if recovery_map_list is not None else None,
+            len(recovery_map_list) if recovery_map_list is not None else None,
+            id(map_recovery_map_list) if map_recovery_map_list else None,
+            getattr(wifi_map_data, "last_updated", None) if wifi_map_data is not None else None,
+            getattr(renderer_config, "robot", None) if renderer_config is not None else None,
+            segments_signature,
+        )
+
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return the map entity specific state attributes."""
         if self.device is None:
             return {}
         if not self.map_data_json:
+            signature = self._attributes_signature()
+            if self._attributes_cache[0] == signature:
+                return self._attributes_cache[1]
             assert self._renderer is not None
             attributes = None
             map_data = self._map_data
@@ -1108,6 +1223,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                         token,
                         int(wifi_map_data.last_updated if wifi_map_data.last_updated else map_data.last_updated),
                     )
+            self._attributes_cache = (signature, attributes)
             return attributes
 
         return None
