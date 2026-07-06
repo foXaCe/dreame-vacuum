@@ -604,6 +604,52 @@ class TestExtraStateAttributes:
             attrs = entity.extra_state_attributes
         assert attrs[ATTR_CALIBRATION] == [{"x": 1}]
 
+    def test_no_calibration_strips_positions(self) -> None:
+        """Before the first successful render there is no calibration yet: the
+        positions MUST go too (contract §3.2 — atomic with the image), or any
+        consumer can place overlays with an identity/stale mapping (robot drawn
+        in the top-left corner during HA boot, seen live 2026-07-06)."""
+        from custom_components.dreame_vacuum.dreame.vacuum_types import ATTR_CHARGER, ATTR_ROBOT_POSITION
+
+        entity, map_data = self._build_attr_entity()
+        entity._segment_map_cache = (None, None, None)
+        entity._renderer.calibration_points = None
+        map_data.as_dict = lambda: {
+            ATTR_ROOMS: {5: {"name": "Kitchen"}},
+            ATTR_ROBOT_POSITION: {"x": 421, "y": 43, "a": 183},
+            ATTR_CHARGER: {"x": 424, "y": 43, "a": 182},
+        }
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert not attrs[ATTR_CALIBRATION]
+        assert ATTR_ROBOT_POSITION not in attrs
+        assert ATTR_CHARGER not in attrs
+
+    def test_calibration_present_keeps_positions(self) -> None:
+        """With a real calibration the positions stay untouched."""
+        from custom_components.dreame_vacuum.dreame.vacuum_types import ATTR_CHARGER, ATTR_ROBOT_POSITION
+
+        entity, map_data = self._build_attr_entity()
+        entity._segment_map_cache = (None, None, None)
+        map_data.as_dict = lambda: {
+            ATTR_ROOMS: {5: {"name": "Kitchen"}},
+            ATTR_ROBOT_POSITION: {"x": 421, "y": 43, "a": 183},
+            ATTR_CHARGER: {"x": 424, "y": 43, "a": 182},
+        }
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert attrs[ATTR_CALIBRATION] == [{"x": 1}]
+        assert attrs[ATTR_ROBOT_POSITION] == {"x": 421, "y": 43, "a": 183}
+        assert attrs[ATTR_CHARGER] == {"x": 424, "y": 43, "a": 182}
+
     def test_map_data_json_returns_none(self) -> None:
         """For the JSON-data camera the property returns ``None`` (no attrs)."""
         entity = _bare_camera()
