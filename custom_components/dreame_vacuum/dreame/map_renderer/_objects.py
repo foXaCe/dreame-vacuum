@@ -645,6 +645,24 @@ class _ObjectsMixin(_MapRendererState):
 
         return None
 
+    @staticmethod
+    def _badge_transparent_recolor(img: Image.Image, recolor: tuple[int, int, int] | None = None) -> Image.Image:
+        """Drop a status icon's white badge disc and optionally recolour the glyph.
+
+        The bundled washing/self-clean icons ship as a coloured pinwheel on an
+        opaque white circle. The official app shows them without that disc, so
+        make near-white pixels transparent; when ``recolor`` is given, repaint
+        the remaining glyph pixels with it (keeping their alpha, so anti-aliased
+        edges stay soft).
+        """
+        arr = np.array(img.convert("RGBA"))
+        white = (arr[:, :, 0] > 225) & (arr[:, :, 1] > 225) & (arr[:, :, 2] > 225)
+        arr[white, 3] = 0
+        if recolor is not None:
+            glyph = arr[:, :, 3] > 0
+            arr[glyph, 0], arr[glyph, 1], arr[glyph, 2] = recolor
+        return Image.fromarray(arr, "RGBA")
+
     def render_charger(
         self,
         charger_position: Point,
@@ -729,13 +747,15 @@ class _ObjectsMixin(_MapRendererState):
                         Image.open(BytesIO(base64.b64decode(MAP_ROBOT_WASHING_IMAGE)))
                         .convert("RGBA")
                         .resize(
-                            (int(icon_size * 1.25), int(icon_size * 1.25)),
-                            resample=Image.Resampling.NEAREST,
+                            (int(icon_size * 0.9), int(icon_size * 0.9)),
+                            resample=Image.Resampling.LANCZOS,
                         )
                     )
+                    # Match the official app: drop the white disc, red pinwheel.
+                    washing_img = self._badge_transparent_recolor(washing_img, (255, 59, 48))
                     enhancer = ImageEnhance.Brightness(washing_img)
                     if self.color_scheme.dark:
-                        washing_img = enhancer.enhance(0.65)
+                        washing_img = enhancer.enhance(0.85)
                     self._robot_washing_icon = washing_img
 
                 if hot_washing and self._robot_hot_washing_icon is None:
@@ -743,13 +763,15 @@ class _ObjectsMixin(_MapRendererState):
                         Image.open(BytesIO(base64.b64decode(MAP_ROBOT_HOT_WASHING_IMAGE)))
                         .convert("RGBA")
                         .resize(
-                            (int(icon_size * 1.25), int(icon_size * 1.25)),
-                            resample=Image.Resampling.NEAREST,
+                            (int(icon_size * 0.9), int(icon_size * 0.9)),
+                            resample=Image.Resampling.LANCZOS,
                         )
                     )
+                    # Keep the hot-wash orange, just drop the white disc.
+                    hot_washing_img = self._badge_transparent_recolor(hot_washing_img)
                     enhancer = ImageEnhance.Brightness(hot_washing_img)
                     if self.color_scheme.dark:
-                        hot_washing_img = enhancer.enhance(0.65)
+                        hot_washing_img = enhancer.enhance(0.85)
                     self._robot_hot_washing_icon = hot_washing_img
 
                 offset = icon_size * 1.5
