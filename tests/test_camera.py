@@ -2448,10 +2448,11 @@ class TestAttributesCache:
         entity.entity_id = "camera.test_map"
         entity._segment_map_cache = (None, None, None)
 
-        renderer = MagicMock(spec=["calibration_points", "robot_icon_data_uri", "config"])
+        renderer = MagicMock(spec=["calibration_points", "robot_icon_data_uri", "robot_beam_icon_data_uri", "config"])
         renderer.calibration_points = []
         renderer.config = SimpleNamespace(robot=False)
         renderer.robot_icon_data_uri = lambda light_on: f"icon-{'on' if light_on else 'off'}"
+        renderer.robot_beam_icon_data_uri = lambda: "data:image/png;base64,beam"
         entity._renderer = renderer
 
         map_data = SimpleNamespace(
@@ -2529,6 +2530,39 @@ class TestAttributesCache:
         assert attrs1[ATTR_ROBOT_ICON] == "icon-off"
         assert attrs2[ATTR_ROBOT_ICON] == "icon-on"
         assert attrs1 is not attrs2
+
+    def test_no_beam_icon_when_fill_light_off(self) -> None:
+        """The beam attribute (Plan 021) must be absent while the fill light
+        is off -- the card only draws it behind the body when the light is on.
+        """
+        from custom_components.dreame_vacuum.dreame.const import ATTR_ROBOT_BEAM_ICON
+
+        entity, map_data, _device = self._build_entity()
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert attrs is not None
+        assert ATTR_ROBOT_BEAM_ICON not in attrs
+
+    def test_beam_icon_present_when_fill_light_on(self) -> None:
+        """When the fill light is on, the beam data URI is exposed alongside
+        the (subtly warmed) body icon.
+        """
+        from custom_components.dreame_vacuum.dreame.const import ATTR_ROBOT_BEAM_ICON
+
+        entity, map_data, device = self._build_entity()
+        device.status.fill_light = True
+        with (
+            patch.object(type(entity), "wifi_map", new=property(lambda self: False)),
+            patch.object(type(entity), "map_data_json", new=property(lambda self: False)),
+            patch.object(type(entity), "_map_data", new=property(lambda self: map_data)),
+        ):
+            attrs = entity.extra_state_attributes
+        assert attrs is not None
+        assert attrs[ATTR_ROBOT_BEAM_ICON].startswith("data:image/png;base64,")
 
     def test_cache_invalidates_on_segment_rename(self) -> None:
         """A room rename mutates the ``Segment`` object in place without the

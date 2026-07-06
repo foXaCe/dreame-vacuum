@@ -58,6 +58,7 @@ from .dreame.const import (
     ATTR_OBSTACLE_PICTURE,
     ATTR_RECOVERY_MAP_FILE,
     ATTR_RECOVERY_MAP_PICTURE,
+    ATTR_ROBOT_BEAM_ICON,
     ATTR_ROBOT_ICON,
     ATTR_ROBOT_IN_MAP,
     ATTR_ROOM_COLORS,
@@ -1053,7 +1054,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 # Real device robot icon (top-view PNG data URI) for the card's
                 # client-side overlay when the robot is not baked into the PNG
                 # (robot_in_map=false). Static per device/theme; the card rotates
-                # it by the heading itself. A warm "glow" variant is served while
+                # it by the heading itself. A subtly warmed variant is served while
                 # the device fill light is on so the card reflects it. Absent if it
                 # cannot be produced.
                 robot_icon_fn = getattr(self._renderer, "robot_icon_data_uri", None)
@@ -1061,6 +1062,15 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 robot_icon = robot_icon_fn(fill_light_on) if callable(robot_icon_fn) else None
                 if robot_icon:
                     attributes[ATTR_ROBOT_ICON] = robot_icon
+                    if fill_light_on:
+                        # Real beam asset (translucent cone), served only while the
+                        # fill light is on, so the card can draw it BEHIND the body
+                        # -- see robot_beam_icon_data_uri()'s docstring for why the
+                        # body itself is no longer whitened to simulate the light.
+                        beam_fn = getattr(self._renderer, "robot_beam_icon_data_uri", None)
+                        beam = beam_fn() if callable(beam_fn) else None
+                        if beam:
+                            attributes[ATTR_ROBOT_BEAM_ICON] = beam
 
                 # Segment map: pick-buffer PNG where blue channel = room key
                 # We use pixel_type as the spatial source (matches the rendered
