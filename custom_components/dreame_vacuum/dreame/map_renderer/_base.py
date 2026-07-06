@@ -62,6 +62,8 @@ class _MapRendererState:
         # --- Lazily-loaded image/asset caches (created None in __init__) ---
         _charger_icon: Image.Image | None
         _robot_icon: Image.Image | None
+        _robot_icon_data_uri: str | None
+        _robot_icon_lit_data_uri: str | None
         _robot_charging_icon: Image.Image | None
         _robot_cleaning_icon: Image.Image | None
         _robot_warning_icon: Image.Image | None
