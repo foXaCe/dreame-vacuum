@@ -1159,65 +1159,16 @@ class DreameVacuumDeviceMapMixin(DreameVacuumDeviceState):
             if not has_cleaning_mode and custom_cleaning_mode:
                 raise InvalidActionException("Cleaning mode is required")
 
-            if segments:
-                count = len(segments.items())
-                if (
-                    len(segment_id) != count
-                    or len(suction_level) != count
-                    or len(water_volume) != count
-                    or len(cleaning_times) != count
-                    or (custom_cleaning_mode and cleaning_mode is not None and len(cleaning_mode) != count)
-                ):
-                    raise InvalidActionException("Parameter count mismatch!")
-
-            custom_cleaning = []
-            index = 0
-            water_level = water_volume[index]
-            if self.capability.wetness_level:
-                if water_level == 1:
-                    water_level = 5
-                elif water_level == 3:
-                    water_level = 27
-                else:
-                    water_level = 16
-            else:
-                water_level = water_level + 1
-
-            for id in segment_id:
-                # for some reason cleanset uses different int values for water volume
-                values = [
-                    id,
-                    suction_level[index],
-                    water_level,
-                    cleaning_times[index],
-                ]
-                if custom_cleaning_mode:
-                    values.append(cleaning_mode[index])
-                    if segments:
-                        if id not in segments:
-                            raise InvalidActionException("Invalid Segment ID: %s", id)
-
-                        if segments[id].custom_mopping_route is not None:
-                            from .map_decoder import DreameVacuumMapDecoder
-
-                            map_decoder = DreameVacuumMapDecoder
-                            mopping_values = map_decoder.split_mopping_settings(segments[id].mopping_settings or 0)
-                            if mopping_values:
-                                if self.capability.wetness_level:
-                                    mopping_values[1] = 0
-                                    mopping_values[2] = 0
-                                else:
-                                    # Set mopping mode or water volume according to the mopping effect switch
-                                    mopping_values[2 if segments[id].custom_mopping_route == -1 else 1] = water_volume[
-                                        index
-                                    ]
-                                    values.append(map_decoder.combine_mopping_settings(mopping_values))
-                            else:
-                                values.append(segments[id].mopping_settings)
-                custom_cleaning.append(values)
-                index = index + 1
-
-            return self.set_cleanset(custom_cleaning)
+            # Legacy (mapless) cleanset-building path used to continue here,
+            # building a raw cleanset array keyed against `self.status.segments`.
+            # That variable is only ever assigned above in the map-aware branch
+            # (`if self.capability.map: if current_map:`), which always returns
+            # before falling through to this point - so any device reaching
+            # here (capability.map is False, or true but with no current map)
+            # crashed with UnboundLocalError instead of building a legacy
+            # cleanset. Devices without map support have no segments to
+            # validate against, so surface a clear error instead.
+            raise InvalidActionException("Customized cleaning without a map is not supported on this device")
 
         raise InvalidActionException("Missing parameters!")
 
