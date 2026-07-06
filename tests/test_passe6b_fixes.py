@@ -10,16 +10,11 @@ These modules became importable/testable only after P9 (entity.py <-> camera dec
 
 from __future__ import annotations
 
-import pathlib
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from custom_components.dreame_vacuum import select as select_mod
 from custom_components.dreame_vacuum.entity import DreameVacuumEntity
-
-_CC = pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "dreame_vacuum"
-_CC_PLATFORMS = ("switch.py", "number.py", "time.py")
-
 
 # --- set-resolver helper -----------------------------------------------------
 
@@ -72,11 +67,23 @@ def test_p6_resolve_set_fn_keeps_explicit_set_fn() -> None:
 
 
 def test_p6_platforms_use_shared_resolver() -> None:
-    """The inline resolver block must be gone from the platforms, replaced by the helper."""
-    for fname in _CC_PLATFORMS:
-        src = (_CC / fname).read_text()
-        assert "# Override _computed_set_fn if we can find a setter method" not in src
-        assert "self._computed_set_fn = self._resolve_set_fn(coordinator, description)" in src
+    """Each platform's __init__ must delegate set-fn resolution to the shared
+    DreameVacuumEntity._resolve_set_fn helper, not an inline duplicate block."""
+    from unittest.mock import MagicMock, patch
+
+    from custom_components.dreame_vacuum import number as number_mod, switch as switch_mod, time as time_mod
+
+    for module, descriptions_name, entity_cls_name in (
+        (switch_mod, "SWITCHES", "DreameVacuumSwitchEntity"),
+        (number_mod, "NUMBERS", "DreameVacuumNumberEntity"),
+        (time_mod, "TIMES", "DreameVacuumTimeEntity"),
+    ):
+        descriptions = getattr(module, descriptions_name)
+        entity_cls = getattr(module, entity_cls_name)
+        coordinator = MagicMock()
+        with patch.object(DreameVacuumEntity, "_resolve_set_fn", return_value=None) as mock_resolve:
+            entity_cls(coordinator, descriptions[0])
+        assert mock_resolve.called, f"{entity_cls_name} did not delegate to the shared resolver"
 
 
 # --- segment navigation mixin ------------------------------------------------

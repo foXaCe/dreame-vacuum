@@ -65,12 +65,14 @@ def test_service_names_match_services_yaml() -> None:
     """Every registered service (except camera update) is declared in services.yaml."""
     from pathlib import Path
 
-    yaml_text = Path("custom_components/dreame_vacuum/services.yaml").read_text()
+    import yaml
+
+    services_yaml = yaml.safe_load(Path("custom_components/dreame_vacuum/services.yaml").read_text())
     for call in _register_all():
         name = call.args[2]
         if name == "update":
             continue
-        assert f"{name}:" in yaml_text, f"service {name} absent de services.yaml"
+        assert name in services_yaml, f"service {name} absent de services.yaml"
 
 
 async def test_async_setup_registers_services() -> None:
