@@ -656,7 +656,12 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
         self.load_devices()
-        hidden_map_objects: list[str] = []
+        # Hide the robot icon from the rendered PNG by default so the companion
+        # card's smooth client-side robot overlay (interpolated, real icon via the
+        # ``robot_icon`` attribute) takes over out of the box — no option to toggle.
+        # Still reversible: the user can uncheck "Robot Icon" to bake it back in.
+        # Note: users of the bare camera view (no card) will then see no robot.
+        hidden_map_objects: list[str] = ["robot"]
         assert self.models is not None
         assert self.model is not None
         if self.models[self.model] == 1:

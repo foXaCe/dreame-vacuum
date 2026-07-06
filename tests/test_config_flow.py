@@ -903,9 +903,10 @@ async def test_options_form_dreame_recent_model() -> None:
     assert CONF_COLOR_SCHEME in keys
     assert CONF_ICON_SET in keys
     assert CONF_LOW_RESOLUTION in keys
-    # Default hidden objects empty for a recent model.
+    # Robot icon is hidden from the PNG by default (card overlay takes over);
+    # a recent model hides no name layers on top of that.
     defaults = {str(k.schema): k.default() for k in schema if k.default is not vol.UNDEFINED}
-    assert defaults[CONF_HIDDEN_MAP_OBJECTS] == []
+    assert defaults[CONF_HIDDEN_MAP_OBJECTS] == ["robot"]
     assert defaults[CONF_COLOR_SCHEME] == "Dreame Light"
 
 
@@ -917,7 +918,7 @@ async def test_options_form_dreame_old_model_hides_names() -> None:
 
     schema = result["data_schema"].schema
     defaults = {str(k.schema): k.default() for k in schema if k.default is not vol.UNDEFINED}
-    assert set(defaults[CONF_HIDDEN_MAP_OBJECTS]) == {"name", "name_background"}
+    assert set(defaults[CONF_HIDDEN_MAP_OBJECTS]) == {"name", "name_background", "robot"}
 
 
 async def test_options_form_mijia_model_uses_mijia_defaults() -> None:
@@ -930,7 +931,7 @@ async def test_options_form_mijia_model_uses_mijia_defaults() -> None:
     defaults = {str(k.schema): k.default() for k in schema if k.default is not vol.UNDEFINED}
     assert defaults[CONF_COLOR_SCHEME] == "Mijia Light"
     assert defaults[CONF_ICON_SET] == "Mijia"
-    assert set(defaults[CONF_HIDDEN_MAP_OBJECTS]) == {"name_background", "icon"}
+    assert set(defaults[CONF_HIDDEN_MAP_OBJECTS]) == {"name_background", "icon", "robot"}
 
 
 async def test_options_form_local_account_omits_map_options() -> None:

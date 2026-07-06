@@ -58,6 +58,7 @@ from .dreame.const import (
     ATTR_OBSTACLE_PICTURE,
     ATTR_RECOVERY_MAP_FILE,
     ATTR_RECOVERY_MAP_PICTURE,
+    ATTR_ROBOT_ICON,
     ATTR_ROBOT_IN_MAP,
     ATTR_ROOM_COLORS,
     ATTR_ROOMS,
@@ -918,6 +919,18 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 renderer_config = getattr(self._renderer, "config", None)
                 if renderer_config is not None:
                     attributes[ATTR_ROBOT_IN_MAP] = bool(renderer_config.robot)
+
+                # Real device robot icon (top-view PNG data URI) for the card's
+                # client-side overlay when the robot is not baked into the PNG
+                # (robot_in_map=false). Static per device/theme; the card rotates
+                # it by the heading itself. A warm "glow" variant is served while
+                # the device fill light is on so the card reflects it. Absent if it
+                # cannot be produced.
+                robot_icon_fn = getattr(self._renderer, "robot_icon_data_uri", None)
+                fill_light_on = bool(getattr(self.device.status, "fill_light", False))
+                robot_icon = robot_icon_fn(fill_light_on) if callable(robot_icon_fn) else None
+                if robot_icon:
+                    attributes[ATTR_ROBOT_ICON] = robot_icon
 
                 # Segment map: pick-buffer PNG where blue channel = room key
                 # We use pixel_type as the spatial source (matches the rendered

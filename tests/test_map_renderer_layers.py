@@ -440,3 +440,54 @@ class TestResolveOverlaps:
         }
         # size=1 -> threshold (size*3.5=3.5 grid units) well below the ~22-unit separation.
         assert renderer._resolve_name_overlaps(segments, dims, 1, 0) == {}
+
+
+class TestRobotIconDataUri:
+    """``robot_icon_data_uri`` exposes the base robot body icon for the card overlay."""
+
+    def test_returns_valid_png_data_uri_and_caches(self) -> None:
+        import base64
+        from io import BytesIO
+
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        uri = renderer.robot_icon_data_uri()
+
+        assert uri is not None
+        assert uri.startswith("data:image/png;base64,")
+        image = Image.open(BytesIO(base64.b64decode(uri.split(",", 1)[1])))
+        assert image.format == "PNG"
+        assert image.mode == "RGBA"
+        assert image.size[0] > 0
+        assert image.size[1] > 0
+        # Cached: a second call returns the very same string object.
+        assert renderer.robot_icon_data_uri() is uri
+
+    def test_available_even_when_robot_hidden_from_png(self) -> None:
+        # The icon must be exposed independently of whether the robot is baked
+        # into the PNG, so the card overlay can use it when robot_in_map=false.
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True, hidden_map_objects=["robot"])
+        assert renderer.config.robot is False
+        assert renderer.robot_icon_data_uri() is not None
+
+    def test_lit_variant_differs_from_base_and_caches_separately(self) -> None:
+        import base64
+        from io import BytesIO
+
+        renderer = DreameVacuumMapRenderer(low_resolution=False, cache=True)
+        base = renderer.robot_icon_data_uri(light_on=False)
+        lit = renderer.robot_icon_data_uri(light_on=True)
+
+        assert base is not None
+        assert lit is not None
+        # The "fill light on" glow variant is a different image from the base body.
+        assert lit != base
+        assert lit.startswith("data:image/png;base64,")
+        image = Image.open(BytesIO(base64.b64decode(lit.split(",", 1)[1])))
+        assert image.format == "PNG"
+        assert image.mode == "RGBA"
+        # Same canvas size as the base body -> the robot does not resize when lit.
+        base_image = Image.open(BytesIO(base64.b64decode(base.split(",", 1)[1])))
+        assert image.size == base_image.size
+        # Each variant is cached independently.
+        assert renderer.robot_icon_data_uri(light_on=True) is lit
+        assert renderer.robot_icon_data_uri(light_on=False) is base

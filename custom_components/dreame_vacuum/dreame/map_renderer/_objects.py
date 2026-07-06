@@ -18,7 +18,7 @@ from typing import Any, cast
 import zlib
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 from ..resources import (
     FURNITURE_TYPE_TO_ICON,
@@ -65,6 +65,110 @@ from ._base import _MapRendererState
 class _ObjectsMixin(_MapRendererState):
     """Renderers for vacuum, charger, router, neglected segments and low-lying areas."""
 
+    def _ensure_robot_body_icon(self) -> None:
+        """Lazily load the base robot body icon (top view, unrotated) for this device.
+
+        The image depends only on the device robot type, the icon set and the
+        colour scheme, so it is loaded once and cached on ``self._robot_icon``.
+        """
+        if self._robot_icon is not None:
+            return
+
+        if self.icon_set == 2:
+            if self._robot_type == RobotType.MOPPING:
+                robot_image = MAP_ROBOT_MOP_IMAGE_MIJIA
+            elif self._robot_type == RobotType.VSLAM:
+                robot_image = MAP_ROBOT_VSLAM_IMAGE_MIJIA
+            else:
+                robot_image = MAP_ROBOT_LIDAR_IMAGE_MIJIA
+        else:
+            if self._robot_type == RobotType.MOPPING:
+                robot_image = MAP_ROBOT_MOP_IMAGE_DREAME
+            elif self._robot_type == RobotType.SWEEPING_AND_MOPPING:
+                robot_image = MAP_ROBOT_LIDAR_IMAGE_DREAME_LIGHT
+            elif self._robot_type == RobotType.VSLAM:
+                if self.icon_set == 3:
+                    robot_image = MAP_ROBOT_VSLAM_IMAGE_DREAME_LIGHT
+                else:
+                    robot_image = MAP_ROBOT_VSLAM_IMAGE_DREAME_DARK
+            else:
+                if self.icon_set == 3:
+                    robot_image = MAP_ROBOT_LIDAR_IMAGE_DREAME_LIGHT
+                else:
+                    robot_image = MAP_ROBOT_LIDAR_IMAGE_DREAME_DARK
+
+        self._robot_icon = Image.open(BytesIO(base64.b64decode(robot_image))).convert("RGBA")
+
+        if (
+            self._robot_type != RobotType.MOPPING
+            and self._robot_type != RobotType.SWEEPING_AND_MOPPING
+            and self.icon_set != 2
+            and self.icon_set != 3
+        ):
+            enhancer = ImageEnhance.Brightness(self._robot_icon)
+            if self.color_scheme.dark:
+                self._robot_icon = enhancer.enhance(1.5)
+            else:
+                self._robot_icon = enhancer.enhance(0.9)
+
+    @staticmethod
+    def _encode_png_data_uri(image: Image.Image) -> str:
+        buf = BytesIO()
+        image.save(buf, format="PNG")
+        return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+
+    def _build_lit_robot_icon(self) -> Image.Image | None:
+        """Base body icon with a warm "fill light on" glow (same canvas size).
+
+        The device fill light (front LED for the camera / dark obstacle detection)
+        is reflected by warming + brightening the body and adding a soft bloom, so
+        the robot visibly lights up without changing size.
+        """
+        self._ensure_robot_body_icon()
+        if self._robot_icon is None:
+            return None
+        base = self._robot_icon
+        width = base.size[0]
+        lit = np.array(ImageEnhance.Brightness(base).enhance(1.35)).astype(np.int16)
+        opaque = lit[:, :, 3] > 0
+        lit[opaque, 0] = np.minimum(255, lit[opaque, 0] + 45)  # warm up red
+        lit[opaque, 1] = np.minimum(255, lit[opaque, 1] + 25)  # warm up green
+        body = Image.fromarray(lit.astype(np.uint8), "RGBA")
+        bloom = (
+            ImageEnhance.Brightness(base).enhance(2.2).filter(ImageFilter.GaussianBlur(radius=max(2.0, width * 0.06)))
+        )
+        return Image.alpha_composite(bloom, body)
+
+    def robot_icon_data_uri(self, light_on: bool = False) -> str | None:
+        """Return the robot body icon as a PNG ``data:`` URI, or ``None``.
+
+        Top view, unrotated (heading 0° = pointing toward vacuum +x), transparent
+        background. Exposed on the camera so the companion card can draw the real
+        device icon in its client-side robot overlay (and rotate it by the heading
+        itself) instead of a generic marker. When ``light_on`` is set (device fill
+        light on) a warm glow variant is returned so the card reflects the light.
+        Both variants are static per device/theme — cached.
+        """
+        cached = self._robot_icon_lit_data_uri if light_on else self._robot_icon_data_uri
+        if cached is not None:
+            return cached
+        try:
+            if light_on:
+                image = self._build_lit_robot_icon()
+            else:
+                self._ensure_robot_body_icon()
+                image = self._robot_icon
+            if image is None:
+                return None
+            uri = self._encode_png_data_uri(image)
+        except Exception:  # never let icon export break attribute publishing
+            return None
+        if light_on:
+            self._robot_icon_lit_data_uri = uri
+        else:
+            self._robot_icon_data_uri = uri
+        return uri
+
     def render_vacuum(
         self,
         robot_position: Point,
@@ -82,43 +186,8 @@ class _ObjectsMixin(_MapRendererState):
             if self.icon_set == 2 or (self._robot_type == RobotType.VSLAM and self.icon_set == 3)
             else icon_size
         )
-        if self._robot_icon is None:
-            if self.icon_set == 2:
-                if self._robot_type == RobotType.MOPPING:
-                    robot_image = MAP_ROBOT_MOP_IMAGE_MIJIA
-                elif self._robot_type == RobotType.VSLAM:
-                    robot_image = MAP_ROBOT_VSLAM_IMAGE_MIJIA
-                else:
-                    robot_image = MAP_ROBOT_LIDAR_IMAGE_MIJIA
-            else:
-                if self._robot_type == RobotType.MOPPING:
-                    robot_image = MAP_ROBOT_MOP_IMAGE_DREAME
-                elif self._robot_type == RobotType.SWEEPING_AND_MOPPING:
-                    robot_image = MAP_ROBOT_LIDAR_IMAGE_DREAME_LIGHT
-                elif self._robot_type == RobotType.VSLAM:
-                    if self.icon_set == 3:
-                        robot_image = MAP_ROBOT_VSLAM_IMAGE_DREAME_LIGHT
-                    else:
-                        robot_image = MAP_ROBOT_VSLAM_IMAGE_DREAME_DARK
-                else:
-                    if self.icon_set == 3:
-                        robot_image = MAP_ROBOT_LIDAR_IMAGE_DREAME_LIGHT
-                    else:
-                        robot_image = MAP_ROBOT_LIDAR_IMAGE_DREAME_DARK
-
-            self._robot_icon = Image.open(BytesIO(base64.b64decode(robot_image))).convert("RGBA")
-
-            if (
-                self._robot_type != RobotType.MOPPING
-                and self._robot_type != RobotType.SWEEPING_AND_MOPPING
-                and self.icon_set != 2
-                and self.icon_set != 3
-            ):
-                enhancer = ImageEnhance.Brightness(self._robot_icon)
-                if self.color_scheme.dark:
-                    self._robot_icon = enhancer.enhance(1.5)
-                else:
-                    self._robot_icon = enhancer.enhance(0.9)
+        self._ensure_robot_body_icon()
+        assert self._robot_icon is not None
 
         robot_angle = robot_position.a or 0
         icon = self._robot_icon.resize(
