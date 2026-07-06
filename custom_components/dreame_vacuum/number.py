@@ -19,7 +19,6 @@ from homeassistant.components.number import (
 from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity import async_generate_entity_id
 
 from .const import DOMAIN, UNIT_AREA, UNIT_HOURS, UNIT_MINUTES, UNIT_PERCENT, DreameVacuumConfigEntry
@@ -32,7 +31,13 @@ if TYPE_CHECKING:
 
     from .coordinator import DreameVacuumDataUpdateCoordinator
 from .dreame import DreameVacuumCleaningMode, DreameVacuumProperty
-from .entity import DreameVacuumEntity, DreameVacuumNumberEntityDescription, default_exists_fn
+from .entity import (
+    DreameVacuumEntity,
+    DreameVacuumNumberEntityDescription,
+    async_remove_segment_entities,
+    async_sync_segment_entities,
+    default_exists_fn,
+)
 
 
 def WETNESS_LEVEL_TO_ICON(wetness: int, max_level: int) -> str:
@@ -234,30 +239,13 @@ def async_update_segment_numbers(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add or remove per-segment number entities to match the current map segments."""
-    new_ids: list[int] = []
-    if coordinator.device and coordinator.device.status.map_list:
-        for _k, v in (coordinator.device.status.map_data_list or {}).items():
-            for j, _s in (v.segments or {}).items():
-                if j not in new_ids:
-                    new_ids.append(j)
-
-    new_id_set = set(new_ids)
-    current_ids = set(current)
-
-    for segment_id in current_ids - new_id_set:
-        async_remove_segment_numbers(segment_id, coordinator, current)
-
-    new_entities: list[DreameVacuumSegmentNumberEntity] = []
-    for segment_id in new_id_set - current_ids:
-        current[segment_id] = [
-            DreameVacuumSegmentNumberEntity(coordinator, description, segment_id)
-            for description in SEGMENT_NUMBERS
-            if description.exists_fn(description, coordinator.device)
-        ]
-        new_entities = new_entities + current[segment_id]
-
-    if new_entities:
-        async_add_entities(new_entities)
+    async_sync_segment_entities(
+        coordinator,
+        current,
+        async_add_entities,
+        SEGMENT_NUMBERS,
+        DreameVacuumSegmentNumberEntity,
+    )
 
 
 def async_remove_segment_numbers(
@@ -266,12 +254,7 @@ def async_remove_segment_numbers(
     current: dict[int, list[DreameVacuumSegmentNumberEntity]],
 ) -> None:
     """Remove the number entities of a segment that no longer exists."""
-    registry = entity_registry.async_get(coordinator.hass)
-    entities = current[segment_id]
-    for entity in entities:
-        if entity.entity_id in registry.entities:
-            registry.async_remove(entity.entity_id)
-    del current[segment_id]
+    async_remove_segment_entities(segment_id, coordinator, current)
 
 
 class DreameVacuumNumberEntity(DreameVacuumEntity, NumberEntity):

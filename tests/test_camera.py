@@ -51,15 +51,17 @@ import numpy as np
 
 import custom_components.dreame_vacuum.camera as cam
 from custom_components.dreame_vacuum.camera import (
-    _VIEWS_REGISTERED_KEY,
     CAMERAS,
     DreameVacuumCameraEntity,
     DreameVacuumMapType,
     _find_segment_at,
+    async_setup_entry,
+)
+from custom_components.dreame_vacuum.camera_views import (
+    _VIEWS_REGISTERED_KEY,
     _query_bool,
     _query_bool_default_true,
     _safe_filename,
-    async_setup_entry,
 )
 from custom_components.dreame_vacuum.dreame.const import (
     ATTR_CALIBRATION,

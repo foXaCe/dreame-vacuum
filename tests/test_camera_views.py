@@ -46,7 +46,8 @@ from aiohttp import web
 from homeassistant.components.camera import DEFAULT_CONTENT_TYPE
 
 import custom_components.dreame_vacuum.camera as cam
-from custom_components.dreame_vacuum.camera import (
+from custom_components.dreame_vacuum.camera import DreameVacuumCameraEntity
+from custom_components.dreame_vacuum.camera_views import (
     JSON_CONTENT_TYPE,
     PNG_CONTENT_TYPE,
     CameraDataView,
@@ -56,7 +57,6 @@ from custom_components.dreame_vacuum.camera import (
     CameraRecoveryView,
     CameraResourcesView,
     CameraWifiView,
-    DreameVacuumCameraEntity,
 )
 
 

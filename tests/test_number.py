@@ -425,15 +425,15 @@ def test_async_update_segment_numbers_add_and_remove(coordinator):
     # Second pass with no segments -> removal path.
     registry = MagicMock()
     registry.entities = {}
-    import custom_components.dreame_vacuum.number as number_mod
+    import custom_components.dreame_vacuum.entity as entity_mod
 
-    orig_get = number_mod.entity_registry.async_get
-    number_mod.entity_registry.async_get = MagicMock(return_value=registry)
+    orig_get = entity_mod.entity_registry.async_get
+    entity_mod.entity_registry.async_get = MagicMock(return_value=registry)
     try:
         coordinator.device.status.map_list = None
         async_update_segment_numbers(coordinator, current, async_add)
     finally:
-        number_mod.entity_registry.async_get = orig_get
+        entity_mod.entity_registry.async_get = orig_get
     assert 3 not in current
 
 
@@ -444,14 +444,14 @@ def test_async_remove_segment_numbers_unregisters(coordinator):
 
     registry = MagicMock()
     registry.entities = {"number.room_3_wetness_level": object()}
-    import custom_components.dreame_vacuum.number as number_mod
+    import custom_components.dreame_vacuum.entity as entity_mod
 
-    orig_get = number_mod.entity_registry.async_get
-    number_mod.entity_registry.async_get = MagicMock(return_value=registry)
+    orig_get = entity_mod.entity_registry.async_get
+    entity_mod.entity_registry.async_get = MagicMock(return_value=registry)
     try:
         async_remove_segment_numbers(3, coordinator, current)
     finally:
-        number_mod.entity_registry.async_get = orig_get
+        entity_mod.entity_registry.async_get = orig_get
 
     registry.async_remove.assert_called_once_with("number.room_3_wetness_level")
     assert 3 not in current

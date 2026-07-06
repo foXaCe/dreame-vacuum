@@ -7,10 +7,10 @@ like device info, availability, and state attributes.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.components.binary_sensor import BinarySensorEntityDescription
 from homeassistant.components.button import ButtonEntityDescription
@@ -21,10 +21,14 @@ from homeassistant.components.switch import SwitchEntityDescription
 from homeassistant.components.time import TimeEntityDescription
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity import EntityDescription, async_generate_entity_id
 from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, LOGGER
 from .coordinator import DreameVacuumDataUpdateCoordinator
@@ -451,3 +455,53 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
     def device(self) -> DreameVacuumDevice:
         """Return the underlying Dreame vacuum device."""
         return self.coordinator.device
+
+
+@callback
+def async_sync_segment_entities(
+    coordinator: DreameVacuumDataUpdateCoordinator,
+    current: dict[int, list[Any]],
+    async_add_entities: AddEntitiesCallback,
+    descriptions: Iterable[Any],
+    entity_factory: Callable[[DreameVacuumDataUpdateCoordinator, Any, int], Any],
+) -> None:
+    """Add or remove per-segment entities to match the current map segments.
+
+    Shared by the number and select platforms: both create one entity per
+    (segment, description) pair and must drop the entities of rooms that no
+    longer exist in any saved map.
+    """
+    new_ids: set[int] = set()
+    if coordinator.device and coordinator.device.status.map_list:
+        for map_data in (coordinator.device.status.map_data_list or {}).values():
+            new_ids.update(map_data.segments or {})
+
+    current_ids = set(current)
+
+    for segment_id in current_ids - new_ids:
+        async_remove_segment_entities(segment_id, coordinator, current)
+
+    new_entities: list[Any] = []
+    for segment_id in new_ids - current_ids:
+        current[segment_id] = [
+            entity_factory(coordinator, description, segment_id)
+            for description in descriptions
+            if description.exists_fn(description, coordinator.device)
+        ]
+        new_entities.extend(current[segment_id])
+
+    if new_entities:
+        async_add_entities(new_entities)
+
+
+def async_remove_segment_entities(
+    segment_id: int,
+    coordinator: DreameVacuumDataUpdateCoordinator,
+    current: dict[int, list[Any]],
+) -> None:
+    """Remove the entities of a segment that no longer exists."""
+    registry = entity_registry.async_get(coordinator.hass)
+    for entity in current[segment_id]:
+        if entity.entity_id in registry.entities:
+            registry.async_remove(entity.entity_id)
+    del current[segment_id]

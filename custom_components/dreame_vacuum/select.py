@@ -19,7 +19,6 @@ from homeassistant.components.select import (
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity import async_generate_entity_id
 
 PARALLEL_UPDATES = 1
@@ -76,6 +75,8 @@ from .dreame.vacuum_types import ATTR_MAP_ID, ATTR_MAP_INDEX, Segment
 from .entity import (
     DreameVacuumEntity,
     DreameVacuumSelectEntityDescription,
+    async_remove_segment_entities,
+    async_sync_segment_entities,
     default_exists_fn,
 )
 
@@ -779,28 +780,13 @@ def async_update_segment_selects(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add or remove per-segment select entities to match the current map segments."""
-    new_ids: set[int] = set()
-    if coordinator.device and coordinator.device.status.map_list:
-        for _k, v in (coordinator.device.status.map_data_list or {}).items():
-            for j, _s in (v.segments or {}).items():
-                new_ids.add(j)
-
-    current_ids = set(current)
-
-    for segment_id in current_ids - new_ids:
-        async_remove_segment_selects(segment_id, coordinator, current)
-
-    new_entities: list[DreameVacuumSegmentSelectEntity] = []
-    for segment_id in new_ids - current_ids:
-        current[segment_id] = [
-            DreameVacuumSegmentSelectEntity(coordinator, description, segment_id)
-            for description in SEGMENT_SELECTS
-            if description.exists_fn(description, coordinator.device)
-        ]
-        new_entities = new_entities + current[segment_id]
-
-    if new_entities:
-        async_add_entities(new_entities)
+    async_sync_segment_entities(
+        coordinator,
+        current,
+        async_add_entities,
+        SEGMENT_SELECTS,
+        DreameVacuumSegmentSelectEntity,
+    )
 
 
 def async_remove_segment_selects(
@@ -809,12 +795,7 @@ def async_remove_segment_selects(
     current: dict[int, list[DreameVacuumSegmentSelectEntity]],
 ) -> None:
     """Remove the select entities of a segment that no longer exists."""
-    registry = entity_registry.async_get(coordinator.hass)
-    entities = current[segment_id]
-    for entity in entities:
-        if entity.entity_id in registry.entities:
-            registry.async_remove(entity.entity_id)
-    del current[segment_id]
+    async_remove_segment_entities(segment_id, coordinator, current)
 
 
 class DreameVacuumOptionNavigationMixin:
