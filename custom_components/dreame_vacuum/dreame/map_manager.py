@@ -878,6 +878,17 @@ class DreameMapVacuumMapManager:
                             map_data.frame_id,
                         )
 
+        else:
+            # Frame types other than P/I (e.g. W-frames) have no decoder branch here
+            # and are accepted without any state change. This is intentional (no new
+            # decoding behavior added), but log it explicitly instead of staying silent.
+            _LOGGER.debug(
+                "Ignoring frame type %s for map %s (frame %s): no decoder for this type",
+                partial_map.frame_type,
+                partial_map.map_id,
+                partial_map.frame_id,
+            )
+
         if self._current_frame_id is None and self._map_data is not None:
             self._map_data = None
             self._map_data_changed()
