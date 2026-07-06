@@ -569,7 +569,8 @@ async def test_try_command_invalid_exception_to_ha_error(coordinator, exc_cls):
 
     with pytest.raises(HomeAssistantError) as err:
         await ent._try_command("err %s", func)
-    assert "bad value" in str(err.value)
+    assert err.value.translation_key == "invalid_command"
+    assert err.value.translation_placeholders == {"error": "bad value"}
 
 
 @pytest.mark.parametrize("exc_cls", [DeviceException, DeviceUpdateFailedException])
@@ -583,7 +584,8 @@ async def test_try_command_device_exception_available_raises(coordinator, exc_cl
 
     with pytest.raises(HomeAssistantError) as err:
         await ent._try_command("err %s", func)
-    assert "device boom" in str(err.value)
+    assert err.value.translation_key == "command_failed"
+    assert err.value.translation_placeholders == {"error": "device boom"}
 
 
 @pytest.mark.parametrize("exc_cls", [DeviceException, DeviceUpdateFailedException])

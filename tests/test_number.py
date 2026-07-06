@@ -266,7 +266,8 @@ async def test_set_value_command_failure_maps_to_ha_error(coordinator):
     ent._attr_available = True
     with pytest.raises(HomeAssistantError) as err:
         await ent.async_set_native_value(10.0)
-    assert "nope" in str(err.value)
+    assert err.value.translation_key == "invalid_command"
+    assert err.value.translation_placeholders == {"error": "nope"}
 
 
 async def test_set_value_device_exception_available_raises(coordinator):

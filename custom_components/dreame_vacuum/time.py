@@ -33,28 +33,24 @@ TIMES: tuple[DreameVacuumTimeEntityDescription, ...] = (
     DreameVacuumTimeEntityDescription(
         key="dnd_start",
         name="DnD start",
-        icon="mdi:clock-start",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: device.capability.dnd,
     ),
     DreameVacuumTimeEntityDescription(
         key="dnd_end",
         name="DnD end",
-        icon="mdi:clock-end",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: device.capability.dnd,
     ),
     DreameVacuumTimeEntityDescription(
         key="off_peak_charging_start",
         name="Off-peak charging start",
-        icon="mdi:battery-lock-open",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: device.capability.off_peak_charging,
     ),
     DreameVacuumTimeEntityDescription(
         key="off_peak_charging_end",
         name="Off-peak charging end",
-        icon="mdi:battery-lock",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: device.capability.off_peak_charging,
     ),

@@ -1361,6 +1361,9 @@
     "auth_failed": {
       "message": "L'authentification a échoué."
     },
+    "command_failed": {
+      "message": "Échec de la commande : {error}"
+    },
     "device_not_available": {
       "message": "L'appareil n'est pas disponible."
     },
@@ -1375,6 +1378,9 @@
     },
     "fan_speed_not_recognized": {
       "message": "Vitesse d'aspiration non reconnue. Options valides : {options}."
+    },
+    "invalid_command": {
+      "message": "Commande invalide : {error}"
     },
     "invalid_fan_speed": {
       "message": "Vitesse d'aspiration invalide."

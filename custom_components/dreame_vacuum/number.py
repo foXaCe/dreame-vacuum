@@ -72,7 +72,6 @@ NUMBERS: tuple[DreameVacuumNumberEntityDescription, ...] = (
     ),
     DreameVacuumNumberEntityDescription(
         property_key=DreameVacuumProperty.MOP_CLEANING_REMAINDER,
-        icon="mdi:alarm-check",
         mode=NumberMode.BOX,
         native_unit_of_measurement=UNIT_MINUTES,
         native_min_value=0,
@@ -115,7 +114,6 @@ NUMBERS: tuple[DreameVacuumNumberEntityDescription, ...] = (
     ),
     DreameVacuumNumberEntityDescription(
         key="self_clean_time",
-        icon="mdi:table-clock",
         mode=NumberMode.SLIDER,
         native_unit_of_measurement=UNIT_MINUTES,
         exists_fn=lambda description, device: (
@@ -141,7 +139,6 @@ NUMBERS: tuple[DreameVacuumNumberEntityDescription, ...] = (
     ),
     DreameVacuumNumberEntityDescription(
         property_key=DreameVacuumProperty.CAMERA_LIGHT_BRIGHTNESS,
-        icon="mdi:brightness-percent",
         mode=NumberMode.SLIDER,
         native_min_value=40,
         native_max_value=100,
@@ -170,7 +167,6 @@ NUMBERS: tuple[DreameVacuumNumberEntityDescription, ...] = (
     ),
     DreameVacuumNumberEntityDescription(
         property_key=DreameVacuumProperty.DRYING_TIME,
-        icon="mdi:sun-clock",
         native_unit_of_measurement=UNIT_HOURS,
         mode=NumberMode.SLIDER,
         native_min_value=2,

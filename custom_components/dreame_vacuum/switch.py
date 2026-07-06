@@ -38,7 +38,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.RESUME_CLEANING,
         value_fn=lambda value, device: bool(value),
-        icon="mdi:play-pause",
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
@@ -53,7 +52,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.CUSTOMIZED_CLEANING,
-        icon="mdi:home-search",
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.CHILD_LOCK,
@@ -62,7 +60,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.TIGHT_MOPPING,
-        icon="mdi:heating-coil",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.mopping_type is None
@@ -76,7 +73,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.DND_DISABLE_RESUME_CLEANING,
-        icon="mdi:pause-box",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: bool(
             device.capability.dnd_functions and default_exists_fn(description, device)
@@ -84,7 +80,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.DND_DISABLE_AUTO_EMPTY,
-        icon="mdi:delete-off",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: bool(
             device.capability.dnd_functions and default_exists_fn(description, device)
@@ -92,7 +87,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.DND_REDUCE_VOLUME,
-        icon="mdi:volume-minus",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: bool(
             device.capability.dnd_functions and default_exists_fn(description, device)
@@ -116,7 +110,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.CARPET_RECOGNITION,
-        icon="mdi:rug",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device)
@@ -160,7 +153,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         key="carpet_avoidance",
-        icon="mdi:close-box-outline",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: (
             not (
@@ -173,7 +165,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.AUTO_ADD_DETERGENT,
-        icon="mdi:chart-bubble",
         entity_category=EntityCategory.CONFIG,
         format_fn=lambda value, device: int(value),
         exists_fn=lambda description, device: bool(
@@ -183,7 +174,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.MOP_WASHING_WITH_DETERGENT,
-        icon="mdi:hand-wash",
         entity_category=EntityCategory.CONFIG,
         format_fn=lambda value, device: int(value),
         exists_fn=lambda description, device: bool(
@@ -192,13 +182,11 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.MAP_SAVING,
-        icon="mdi:map-legend",
         entity_category=EntityCategory.CONFIG,
         format_fn=lambda value, device: int(value),
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.AUTO_MOUNT_MOP,
-        icon="mdi:google-circles-group",
         entity_category=EntityCategory.CONFIG,
         format_fn=lambda value, device: int(value),
         exists_fn=lambda description, device: bool(
@@ -213,7 +201,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         key="cleaning_sequence",
-        icon="mdi:order-numeric-ascending",
         value_fn=lambda value, device: device.status.custom_order,
         exists_fn=lambda description, device: device.capability.customized_cleaning and device.capability.map,
         set_fn=lambda device, value: device.set_cleaning_sequence(
@@ -251,7 +238,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAIProperty.AI_OBSTACLE_IMAGE_UPLOAD,
-        icon="mdi:cloud-upload",
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
@@ -271,7 +257,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAIProperty.AI_FURNITURE_DETECTION,
-        icon="mdi:table-furniture",
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
@@ -282,29 +267,24 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAIProperty.FUZZY_OBSTACLE_DETECTION,
-        icon="mdi:blur-linear",
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAIProperty.AI_PET_AVOIDANCE,
-        icon="mdi:dog-service",
         exists_fn=lambda description, device: device.capability.pet_detective,
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAIProperty.PET_PICTURE,
-        icon="mdi:cat",
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAIProperty.PET_FOCUSED_DETECTION,
-        icon="mdi:dog",
         exists_fn=lambda description, device: device.capability.pet_furniture,
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAIProperty.LARGE_PARTICLES_BOOST,
-        icon="mdi:weather-dust",
         exists_fn=lambda description, device: bool(device.capability.large_particles_boost),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -323,7 +303,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.STAIN_AVOIDANCE,
-        icon="mdi:liquid-spot",
         format_fn=lambda value, device: 2 if value else 1,
         exists_fn=lambda description, device: bool(
             device.capability.fluid_detection and default_exists_fn(description, device)
@@ -335,7 +314,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
         exists_fn=lambda description, device: bool(
             device.capability.floor_direction_cleaning and default_exists_fn(description, device)
         ),
-        icon="mdi:arrow-decision-auto",
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
@@ -343,12 +321,10 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
         exists_fn=lambda description, device: bool(
             device.capability.pet_detective and default_exists_fn(description, device)
         ),
-        icon="mdi:paw",
         entity_category=EntityCategory.CONFIG,
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.INTENSIVE_CARPET_CLEANING,
-        icon="mdi:creation",
         exists_fn=lambda description, device: bool(
             device.capability.intensive_carpet_cleaning and default_exists_fn(description, device)
         ),
@@ -359,7 +335,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.SIDE_REACH,
-        icon="mdi:selection-ellipse-arrow-inside",
         exists_fn=lambda description, device: bool(
             device.capability.side_reach and default_exists_fn(description, device)
         ),
@@ -367,7 +342,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.MOP_EXTEND,
-        icon="mdi:waves-arrow-right",
         exists_fn=lambda description, device: bool(
             device.capability.mop_extend and default_exists_fn(description, device)
         ),
@@ -375,7 +349,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.GAP_CLEANING_EXTENSION,
-        icon="mdi:plus-circle-multiple",
         exists_fn=lambda description, device: bool(
             device.capability.mop_pad_swing_plus and default_exists_fn(description, device)
         ),
@@ -383,7 +356,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.MOPPING_UNDER_FURNITURES,
-        icon="mdi:table-picnic",
         exists_fn=lambda description, device: bool(
             device.capability.mop_pad_swing_plus and default_exists_fn(description, device)
         ),
@@ -391,13 +363,11 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.OFF_PEAK_CHARGING,
-        icon="mdi:battery-clock",
         entity_category=EntityCategory.CONFIG,
         exists_fn=lambda description, device: device.capability.off_peak_charging,
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.AUTO_CHARGING,
-        icon="mdi:battery-sync",
         exists_fn=lambda description, device: bool(
             device.capability.auto_charging and default_exists_fn(description, device)
         ),
@@ -415,7 +385,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.MAX_SUCTION_POWER,
-        icon="mdi:speedometer",
         exists_fn=lambda description, device: bool(
             device.capability.max_suction_power and default_exists_fn(description, device)
         ),
@@ -423,7 +392,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.SMART_DRYING,
-        icon="mdi:clock-fast",
         exists_fn=lambda description, device: bool(
             device.capability.smart_drying and default_exists_fn(description, device)
         ),
@@ -431,7 +399,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.HOT_WASHING,
-        icon="mdi:sun-thermometer",
         exists_fn=lambda description, device: bool(
             device.capability.hot_washing
             and not device.capability.smart_mop_washing
@@ -441,7 +408,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.UV_STERILIZATION,
-        icon="mdi:sun-wireless",
         exists_fn=lambda description, device: bool(
             device.capability.uv_sterilization and default_exists_fn(description, device)
         ),
@@ -449,7 +415,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumAutoSwitchProperty.ULTRA_CLEAN_MODE,
-        icon="mdi:silverware-clean",
         exists_fn=lambda description, device: bool(
             device.capability.ultra_clean_mode
             and not device.capability.smart_mop_washing
@@ -467,7 +432,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.CLEAN_CARPETS_FIRST,
-        icon="mdi:order-bool-descending-variant",
         exists_fn=lambda description, device: bool(
             device.capability.clean_carpets_first and default_exists_fn(description, device)
         ),
@@ -478,7 +442,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.SMART_MOP_WASHING,
-        icon="mdi:hand-water",
         exists_fn=lambda description, device: bool(
             device.capability.smart_mop_washing and default_exists_fn(description, device)
         ),
@@ -486,14 +449,12 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.SILENT_DRYING,
-        icon="mdi:volume-mute",
         exists_fn=lambda description, device: bool(
             device.capability.silent_drying and default_exists_fn(description, device)
         ),
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.HAIR_COMPRESSION,
-        icon="mdi:arrow-collapse-vertical",
         exists_fn=lambda description, device: bool(
             device.capability.hair_compression and default_exists_fn(description, device)
         ),
@@ -501,7 +462,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.SIDE_BRUSH_CARPET_ROTATE,
-        icon="mdi:format-rotate-90",
         exists_fn=lambda description, device: bool(
             device.capability.side_brush_carpet_rotate and default_exists_fn(description, device)
         ),
@@ -512,7 +472,6 @@ SWITCHES: tuple[DreameVacuumSwitchEntityDescription, ...] = (
     ),
     DreameVacuumSwitchEntityDescription(
         property_key=DreameVacuumProperty.AUTO_LDS_LIFTING,
-        icon="mdi:elevator",
         exists_fn=lambda description, device: bool(
             device.capability.auto_lds_lifting and default_exists_fn(description, device)
         ),

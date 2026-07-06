@@ -35,7 +35,6 @@ from .entity import DreameVacuumButtonEntityDescription, DreameVacuumEntity, def
 BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_MAIN_BRUSH,
-        icon="mdi:car-turbocharger",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.main_brush_life is not None
@@ -43,7 +42,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_SIDE_BRUSH,
-        icon="mdi:pinwheel-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.side_brush_life is not None
@@ -51,7 +49,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_FILTER,
-        icon="mdi:air-filter",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.filter_life is not None
@@ -59,13 +56,11 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_SENSOR,
-        icon="mdi:radar",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: not device.capability.disable_sensor_cleaning,
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_MOP_PAD,
-        icon="mdi:hydro-power",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.mop_life is not None
@@ -73,7 +68,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_SILVER_ION,
-        icon="mdi:shimmer",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.silver_ion_life is not None
@@ -81,7 +75,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_DETERGENT,
-        icon="mdi:chart-bubble",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.capability.detergent
@@ -89,7 +82,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_SQUEEGEE,
-        icon="mdi:squeegee",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.squeegee_life is not None
@@ -97,7 +89,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_ONBOARD_DIRTY_WATER_TANK,
-        icon="mdi:train-car-tank",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.onboard_dirty_water_tank_life is not None
@@ -105,7 +96,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_DIRTY_WATER_TANK,
-        icon="mdi:cup",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.status.dirty_water_tank_life is not None
@@ -113,7 +103,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_DEODORIZER,
-        icon="mdi:scent",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.capability.deodorizer is not None
@@ -121,7 +110,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_SCALE_INHIBITOR,
-        icon="mdi:pipe",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(
             default_exists_fn(description, device) and device.capability.scale_inhibitor
@@ -129,7 +117,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.RESET_WHEEL,
-        icon="mdi:tire",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: bool(default_exists_fn(description, device) and device.capability.wheel),
     ),
@@ -148,20 +135,17 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         action_key=DreameVacuumAction.CLEAR_WARNING,
-        icon="mdi:clipboard-check-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
         action_fn=lambda device: device.clear_warning(),
     ),
     DreameVacuumButtonEntityDescription(
         key="start_fast_mapping",
-        icon="mdi:map-plus",
         entity_category=EntityCategory.CONFIG,
         action_fn=lambda device: device.start_fast_mapping(),
         exists_fn=lambda description, device: device.capability.lidar_navigation,
     ),
     DreameVacuumButtonEntityDescription(
         key="start_mapping",
-        icon="mdi:broom",
         entity_category=EntityCategory.CONFIG,
         action_fn=lambda device: device.start_mapping(),
         entity_registry_enabled_default=False,
@@ -199,14 +183,12 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         key="water_tank_draining",
-        icon="mdi:pump",
         entity_category=EntityCategory.DIAGNOSTIC,
         action_fn=lambda device: device.start_draining(),
         exists_fn=lambda description, device: device.capability.self_wash_base and device.capability.drainage,
     ),
     DreameVacuumButtonEntityDescription(
         key="empty_water_tank",
-        icon="mdi:waves-arrow-up",
         entity_category=EntityCategory.DIAGNOSTIC,
         action_fn=lambda device: device.start_draining(True),
         exists_fn=lambda description, device: device.capability.self_wash_base and device.capability.empty_water_tank,
@@ -220,7 +202,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     ),
     DreameVacuumButtonEntityDescription(
         key="base_station_cleaning",
-        icon="mdi:car-wash",
         entity_category=EntityCategory.DIAGNOSTIC,
         action_fn=lambda device: device.start_station_cleaning(),
         exists_fn=lambda description, device: device.capability.station_cleaning,
@@ -228,7 +209,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     DreameVacuumButtonEntityDescription(
         key="start_recleaning",
         name="Start re-cleaning",
-        icon="mdi:refresh-circle",
         entity_category=None,
         action_fn=lambda device: device.start_recleaning(),
         exists_fn=lambda description, device: device.capability.auto_recleaning and device.capability.map,
@@ -236,7 +216,6 @@ BUTTONS: tuple[DreameVacuumButtonEntityDescription, ...] = (
     DreameVacuumButtonEntityDescription(
         key="reload_shortcuts",
         name="Reload shortcuts",
-        icon="mdi:motion-play-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
         action_fn=lambda device: device.reload_shortcuts(),
         exists_fn=lambda description, device: device.capability.shortcuts,
@@ -291,7 +270,6 @@ def async_update_buttons(
                     coordinator,
                     DreameVacuumButtonEntityDescription(
                         key="shortcut",
-                        icon="mdi:play-speed",
                         available_fn=lambda device: (
                             not device.status.started
                             and not device.status.shortcut_task
@@ -317,7 +295,6 @@ def async_update_buttons(
                     coordinator,
                     DreameVacuumButtonEntityDescription(
                         key="backup",
-                        icon="mdi:content-save",
                         entity_category=EntityCategory.DIAGNOSTIC,
                         available_fn=lambda device: not device.status.started and not device.status.map_backup_status,
                     ),

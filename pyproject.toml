@@ -118,7 +118,7 @@ fail_under = 65
 show_missing = true
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 namespace_packages = true
 explicit_package_bases = true
 warn_unused_configs = true
@@ -163,6 +163,8 @@ module = [
     "custom_components.dreame_vacuum.dreame.map_renderer._helpers",
     "custom_components.dreame_vacuum.dreame.miio_patch",
     "custom_components.dreame_vacuum.dreame.resilience",
+    "custom_components.dreame_vacuum.dreame.http_client",
+    "custom_components.dreame_vacuum.camera_views",
     "custom_components.dreame_vacuum.dreame.device_status",
     "custom_components.dreame_vacuum.dreame.device_status._consumables",
     "custom_components.dreame_vacuum.dreame.device_status._station",

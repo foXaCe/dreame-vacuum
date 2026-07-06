@@ -1361,6 +1361,9 @@
     "auth_failed": {
       "message": "Authentication failed."
     },
+    "command_failed": {
+      "message": "Command failed: {error}"
+    },
     "device_not_available": {
       "message": "Device is not available."
     },
@@ -1375,6 +1378,9 @@
     },
     "fan_speed_not_recognized": {
       "message": "Fan speed not recognized. Valid options: {options}."
+    },
+    "invalid_command": {
+      "message": "Invalid command: {error}"
     },
     "invalid_fan_speed": {
       "message": "Invalid fan speed."

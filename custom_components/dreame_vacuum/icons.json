@@ -9,6 +9,9 @@
       }
     },
     "button": {
+      "backup_map": {
+        "default": "mdi:content-save"
+      },
       "base_station_cleaning": {
         "default": "mdi:car-wash"
       },
@@ -59,6 +62,9 @@
       },
       "reset_wheel": {
         "default": "mdi:tire"
+      },
+      "shortcut_named": {
+        "default": "mdi:play-speed"
       },
       "start_fast_mapping": {
         "default": "mdi:map-plus"

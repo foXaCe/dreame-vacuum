@@ -374,10 +374,18 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
             return True
         except (InvalidActionException, InvalidValueException) as exc:
             LOGGER.error(mask_error, exc)
-            raise HomeAssistantError(str(exc)) from exc
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_command",
+                translation_placeholders={"error": str(exc)},
+            ) from exc
         except (DeviceUpdateFailedException, DeviceException) as exc:
             if self.device.available:
-                raise HomeAssistantError(str(exc)) from exc
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="command_failed",
+                    translation_placeholders={"error": str(exc)},
+                ) from exc
             return False
 
     @property

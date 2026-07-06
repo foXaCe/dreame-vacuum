@@ -572,16 +572,20 @@ async def test_try_command_invalid_action_raises(coordinator: MagicMock) -> None
     """InvalidActionException is converted to HomeAssistantError."""
     coordinator.device.start.side_effect = InvalidActionException("bad action")
     entity = _make_entity(coordinator)
-    with pytest.raises(HomeAssistantError, match="bad action"):
+    with pytest.raises(HomeAssistantError) as err:
         await entity.async_start()
+    assert err.value.translation_key == "invalid_command"
+    assert err.value.translation_placeholders == {"error": "bad action"}
 
 
 async def test_try_command_invalid_value_raises(coordinator: MagicMock) -> None:
     """InvalidValueException is converted to HomeAssistantError."""
     coordinator.device.start.side_effect = InvalidValueException("bad value")
     entity = _make_entity(coordinator)
-    with pytest.raises(HomeAssistantError, match="bad value"):
+    with pytest.raises(HomeAssistantError) as err:
         await entity.async_start()
+    assert err.value.translation_key == "invalid_command"
+    assert err.value.translation_placeholders == {"error": "bad value"}
 
 
 async def test_try_command_device_exception_available_raises(coordinator: MagicMock) -> None:
@@ -589,8 +593,10 @@ async def test_try_command_device_exception_available_raises(coordinator: MagicM
     coordinator.device.available = True
     coordinator.device.start.side_effect = DeviceException("network down")
     entity = _make_entity(coordinator)
-    with pytest.raises(HomeAssistantError, match="network down"):
+    with pytest.raises(HomeAssistantError) as err:
         await entity.async_start()
+    assert err.value.translation_key == "command_failed"
+    assert err.value.translation_placeholders == {"error": "network down"}
 
 
 async def test_try_command_device_update_failed_available_raises(coordinator: MagicMock) -> None:
@@ -598,8 +604,10 @@ async def test_try_command_device_update_failed_available_raises(coordinator: Ma
     coordinator.device.available = True
     coordinator.device.start.side_effect = DeviceUpdateFailedException("update failed")
     entity = _make_entity(coordinator)
-    with pytest.raises(HomeAssistantError, match="update failed"):
+    with pytest.raises(HomeAssistantError) as err:
         await entity.async_start()
+    assert err.value.translation_key == "command_failed"
+    assert err.value.translation_placeholders == {"error": "update failed"}
 
 
 async def test_try_command_device_exception_unavailable_swallowed(coordinator: MagicMock) -> None:
@@ -648,8 +656,10 @@ async def test_clean_zone_propagates_device_error(coordinator: MagicMock) -> Non
     """An invalid-zone exception bubbles up as HomeAssistantError."""
     coordinator.device.clean_zone.side_effect = InvalidActionException("Invalid zone coordinates: []")
     entity = _make_entity(coordinator)
-    with pytest.raises(HomeAssistantError, match="Invalid zone coordinates"):
+    with pytest.raises(HomeAssistantError) as err:
         await entity.async_clean_zone([])
+    assert err.value.translation_key == "invalid_command"
+    assert err.value.translation_placeholders == {"error": "Invalid zone coordinates: []"}
 
 
 async def test_goto(coordinator: MagicMock) -> None:

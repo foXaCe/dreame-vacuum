@@ -62,7 +62,6 @@ RELOCATION_STATUS_TO_ICON = {
 SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.CLEANING_TIME,
-        icon="mdi:timer-sand",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
@@ -71,7 +70,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
         property_key=DreameVacuumProperty.CLEANING_TIME,
         name="Mapping time",
         key="mapping_time",
-        icon="mdi:map-clock",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
@@ -80,17 +78,14 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.CLEANED_AREA,
-        icon="mdi:ruler-square",
         native_unit_of_measurement=UNIT_AREA,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.STATE,
-        icon="mdi:robot-vacuum",
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.STATUS,
-        icon="mdi:vacuum",
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.RELOCATION_STATUS,
@@ -100,7 +95,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.TASK_STATUS,
-        icon="mdi:file-tree",
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.WATER_TANK,
@@ -115,7 +109,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         key="mop_pad",
-        icon="mdi:google-circles-communities",
         exists_fn=lambda description, device: device.capability.self_wash_base,
     ),
     DreameVacuumSensorEntityDescription(
@@ -134,7 +127,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SELF_WASH_BASE_STATUS,
-        icon="mdi:dishwasher",
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.LOW_WATER_WARNING,
@@ -152,7 +144,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.TASK_TYPE,
-        icon="mdi:sitemap",
         exists_fn=lambda description, device: device.capability.task_type,
     ),
     DreameVacuumSensorEntityDescription(
@@ -179,7 +170,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.CHARGING_STATUS,
-        icon="mdi:home-lightning-bolt",
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.BATTERY_LEVEL,
@@ -190,7 +180,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.MAIN_BRUSH_LEFT,
-        icon="mdi:car-turbocharger",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -198,7 +187,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.MAIN_BRUSH_TIME_LEFT,
-        icon="mdi:car-turbocharger",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_HOURS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -206,7 +194,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SIDE_BRUSH_LEFT,
-        icon="mdi:pinwheel-outline",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -214,7 +201,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SIDE_BRUSH_TIME_LEFT,
-        icon="mdi:pinwheel-outline",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_HOURS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -222,7 +208,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.FILTER_LEFT,
-        icon="mdi:air-filter",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -230,7 +215,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.FILTER_TIME_LEFT,
-        icon="mdi:air-filter",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_HOURS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -238,7 +222,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SENSOR_DIRTY_LEFT,
-        icon="mdi:radar",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -247,7 +230,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SENSOR_DIRTY_TIME_LEFT,
-        icon="mdi:radar",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_HOURS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -256,7 +238,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.TANK_FILTER_LEFT,
-        icon="mdi:air-filter",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -264,7 +245,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.TANK_FILTER_TIME_LEFT,
-        icon="mdi:air-filter",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_HOURS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -272,7 +252,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.MOP_PAD_LEFT,
-        icon="mdi:hydro-power",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -280,7 +259,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.MOP_PAD_TIME_LEFT,
-        icon="mdi:hydro-power",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_HOURS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -288,7 +266,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SILVER_ION_LEFT,
-        icon="mdi:shimmer",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -296,7 +273,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SILVER_ION_TIME_LEFT,
-        icon="mdi:shimmer",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_DAYS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -304,7 +280,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DETERGENT_LEFT,
-        icon="mdi:water-opacity",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -315,7 +290,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DETERGENT_TIME_LEFT,
-        icon="mdi:water-opacity",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_DAYS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -326,7 +300,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SQUEEGEE_LEFT,
-        icon="mdi:squeegee",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -334,7 +307,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SQUEEGEE_TIME_LEFT,
-        icon="mdi:squeegee",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_DAYS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -342,7 +314,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.ONBOARD_DIRTY_WATER_TANK_LEFT,
-        icon="mdi:train-car-tank",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -350,7 +321,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.ONBOARD_DIRTY_WATER_TANK_TIME_LEFT,
-        icon="mdi:train-car-tank",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_DAYS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -358,7 +328,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DIRTY_WATER_TANK_LEFT,
-        icon="mdi:cup",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -366,7 +335,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DIRTY_WATER_TANK_TIME_LEFT,
-        icon="mdi:cup",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_DAYS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -374,7 +342,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DEODORIZER_LEFT,
-        icon="mdi:scent",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -385,7 +352,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DEODORIZER_TIME_LEFT,
-        icon="mdi:scent",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_DAYS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -396,7 +362,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.WHEEL_DIRTY_LEFT,
-        icon="mdi:tire",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -405,7 +370,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.WHEEL_DIRTY_TIME_LEFT,
-        icon="mdi:tire",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_DAYS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -414,7 +378,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SCALE_INHIBITOR_LEFT,
-        icon="mdi:pipe",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -425,7 +388,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.SCALE_INHIBITOR_TIME_LEFT,
-        icon="mdi:pipe",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UNIT_DAYS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -436,7 +398,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.FIRST_CLEANING_DATE,
-        icon="mdi:calendar-start",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda value, device: (
@@ -445,7 +406,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.TOTAL_CLEANING_TIME,
-        icon="mdi:timer-outline",
         native_unit_of_measurement=UNIT_MINUTES,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -453,21 +413,18 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.CLEANING_COUNT,
-        icon="mdi:counter",
         native_unit_of_measurement=UNIT_TIMES,
         state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.TOTAL_CLEANED_AREA,
-        icon="mdi:set-square",
         native_unit_of_measurement=UNIT_AREA,
         state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.CLEAN_WATER_TANK_STATUS,
-        icon="mdi:beer",
         entity_category=EntityCategory.DIAGNOSTIC,
         exists_fn=lambda description, device: (
             device.capability.self_wash_base and default_exists_fn(description, device)
@@ -475,7 +432,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DIRTY_WATER_TANK_STATUS,
-        icon="mdi:glass-mug",
         exists_fn=lambda description, device: (
             device.capability.self_wash_base and default_exists_fn(description, device)
         ),
@@ -483,7 +439,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DUST_BAG_STATUS,
-        icon="mdi:delete-circle-outline",
         exists_fn=lambda description, device: (
             device.capability.auto_empty_base and default_exists_fn(description, device)
         ),
@@ -491,24 +446,20 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DETERGENT_STATUS,
-        icon="mdi:chart-bubble",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.STATION_DRAINAGE_STATUS,
-        icon="mdi:water-pump",
         exists_fn=lambda description, device: device.capability.drainage and default_exists_fn(description, device),
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.HOT_WATER_STATUS,
-        icon="mdi:water-thermometer",
         exists_fn=lambda description, device: device.capability.hot_washing and default_exists_fn(description, device),
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     DreameVacuumSensorEntityDescription(
         key="current_room",
-        icon="mdi:home-map-marker",
         value_fn=lambda value, device: device.status.current_room.name,
         exists_fn=lambda description, device: device.capability.map and device.capability.lidar_navigation,
         attrs_fn=lambda device: {
@@ -518,7 +469,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         key="cleaning_history",
-        icon="mdi:clipboard-text-clock",
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=lambda value, device: device.status.last_cleaning_time,
         exists_fn=lambda description, device: device.capability.map,
@@ -527,7 +477,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         key="cruising_history",
-        icon="mdi:map-marker-path",
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=lambda value, device: device.status.last_cruising_time,
         exists_fn=lambda description, device: device.capability.map and device.capability.cruising,
@@ -536,7 +485,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.CLEANING_PROGRESS,
-        icon="mdi:home-percent",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -544,7 +492,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         property_key=DreameVacuumProperty.DRYING_PROGRESS,
-        icon="mdi:water-percent",
         native_unit_of_measurement=UNIT_PERCENT,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -552,7 +499,6 @@ SENSORS: tuple[DreameVacuumSensorEntityDescription, ...] = (
     ),
     DreameVacuumSensorEntityDescription(
         key="firmware_version",
-        icon="mdi:chip",
         value_fn=lambda value, device: device.info.version,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
