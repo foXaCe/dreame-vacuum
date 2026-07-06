@@ -59,7 +59,7 @@ jobs:
           zip -r ../../dreame_vacuum.zip .
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
         with:
           name: Release ${{ steps.get_version.outputs.VERSION }}
           draft: false
