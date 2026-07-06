@@ -1,0 +1,11 @@
+=== PERF FINALE dreame_vacuum — 2026-07-06 ===
+Setup of domain dreame_vacuum took 0.01 seconds (boot final 10:39:07, HA 2026.7.0)
+Setup entry complet : 6.09 s (baseline pré-session ~5.8 s, variance cloud 4.1-7.8 s sur la session)
+importtime best-of-3 : 756955 µs (baseline : 645122 µs)
+
+Attribution de l'écart importtime local (+111 ms vs baseline) :
+- aiohttp cumulé ~95 ms, nouvellement dans la chaîne d'import de protocol.py
+  (via dreame/http_client.py) ; requests reste tiré par micloud (dép. python-miio).
+- En contexte HA réel, aiohttp est TOUJOURS déjà importé par le core avant toute
+  intégration (sys.modules) : coût réel nul. Preuve : "Setup of domain
+  dreame_vacuum took 0.01 seconds" au boot final = identique à la baseline.

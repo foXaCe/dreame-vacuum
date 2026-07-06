@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Exhaustive engine test suite**: 2 063 new behavioural tests
+  (1 897 → 3 960, green in ~28 s), lifting coverage from 66 % to **98.8 %**
+  (coverage floor raised 65 → 95). The campaign pinned 22 real pre-existing
+  engine anomalies with tests documenting the current behaviour — see
+  `docs/overhaul/known-issues-2026-07-06.md` (5 user-impacting ones flagged
+  for priority follow-up).
+
 ### Changed
 - **Cloud HTTP now runs on an async-native aiohttp transport** — `requests`
   is gone from the requirements. The new `dreame/http_client.py` hosts the

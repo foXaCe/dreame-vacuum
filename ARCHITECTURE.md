@@ -127,10 +127,12 @@ the translations, handled by `repairs.async_create_fix_flow`.
 - **Quality scale**: Gold — the per-rule checklist lives in
   `custom_components/dreame_vacuum/quality_scale.yaml` (honest statuses:
   documented todos and justified exemptions).
-- **Tests**: `pytest` with `pytest-homeassistant-custom-component`; HA layer at
-  **100 %** (camera and its HTTP views included), engine covered on its critical
-  logic (protocol, manager/optimizer fixes, setters/actions). Global ≈ 46 %,
-  coverage floor (`fail_under = 45`) ratchets upward only.
+- **Tests**: `pytest` with `pytest-homeassistant-custom-component`; 3 960 tests,
+  global coverage **98.8 %** (HA layer at 100 %, engine 96-100 % per module —
+  only `dreame/__init__.py` sits at 87 % on 4 structurally untestable defensive
+  lines). Coverage floor (`fail_under = 95`) ratchets upward only. Known engine
+  anomalies pinned by tests are listed in
+  `docs/overhaul/known-issues-2026-07-06.md`.
 - **Typing**: mypy runs as a ratchet — modules in the per-module allow-list in
   `pyproject.toml` are strictly checked; the engine and a few HA modules
   (`vacuum`, `coordinator`, `select`, `camera`) are still deferred (a `self._device`
