@@ -341,9 +341,9 @@ attributes:
 
 ## To Do
 
-- Shortcut editing
+- Shortcut editing (rename done; create/delete/task-edit blocked on wire format — design: docs/dev/shortcut-editing-design.md)
 - Schedule editing
-- Furniture editing
+- Furniture editing (read/render done, no write path — design: docs/dev/furniture-editing-design.md)
 - Multi-window DnD editing (single-window done; design: docs/dev/dnd-tasks-design.md)
 - Live camera streaming (spike: see docs/dev/streaming-spike.md — size L-or-never, blocked on proprietary transport)
 
