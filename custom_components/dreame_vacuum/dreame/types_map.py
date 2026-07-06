@@ -1755,7 +1755,7 @@ class ScheduleTask:
     map_id: str | None = None
     suction_level: int | None = None
     water_volume: int | None = None
-    options: str | None = None
+    options: list[str] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
