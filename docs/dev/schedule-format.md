@@ -18,6 +18,28 @@ rationale documents the conservative choices actually shipped, e.g. opaque
 pass-through of `repeats`/`options`, `suction_level`/`water_volume` required
 on create).
 
+## Live-device round-trip (2026-07-06, Aqua10 Ultra r95285, firmware 3397)
+
+Exercised through the shipped HA services against a real device:
+
+- **Create via `vacuum_set_schedule`: ✅ works.** Wrote
+  `1-0-03:00-0-0-0-1-1-0`; the device accepted it and pushed back
+  `1-0-03:00-0000000-0-0-1-1-0`. **Discovery: the device normalizes
+  `repeats` `"0"` to `"0000000"`** — `repeats` is a 7-character `0`/`1`
+  per-day mask string (which day maps to which position is still
+  unconfirmed). The parser round-trips it fine either way.
+- **Delete via `vacuum_delete_schedule`: ❌ does NOT delete on this
+  firmware.** The engine's two-step delete (rewrite the `SCHEDULE` property
+  without the task, then `DELETE_SCHEDULE` action `8.1` with
+  `{piid: 3, value: <int id>}`) is silently ignored: the task survives a
+  config-entry reload (so it is device state, not a stale HA echo). A bare
+  `SCHEDULE` property write of `""` is also ignored. **Working hypothesis:
+  this firmware treats `SCHEDULE` property writes as an upsert-by-id, never
+  as a full-list replace** — which is consistent with create working and
+  both delete strategies being no-ops. Next step: capture the official
+  app's delete traffic to learn the real wire operation before touching
+  the engine delete path.
+
 ## Wire format (confirmed from the parser)
 
 `custom_components/dreame_vacuum/dreame/device.py:1484-1517`

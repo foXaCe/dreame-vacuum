@@ -550,6 +550,11 @@ Services for creating, editing and deleting scheduled cleaning tasks (`status.sc
 Delete a scheduled cleaning task.
 
 > - You can acquire the schedule id from the vacuum entity's `schedule` attribute.
+> - ⚠️ **Known not to work on some recent firmwares** (verified on Aqua10 Ultra
+>   r95285 / firmware 3397, 2026-07-06): the device silently ignores both the
+>   property rewrite and the `DELETE_SCHEDULE` action — see
+>   `docs/dev/schedule-format.md` § "Live-device round-trip". Deleting from the
+>   official app still works.
 
 **Fields:**
 
