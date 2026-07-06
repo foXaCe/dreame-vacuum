@@ -283,6 +283,50 @@ class _LayersMixin(_MapRendererState):
             changes.append(layer)
             self._del_layer(cached_layers, layer)
 
+        layer = MapRendererLayer.WALL_OUTLINE
+        if map_data.wall_lines and self.config.wall_outline:
+            layers.append(layer)
+            if (
+                not self._cache
+                or self._map_data is None
+                or self._map_data.wall_lines != map_data.wall_lines
+                or not cached_layers.get(layer)
+            ):
+                changes.append(layer)
+                cached_layers[layer] = self.render_walls(
+                    map_data.wall_lines,
+                    self.color_scheme.wall_outline,
+                    layer_size,
+                    map_data.dimensions,
+                    line_width,
+                    scale,
+                )
+        elif self._cache and cached_layers.get(layer):
+            changes.append(layer)
+            self._del_layer(cached_layers, layer)
+
+        layer = MapRendererLayer.DOOR
+        if map_data.door_lines and self.config.wall_outline:
+            layers.append(layer)
+            if (
+                not self._cache
+                or self._map_data is None
+                or self._map_data.door_lines != map_data.door_lines
+                or not cached_layers.get(layer)
+            ):
+                changes.append(layer)
+                cached_layers[layer] = self.render_walls(
+                    map_data.door_lines,
+                    self.color_scheme.door_line,
+                    layer_size,
+                    map_data.dimensions,
+                    line_width,
+                    scale,
+                )
+        elif self._cache and cached_layers.get(layer):
+            changes.append(layer)
+            self._del_layer(cached_layers, layer)
+
         layer = MapRendererLayer.VIRTUAL_THRESHOLD
         if map_data.virtual_thresholds and self.config.pathway:
             layers.append(layer)

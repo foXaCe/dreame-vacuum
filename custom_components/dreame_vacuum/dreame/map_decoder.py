@@ -281,6 +281,38 @@ class DreameVacuumMapDecoder:
         return DreameVacuumMapDecoder.decode_map(raw_map, vslam_map, rotation, iv)[0]
 
     @staticmethod
+    def _decode_walls_info(map_data: MapData, walls_info: Any) -> None:
+        """Parse the vectorized room boundaries from the saved-map ``walls_info``.
+
+        Structure (real-world mm coordinates, same space as robot/charger):
+            {version_flag, storeys: [{rooms: [{room_id, walls: [
+                {type, beg_pt_x, beg_pt_y, end_pt_x, end_pt_y, normal_x, normal_y}
+            ]}]}]}
+        ``type`` 0 = wall segment, 1 = doorway. Segments are collected into two
+        flat lists of ``Wall`` so the renderer can draw walls and doors with
+        distinct colours (mirrors the official app, which renders doors thinner).
+        """
+        if not isinstance(walls_info, dict):
+            return
+        wall_lines: list[Wall] = []
+        door_lines: list[Wall] = []
+        for storey in walls_info.get("storeys") or []:
+            for room in storey.get("rooms") or []:
+                for wall in room.get("walls") or []:
+                    try:
+                        segment = Wall(
+                            wall["beg_pt_x"],
+                            wall["beg_pt_y"],
+                            wall["end_pt_x"],
+                            wall["end_pt_y"],
+                        )
+                    except (KeyError, TypeError):
+                        continue
+                    (door_lines if wall.get("type") == 1 else wall_lines).append(segment)
+        map_data.wall_lines = wall_lines or None
+        map_data.door_lines = door_lines or None
+
+    @staticmethod
     def decode_map_data_from_partial(partial_map: MapDataPartial | None, vslam_map: bool, rotation: Any = 0) -> Any:
         if partial_map is None:
             return None
@@ -654,6 +686,13 @@ class DreameVacuumMapDecoder:
                     map_data.saved_map_id = saved_map_data.map_id
                     if saved_map_data.temporary_map:
                         map_data.temporary_map = saved_map_data.temporary_map
+
+                    # Vectorized walls live only in the saved-map blob; carry them
+                    # onto the live map so the renderer can draw them over it.
+                    if map_data.wall_lines is None and saved_map_data.wall_lines is not None:
+                        map_data.wall_lines = copy.deepcopy(saved_map_data.wall_lines)
+                    if map_data.door_lines is None and saved_map_data.door_lines is not None:
+                        map_data.door_lines = copy.deepcopy(saved_map_data.door_lines)
 
                     if (
                         restored_map
@@ -1236,6 +1275,9 @@ class DreameVacuumMapDecoder:
                         )
                     )
 
+            if "walls_info" in data_json and map_data.wall_lines is None:
+                DreameVacuumMapDecoder._decode_walls_info(map_data, data_json["walls_info"])
+
             if "pointinfo" in data_json:
                 points = data_json["pointinfo"]
                 if points:
@@ -1335,6 +1377,12 @@ class DreameVacuumMapDecoder:
 
         if map_data.low_lying_areas is not None:
             current_map_data.low_lying_areas = map_data.low_lying_areas
+
+        if map_data.wall_lines is not None:
+            current_map_data.wall_lines = map_data.wall_lines
+
+        if map_data.door_lines is not None:
+            current_map_data.door_lines = map_data.door_lines
 
         # P map only returns difference between its previous frame.
         # Calculate new map size and update the buffer according to the received data at received offset.
