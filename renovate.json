@@ -56,6 +56,24 @@
       "description": "Never auto-merge language runtime version bumps (python, node) — always review",
       "matchDepNames": ["python", "node"],
       "automerge": false
+    },
+    {
+      "description": "Manifest runtime floors: PR only, never automerge",
+      "matchFileNames": ["custom_components/dreame_vacuum/manifest.json"],
+      "automerge": false,
+      "addLabels": ["python", "runtime-floor"]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track runtime requirement floors in the Home Assistant manifest",
+      "managerFilePatterns": ["/^custom_components/dreame_vacuum/manifest\\.json$/"],
+      "matchStrings": [
+        "\"(?<depName>[a-zA-Z0-9._-]+)(?:\\[[a-zA-Z0-9,._-]+\\])?>=(?<currentValue>[0-9][^\",<]*)"
+      ],
+      "datasourceTemplate": "pypi",
+      "versioningTemplate": "pep440"
     }
   ]
 }
