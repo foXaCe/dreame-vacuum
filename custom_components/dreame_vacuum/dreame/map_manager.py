@@ -45,7 +45,7 @@ from .exceptions import DeviceUpdateFailedException
 from .map_decoder import DreameVacuumMapDecoder
 from .map_editor import DreameMapVacuumMapEditor
 from .map_optimizer import DreameVacuumMapOptimizer
-from .protocol import DreameVacuumProtocol
+from .protocol import DreameVacuumProtocol, redact_url
 from .vacuum_types import (
     DIID,
     PIID,
@@ -478,11 +478,12 @@ class DreameMapVacuumMapManager:
 
             url = self._get_file_url(object_name)
             if url:
-                _LOGGER.debug("Request map data from cloud %s", url)
+                # The query string is the download credential — never log it.
+                _LOGGER.debug("Request map data from cloud %s", redact_url(url))
                 response = cloud.get_file(url)
                 if response is not None:
                     return response
-                _LOGGER.warning("Request map data from cloud failed %s", url)
+                _LOGGER.warning("Request map data from cloud failed %s", redact_url(url))
                 if self._file_urls.get(object_name):
                     del self._file_urls[object_name]
         return None
@@ -1093,7 +1094,7 @@ class DreameMapVacuumMapManager:
                         object_name,
                         not (object_name.endswith("mb.tbz2") and not self._protocol.dreame_cloud),
                     )
-                    _LOGGER.debug("Recovery map file url: %s = %s", object_name, map_url)
+                    _LOGGER.debug("Recovery map file url: %s = %s", object_name, redact_url(map_url))
                     if map_url:
                         return (
                             self._protocol.cloud.get_file(map_url),

@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime
 import hashlib
 import json
+import logging
 from unittest.mock import MagicMock
 
 from cryptography.hazmat.backends import default_backend
@@ -818,3 +819,50 @@ def test_get_recovery_map_file_picks_interim_flag_from_object_name_suffix(
     manager.get_recovery_map_file(1, 1)
 
     manager._get_file_url.assert_called_once_with(object_name, expected_interim)
+
+
+# ---------------------------------------------------------------------------
+# URL redaction: pre-signed cloud URLs must never reach the logs
+# ---------------------------------------------------------------------------
+
+SIGNED_URL = "https://oss.example/map.b64?Signature=SECRETSIG&Expires=1"
+
+
+def test_get_interim_file_data_logs_never_leak_signed_query(
+    manager: DreameMapVacuumMapManager,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Both the request debug line and the failure warning must redact the URL."""
+    manager._get_file_url = MagicMock(return_value=SIGNED_URL)
+    # get_file returning None fires the failure-warning path after the debug line.
+    manager._protocol.cloud.get_file = MagicMock(return_value=None)
+
+    with caplog.at_level(logging.DEBUG):
+        result = manager._get_interim_file_data("obj")
+
+    assert result is None
+    assert "Request map data from cloud" in caplog.text  # debug line fired
+    assert "failed" in caplog.text  # warning line fired
+    assert "SECRETSIG" not in caplog.text
+    assert "oss.example" in caplog.text
+
+
+def test_get_recovery_map_file_log_never_leaks_signed_query(
+    manager: DreameMapVacuumMapManager,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The recovery-map debug line redacts the URL; the returned URL stays raw."""
+    entry = MagicMock(object_name="obj.map")
+    manager._map_list = [1]
+    manager._saved_map_data = {1: MagicMock(recovery_map_list=[entry])}
+    manager._get_file_url = MagicMock(return_value=SIGNED_URL)
+    manager._protocol.cloud.get_file = MagicMock(return_value=b"filebytes")
+
+    with caplog.at_level(logging.DEBUG):
+        result = manager.get_recovery_map_file(1, 1)
+
+    # The caller needs the real pre-signed URL to download the file.
+    assert result == (b"filebytes", SIGNED_URL, "obj.map")
+    assert "Recovery map file url" in caplog.text
+    assert "SECRETSIG" not in caplog.text
+    assert "oss.example" in caplog.text

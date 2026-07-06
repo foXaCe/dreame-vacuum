@@ -54,6 +54,19 @@ DREAME_STRINGS: Final = "H4sICAAAAAAEAGNsb3VkX3N0cmluZ3MuanNvbgCFU9tuGjEQ/RUUKai
 _LOGGER = logging.getLogger(__name__)
 
 
+def redact_url(url: Any) -> str:
+    """Return the URL with its query string redacted.
+
+    Cloud file URLs are pre-signed: the query string IS the download
+    credential, so it must never reach the logs. Keep scheme/host/path
+    for debuggability.
+    """
+    if not isinstance(url, str):
+        return str(url)
+    base, sep, _query = url.partition("?")
+    return f"{base}?<redacted>" if sep else base
+
+
 class DreameVacuumDeviceProtocol(MiIOProtocol):
     def __init__(self, ip: str, token: str) -> None:
         super().__init__(ip, token, 0, 0, True, 2)
@@ -654,7 +667,8 @@ class DreameVacuumDreameHomeCloudProtocol:
                 response = self._session.get(url, timeout=self._timeout_config.file_download)
             except HttpRequestError as ex:
                 response = None
-                _LOGGER.warning("Unable to get file at %s: %s", url, ex)
+                # The query string is the download credential — never log it.
+                _LOGGER.warning("Unable to get file at %s: %s", redact_url(url), ex)
             if response is not None and response.status == 200:
                 return response.body
             retries = retries + 1
@@ -1207,7 +1221,8 @@ class DreameVacuumMiHomeCloudProtocol:
                 response = self._session.get(url, timeout=self._timeout_config.file_download)
             except HttpRequestError as ex:
                 response = None
-                _LOGGER.warning("Unable to get file at %s: %s", url, ex)
+                # The query string is the download credential — never log it.
+                _LOGGER.warning("Unable to get file at %s: %s", redact_url(url), ex)
             if response is not None and response.status == 200:
                 return response.body
             retries = retries + 1
@@ -1215,7 +1230,14 @@ class DreameVacuumMiHomeCloudProtocol:
 
     def get_file_url(self, object_name: str = "") -> Any:
         api_response = self._api_call(f"home/getfileurl{('_v3' if self._v3 else '')}", {"obj_name": object_name})
-        _LOGGER.debug("Get file url result: %s = %s", object_name, api_response)
+        # The response embeds a pre-signed URL: log it redacted; without a URL the
+        # remaining response holds only an error code, safe to log as-is.
+        url = (
+            api_response["result"]["url"]
+            if api_response is not None and "result" in api_response and "url" in api_response["result"]
+            else None
+        )
+        _LOGGER.debug("Get file url result: %s = %s", object_name, redact_url(url) if url else api_response)
         if api_response is None or "result" not in api_response or "url" not in api_response["result"]:
             if api_response and api_response.get("code") == -8 and self._v3:
                 _LOGGER.debug("get_file_url fallback to V2")
@@ -1230,7 +1252,13 @@ class DreameVacuumMiHomeCloudProtocol:
             f"v2/home/get_interim_file_url{('_pro' if self._v3 else '')}",
             {"obj_name": object_name},
         )
-        _LOGGER.debug("Get interim file url result: %s = %s", object_name, api_response)
+        # Same as get_file_url: never log the pre-signed URL unredacted.
+        url = (
+            api_response["result"]["url"]
+            if api_response is not None and api_response.get("result") and "url" in api_response["result"]
+            else None
+        )
+        _LOGGER.debug("Get interim file url result: %s = %s", object_name, redact_url(url) if url else api_response)
         if api_response is None or not api_response.get("result") or "url" not in api_response["result"]:
             if api_response and api_response.get("code") == -8 and self._v3:
                 _LOGGER.debug("get_interim_file_url fallback to V2")

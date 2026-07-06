@@ -24,6 +24,8 @@ from custom_components.dreame_vacuum.dreame.http_client import (
 )
 from custom_components.dreame_vacuum.dreame.protocol import (
     DreameVacuumDreameHomeCloudProtocol,
+    DreameVacuumMiHomeCloudProtocol,
+    redact_url,
 )
 from custom_components.dreame_vacuum.dreame.resilience import CircuitState
 
@@ -1921,3 +1923,100 @@ def test_set_batch_device_datas_success(proto: DreameVacuumDreameHomeCloudProtoc
 def test_set_batch_device_datas_missing_result(proto: DreameVacuumDreameHomeCloudProtocol) -> None:
     with patch.object(proto, "_api_call", return_value={"other": 1}):
         assert proto.set_batch_device_datas(["p1"]) is None
+
+
+# ---------------------------------------------------------------------------
+# redact_url: pre-signed cloud URLs must never reach the logs
+# ---------------------------------------------------------------------------
+
+SIGNED_URL = "https://oss.example/map.b64?Signature=SECRETSIG&Expires=1"
+
+
+def test_redact_url_strips_query() -> None:
+    """The query string (the download credential) is dropped, path kept."""
+    assert redact_url("https://h/p?sig=abc") == "https://h/p?<redacted>"
+    assert redact_url("https://h/p") == "https://h/p"
+    assert redact_url(None) == "None"
+
+
+def test_get_file_failure_log_redacts_signature_dreame_home(
+    proto: DreameVacuumDreameHomeCloudProtocol,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """DreameHome get_file() failure warning must not leak the signed query string."""
+    proto._session = MagicMock()
+    proto._session.get.side_effect = HttpRequestError("boom")
+
+    with caplog.at_level(logging.WARNING):
+        result = proto.get_file(SIGNED_URL, retry_count=0)
+
+    assert result is None
+    assert "SECRETSIG" not in caplog.text
+    assert "oss.example" in caplog.text
+
+
+def test_get_file_failure_log_redacts_signature_mihome(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """MiHome get_file() failure warning must not leak the signed query string."""
+    p = DreameVacuumMiHomeCloudProtocol("user@example.com", "secret", "de")
+    p._session = MagicMock()
+    p._session.get.side_effect = HttpRequestError("boom")
+
+    with caplog.at_level(logging.WARNING):
+        result = p.get_file(SIGNED_URL, retry_count=0)
+
+    assert result is None
+    assert "SECRETSIG" not in caplog.text
+    assert "oss.example" in caplog.text
+
+
+def test_get_file_url_debug_log_redacts_signature(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """get_file_url() logs a redacted URL but still returns the raw signed one."""
+    p = DreameVacuumMiHomeCloudProtocol("user@example.com", "secret", "de")
+
+    with (
+        patch.object(p, "_api_call", return_value={"result": {"url": SIGNED_URL}}),
+        caplog.at_level(logging.DEBUG),
+    ):
+        result = p.get_file_url("obj")
+
+    # The caller needs the real pre-signed URL to download the file.
+    assert result == SIGNED_URL
+    assert "SECRETSIG" not in caplog.text
+    assert "oss.example" in caplog.text
+
+
+def test_get_interim_file_url_debug_log_redacts_signature(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """get_interim_file_url() logs a redacted URL but still returns the raw signed one."""
+    p = DreameVacuumMiHomeCloudProtocol("user@example.com", "secret", "de")
+
+    with (
+        patch.object(p, "_api_call", return_value={"result": {"url": SIGNED_URL}}),
+        caplog.at_level(logging.DEBUG),
+    ):
+        result = p.get_interim_file_url("obj")
+
+    assert result == SIGNED_URL
+    assert "SECRETSIG" not in caplog.text
+    assert "oss.example" in caplog.text
+
+
+def test_get_file_url_error_response_still_logged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Without a URL in the response, the (URL-free) api_response is still logged."""
+    p = DreameVacuumMiHomeCloudProtocol("user@example.com", "secret", "de")
+
+    with (
+        patch.object(p, "_api_call", return_value={"code": -1}),
+        caplog.at_level(logging.DEBUG),
+    ):
+        result = p.get_file_url("obj")
+
+    assert result is None
+    assert "'code': -1" in caplog.text
