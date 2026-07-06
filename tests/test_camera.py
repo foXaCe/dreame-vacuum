@@ -293,32 +293,33 @@ class TestBuildSegmentMap:
         map_data.segments = {}
         assert entity._build_segment_map(map_data) is None
 
-    def test_room_on_background_gets_no_mapping(self) -> None:
-        """A room whose centre lands on background (raw 0) is not mapped."""
+    def test_none_when_no_room_maps_to_a_raw_value(self) -> None:
+        """A room whose centre lands on background (raw 0) is not mapped, so the
+        buffer would be uniformly zero -> return None instead (contract 3.3: do
+        not publish a degenerate all-zero segment_map)."""
         entity = _bare_camera()
         map_data = _fake_map_data(raw_at=(2, 2), raw_value=10, room_key=5)
         # Point the (only) segment at an empty cell far from the painted pixel.
         map_data.segments[5] = SimpleNamespace(x=0.0, y=0.0)
         # Re-zero the painted pixel so nothing is in range.
         map_data.pixel_type[2, 2] = 0
-        b64, room_to_raw = entity._build_segment_map(map_data)
-        assert room_to_raw == {}  # no raw value picked up
+        assert entity._build_segment_map(map_data) is None
 
-    def test_segment_without_coordinates_skipped(self) -> None:
+    def test_none_when_segment_has_no_coordinates(self) -> None:
+        """The only segment has no centre -> nothing maps -> None (no all-zero buffer)."""
         entity = _bare_camera()
         map_data = _fake_map_data()
-        map_data.segments[5] = SimpleNamespace(x=None, y=None)
-        b64, room_to_raw = entity._build_segment_map(map_data)
-        assert room_to_raw == {}
+        map_data.segments = {5: SimpleNamespace(x=None, y=None)}
+        assert entity._build_segment_map(map_data) is None
 
     def test_out_of_range_room_key_skipped(self) -> None:
-        """Room keys must satisfy 0 < key < 256 to be remapped."""
+        """Room keys must satisfy 0 < key < 256 to be remapped; the only key here
+        is out of range so nothing maps -> None (no degenerate buffer)."""
         entity = _bare_camera()
         map_data = _fake_map_data(raw_at=(2, 2), raw_value=10, room_key=5)
         # Replace with an out-of-range key (>= 256).
         map_data.segments = {300: SimpleNamespace(x=2.0, y=2.0)}
-        b64, room_to_raw = entity._build_segment_map(map_data)
-        assert room_to_raw == {}
+        assert entity._build_segment_map(map_data) is None
 
 
 # ===========================================================================

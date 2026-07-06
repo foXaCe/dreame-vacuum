@@ -60,10 +60,22 @@ def _make_entity(coordinator: MagicMock) -> DreameVacuumBinarySensorEntity:
     return DreameVacuumBinarySensorEntity(coordinator, BINARY_SENSORS[0])
 
 
+def _make_entity_for_key(coordinator: MagicMock, key: str) -> DreameVacuumBinarySensorEntity:
+    description = next(d for d in BINARY_SENSORS if d.key == key)
+    return DreameVacuumBinarySensorEntity(coordinator, description)
+
+
 def test_only_charging_state_defined() -> None:
-    """The platform exposes the single charging_state binary sensor."""
-    assert len(BINARY_SENSORS) == 1
+    """The platform exposes charging_state plus the station diagnostic sensors."""
+    assert len(BINARY_SENSORS) == 5
     assert BINARY_SENSORS[0].key == "charging_state"
+    assert {d.key for d in BINARY_SENSORS} == {
+        "charging_state",
+        "dust_bag_dry_status",
+        "station_clean_status",
+        "mechanical_foot_status",
+        "station_ota_status",
+    }
 
 
 def test_is_on_reflects_charging_true(coordinator: MagicMock, device: MagicMock) -> None:
@@ -177,6 +189,88 @@ async def test_async_setup_entry_adds_entities(coordinator: MagicMock) -> None:
 
     await async_setup_entry(coordinator.hass, entry, _add)
 
-    assert len(added) == 1
+    assert len(added) == 5
     assert isinstance(added[0], DreameVacuumBinarySensorEntity)
     assert added[0].entity_description.key == "charging_state"
+    assert {entity.entity_description.key for entity in added} == {
+        "charging_state",
+        "dust_bag_dry_status",
+        "station_clean_status",
+        "mechanical_foot_status",
+        "station_ota_status",
+    }
+
+
+@pytest.mark.parametrize(
+    ("key", "prop", "device_class"),
+    [
+        ("dust_bag_dry_status", DreameVacuumProperty.DUST_BAG_DRY_STATUS, "running"),
+        ("station_clean_status", DreameVacuumProperty.STATION_CLEAN_STATUS, "running"),
+        ("mechanical_foot_status", DreameVacuumProperty.MECHANICAL_FOOT_STATUS, None),
+        ("station_ota_status", DreameVacuumProperty.STATION_OTA_STATUS, "running"),
+    ],
+)
+def test_station_sensor_is_on_reflects_property_value(
+    coordinator: MagicMock,
+    device: MagicMock,
+    key: str,
+    prop: DreameVacuumProperty,
+    device_class: str | None,
+) -> None:
+    """Each station diagnostic sensor follows its mapped property's truthiness."""
+    device.get_property.side_effect = lambda p, _prop=prop: 1 if p == _prop else 0
+    entity = _make_entity_for_key(coordinator, key)
+    assert entity.is_on is True
+    assert isinstance(entity.is_on, bool)
+    assert entity.device_class == device_class
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "dust_bag_dry_status",
+        "station_clean_status",
+        "mechanical_foot_status",
+        "station_ota_status",
+    ],
+)
+def test_station_sensor_is_off_when_property_zero(
+    coordinator: MagicMock,
+    device: MagicMock,
+    key: str,
+) -> None:
+    """The sensor reads False when its mapped property value is 0."""
+    device.get_property.return_value = 0
+    entity = _make_entity_for_key(coordinator, key)
+    assert entity.is_on is False
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "dust_bag_dry_status",
+        "station_clean_status",
+        "mechanical_foot_status",
+        "station_ota_status",
+    ],
+)
+def test_station_sensor_disabled_by_default(coordinator: MagicMock, key: str) -> None:
+    """The new station diagnostic sensors are opt-in (disabled by default)."""
+    entity = _make_entity_for_key(coordinator, key)
+    assert entity.entity_description.entity_registry_enabled_default is False
+    assert entity.entity_description.entity_category == "diagnostic"
+
+
+@pytest.mark.parametrize(
+    ("key", "expected_unique_id"),
+    [
+        ("dust_bag_dry_status", "AA:BB:CC:DD:EE:FF_dust_bag_dry_status"),
+        ("station_clean_status", "AA:BB:CC:DD:EE:FF_station_clean_status"),
+        ("mechanical_foot_status", "AA:BB:CC:DD:EE:FF_mechanical_foot_status"),
+        ("station_ota_status", "AA:BB:CC:DD:EE:FF_station_ota_status"),
+    ],
+)
+def test_station_sensor_unique_id(coordinator: MagicMock, key: str, expected_unique_id: str) -> None:
+    """unique_id is the MAC plus the station diagnostic sensor's key."""
+    entity = _make_entity_for_key(coordinator, key)
+    assert entity.unique_id == expected_unique_id

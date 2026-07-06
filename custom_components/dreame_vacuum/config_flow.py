@@ -47,12 +47,14 @@ from .const import (
     CONF_ICON_SET,
     CONF_LOW_RESOLUTION,
     CONF_MAC,
+    CONF_MAP_SCALE,
     CONF_NOTIFY,
     CONF_PREFER_CLOUD,
     CONF_SQUARE,
     CONF_VECTOR_ROOMS,
     CONF_VERSION,
     CONFIG_ENTRY_VERSION,
+    DEFAULT_MAP_SCALE,
     DOMAIN,
     LOGGER,
     MAP_OBJECTS,
@@ -131,6 +133,10 @@ class DreameVacuumOptionsFlowHandler(OptionsFlowWithReload):
                         CONF_LOW_RESOLUTION,
                         default=self.config_entry.options.get(CONF_LOW_RESOLUTION, False),
                     ): _BOOL,
+                    vol.Required(
+                        CONF_MAP_SCALE,
+                        default=str(self.config_entry.options.get(CONF_MAP_SCALE, DEFAULT_MAP_SCALE)),
+                    ): _select(["1", "2", "3"]),
                 }
             )
             if self.config_entry.data.get(CONF_ACCOUNT_TYPE, ACCOUNT_TYPE_MI) == ACCOUNT_TYPE_MI:
@@ -620,6 +626,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                 CONF_SQUARE: user_input.get(CONF_SQUARE),
                 CONF_VECTOR_ROOMS: user_input.get(CONF_VECTOR_ROOMS, True),
                 CONF_LOW_RESOLUTION: user_input.get(CONF_LOW_RESOLUTION),
+                CONF_MAP_SCALE: DEFAULT_MAP_SCALE,
                 CONF_PREFER_CLOUD: self.prefer_cloud,
             }
 

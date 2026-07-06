@@ -1255,6 +1255,10 @@ class DreameVacuumProperty(IntEnum):
     STREAM_VERIFY_CODE = 245
     STREAM_RESET_CODE = 246
     STREAM_SPACE = 247
+    DUST_BAG_DRY_STATUS = 248
+    STATION_CLEAN_STATUS = 249
+    MECHANICAL_FOOT_STATUS = 250
+    STATION_OTA_STATUS = 251
 
 
 class DreameVacuumAutoSwitchProperty(StrEnum):
@@ -1525,6 +1529,10 @@ DreameVacuumPropertyMapping = {
     DreameVacuumProperty.HAND_DUST_STATUS: {siid: 27, piid: 13},
     DreameVacuumProperty.HAND_DUST_CONNECT_STATUS: {siid: 27, piid: 14},
     DreameVacuumProperty.HOT_WATER_STATUS: {siid: 27, piid: 15},
+    DreameVacuumProperty.DUST_BAG_DRY_STATUS: {siid: 27, piid: 18},
+    DreameVacuumProperty.STATION_CLEAN_STATUS: {siid: 27, piid: 27},
+    DreameVacuumProperty.MECHANICAL_FOOT_STATUS: {siid: 27, piid: 28},
+    DreameVacuumProperty.STATION_OTA_STATUS: {siid: 27, piid: 30},
     DreameVacuumProperty.WETNESS_LEVEL: {siid: 28, piid: 1},
     DreameVacuumProperty.CLEAN_CARPETS_FIRST: {siid: 28, piid: 2},
     DreameVacuumProperty.AUTO_LDS_LIFTING: {siid: 28, piid: 3},
@@ -3736,6 +3744,10 @@ class MapData:
         self.no_mopping_areas: list[Area] | None = None  # Data json: vw.mop
         self.virtual_walls: list[Wall] | None = None  # Data json: vw.line
         self.virtual_thresholds: list[Wall] | None = None  # Data json: vws.vwsl
+        # Vectorized room boundaries from the saved map (Data json: walls_info).
+        # wall_lines = wall segments (type 0), door_lines = doorways (type 1).
+        self.wall_lines: list[Wall] | None = None
+        self.door_lines: list[Wall] | None = None
         self.passable_thresholds: list[Wall] | None = None  # Data json: vws.vwsl
         self.impassable_thresholds: list[Wall] | None = None  # Data json: vws.npthrsd
         self.ramps: list[Area] | None = None  # Data json: vws.ramp
@@ -3875,6 +3887,12 @@ class MapData:
             return False
 
         if self.virtual_thresholds != other.virtual_thresholds:
+            return False
+
+        if self.wall_lines != other.wall_lines:
+            return False
+
+        if self.door_lines != other.door_lines:
             return False
 
         if self.passable_thresholds != other.passable_thresholds:

@@ -6,6 +6,30 @@
         "state": {
           "off": "mdi:battery"
         }
+      },
+      "dust_bag_dry_status": {
+        "default": "mdi:tumble-dryer",
+        "state": {
+          "off": "mdi:tumble-dryer-off"
+        }
+      },
+      "mechanical_foot_status": {
+        "default": "mdi:cog",
+        "state": {
+          "off": "mdi:cog-off"
+        }
+      },
+      "station_clean_status": {
+        "default": "mdi:dishwasher",
+        "state": {
+          "off": "mdi:dishwasher-off"
+        }
+      },
+      "station_ota_status": {
+        "default": "mdi:update",
+        "state": {
+          "off": "mdi:check-circle-outline"
+        }
       }
     },
     "button": {

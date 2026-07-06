@@ -54,6 +54,11 @@ CONF_PREFER_CLOUD: Final = "prefer_cloud"
 CONF_LOW_RESOLUTION: Final = "low_resolution"
 CONF_SQUARE: Final = "square"
 CONF_VECTOR_ROOMS: Final = "vector_rooms"
+CONF_MAP_SCALE: Final = "map_scale"
+# Render-resolution multiplier for the interactive map PNG (1/2/3). Default 2
+# keeps the map crisp under the card's pinch-zoom; memory/CPU grow with the
+# square of the factor, so low-memory hosts can drop to 1.
+DEFAULT_MAP_SCALE: Final = 2
 CONF_ACCOUNT_TYPE: Final = "account_type"
 CONF_VERSION: Final = "version"
 
