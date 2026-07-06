@@ -326,6 +326,29 @@ class DreameVacuumEntity(CoordinatorEntity[DreameVacuumDataUpdateCoordinator]):
                 return lambda device, segment_id, value: getattr(device, method_name)(segment_id, value)
         return cast("Callable[..., None] | None", description.set_fn)
 
+    def _resolve_options_fn(
+        self,
+        coordinator: DreameVacuumDataUpdateCoordinator,
+        description: Any,
+    ) -> Callable[[Any, Any], list[str]] | None:
+        """Resolve the options getter for a select entity.
+
+        Returns ``description.options`` unless it is None and a ``<key>_list``
+        attribute exists on ``device.status``, in which case a wrapper returning
+        a fresh list copy of it is returned. Shared by the select / segment-select
+        entities.
+        """
+        if description.options is None and (description.property_key is not None or self._computed_key is not None):
+            prop: str | None = None
+            if description.property_key is not None:
+                prop = f"{description.property_key.name.lower()}_list"
+            elif self._computed_key:
+                prop = f"{self._computed_key.lower()}_list"
+            if prop is not None and hasattr(coordinator.device.status, prop):
+                list_name = prop
+                return lambda device, segment: list(getattr(device.status, list_name))
+        return cast("Callable[[Any, Any], list[str]] | None", description.options)
+
     def _set_id(self) -> None:
         if self.entity_description:
             if self.entity_description.icon_fn is not None:

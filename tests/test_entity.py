@@ -788,3 +788,50 @@ def test_resolve_segment_set_fn_none_when_no_method(coordinator):
     desc = DreameVacuumEntityDescription(key="no_segment_setter")
     object.__setattr__(desc, "set_fn", None)
     assert ent._resolve_segment_set_fn(coordinator, desc) is None
+
+
+def test_resolve_options_fn_explicit(coordinator):
+    def fn(device, segment):
+        return ["a", "b"]
+
+    ent = _entity(coordinator, DreameVacuumEntityDescription(key="x"))
+    desc = DreameVacuumEntityDescription(key="x")
+    object.__setattr__(desc, "options", fn)
+    assert ent._resolve_options_fn(coordinator, desc) is fn
+
+
+def test_resolve_options_fn_from_status_list(coordinator):
+    # status has ``volume_list`` -> resolver returns a getter wrapping it in list().
+    coordinator.device.status.volume_list = ["low", "medium", "high"]
+    ent = _entity(coordinator, DreameVacuumEntityDescription(property_key=DreameVacuumProperty.VOLUME))
+    desc = DreameVacuumEntityDescription(property_key=DreameVacuumProperty.VOLUME)
+    object.__setattr__(desc, "options", None)
+    resolved = ent._resolve_options_fn(coordinator, desc)
+    assert resolved is not None
+    assert resolved(coordinator.device, None) == ["low", "medium", "high"]
+
+
+def test_resolve_options_fn_returns_new_list_copy(coordinator):
+    # The wrapper must return a NEW list each call (copy semantics), not the
+    # underlying list itself, so callers can safely mutate the result.
+    original = ["low", "medium", "high"]
+    coordinator.device.status.volume_list = original
+    ent = _entity(coordinator, DreameVacuumEntityDescription(property_key=DreameVacuumProperty.VOLUME))
+    desc = DreameVacuumEntityDescription(property_key=DreameVacuumProperty.VOLUME)
+    object.__setattr__(desc, "options", None)
+    resolved = ent._resolve_options_fn(coordinator, desc)
+    assert resolved is not None
+    result = resolved(coordinator.device, None)
+    assert result == original
+    assert result is not original
+
+
+def test_resolve_options_fn_none_when_status_missing(coordinator):
+    class Status:
+        pass
+
+    coordinator.device.status = Status()
+    ent = _entity(coordinator, DreameVacuumEntityDescription(key="missing_list_attr"))
+    desc = DreameVacuumEntityDescription(key="missing_list_attr")
+    object.__setattr__(desc, "options", None)
+    assert ent._resolve_options_fn(coordinator, desc) is None
