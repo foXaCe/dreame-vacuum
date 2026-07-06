@@ -983,6 +983,47 @@ async def test_rename_shortcut_skips_on_empty(coordinator: MagicMock) -> None:
     coordinator.device.rename_shortcut.assert_not_called()
 
 
+async def test_set_dnd_task(coordinator: MagicMock) -> None:
+    """set_dnd_task forwards task_id/enabled/start/end/weekday_mask to set_dnd_task_entry."""
+    entity = _make_entity(coordinator)
+    await entity.async_set_dnd_task(True, "22:00", "08:00", task_id=1, weekday_mask=127)
+    coordinator.device.set_dnd_task_entry.assert_called_once_with(1, True, "22:00", "08:00", 127)
+
+
+async def test_set_dnd_task_defaults_task_id_and_weekday_mask_to_none(coordinator: MagicMock) -> None:
+    """Omitted task_id/weekday_mask are forwarded as None (create-new / preserve existing)."""
+    entity = _make_entity(coordinator)
+    await entity.async_set_dnd_task(True, "22:00", "08:00")
+    coordinator.device.set_dnd_task_entry.assert_called_once_with(None, True, "22:00", "08:00", None)
+
+
+async def test_set_dnd_task_invalid_action_raises(coordinator: MagicMock) -> None:
+    """capability.dnd_task is unset on the device -> InvalidActionException surfaces as HomeAssistantError."""
+    coordinator.device.set_dnd_task_entry.side_effect = InvalidActionException(
+        "Multi-window DnD tasks are not supported on this device"
+    )
+    entity = _make_entity(coordinator)
+    with pytest.raises(HomeAssistantError) as err:
+        await entity.async_set_dnd_task(True, "22:00", "08:00")
+    assert err.value.translation_key == "invalid_command"
+
+
+async def test_delete_dnd_task(coordinator: MagicMock) -> None:
+    """delete_dnd_task forwards the task id."""
+    entity = _make_entity(coordinator)
+    await entity.async_delete_dnd_task(1)
+    coordinator.device.delete_dnd_task.assert_called_once_with(1)
+
+
+async def test_delete_dnd_task_not_found_raises(coordinator: MagicMock) -> None:
+    """An unknown task_id raises InvalidActionException, surfaced as HomeAssistantError."""
+    coordinator.device.delete_dnd_task.side_effect = InvalidActionException("DnD task 9 not found")
+    entity = _make_entity(coordinator)
+    with pytest.raises(HomeAssistantError) as err:
+        await entity.async_delete_dnd_task(9)
+    assert err.value.translation_key == "invalid_command"
+
+
 async def test_set_obstacle_ignore(coordinator: MagicMock) -> None:
     """set_obstacle_ignore forwards x/y/flag."""
     entity = _make_entity(coordinator)

@@ -56,6 +56,32 @@ from .vacuum_types import (
 
 _LOGGER = logging.getLogger(__name__)
 
+_DND_TIME_PATTERN = re.compile("([0-1][0-9]|2[0-3]):[0-5][0-9]$")
+
+
+def _validate_dnd_window(dnd_start: str | None, dnd_end: str | None) -> tuple[str, str]:
+    """Normalize and validate a DnD HH:MM start/end pair.
+
+    Shared by ``set_dnd_task`` and ``set_dnd_task_entry``: same blank-value
+    defaults ("22:00"/"08:00"), same HH:MM regex, same start != end check.
+    """
+    if dnd_start is None or dnd_start == "":
+        dnd_start = "22:00"
+    if dnd_end is None or dnd_end == "":
+        dnd_end = "08:00"
+
+    if not re.match(_DND_TIME_PATTERN, dnd_start):
+        raise InvalidValueException("DnD start time is not valid: (%s).", dnd_start)
+    if not re.match(_DND_TIME_PATTERN, dnd_end):
+        raise InvalidValueException("DnD end time is not valid: (%s).", dnd_end)
+    if dnd_start == dnd_end:
+        raise InvalidValueException(
+            "DnD Start time must be different from DnD end time: (%s == %s).",
+            dnd_start,
+            dnd_end,
+        )
+    return dnd_start, dnd_end
+
 
 class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
     """Mixin providing property getters, setters, and update helpers for DreameVacuumDevice."""
@@ -750,23 +776,7 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
 
     def set_dnd_task(self, enabled: bool | None, dnd_start: str | None, dnd_end: str | None) -> bool:
         """Set do not disturb task"""
-        if dnd_start is None or dnd_start == "":
-            dnd_start = "22:00"
-
-        if dnd_end is None or dnd_end == "":
-            dnd_end = "08:00"
-
-        time_pattern = re.compile("([0-1][0-9]|2[0-3]):[0-5][0-9]$")
-        if not re.match(time_pattern, dnd_start):
-            raise InvalidValueException("DnD start time is not valid: (%s).", dnd_start)
-        if not re.match(time_pattern, dnd_end):
-            raise InvalidValueException("DnD end time is not valid: (%s).", dnd_end)
-        if dnd_start == dnd_end:
-            raise InvalidValueException(
-                "DnD Start time must be different from DnD end time: (%s == %s).",
-                dnd_start,
-                dnd_end,
-            )
+        dnd_start, dnd_end = _validate_dnd_window(dnd_start, dnd_end)
 
         if self.status.dnd_tasks is None:
             self.status.dnd_tasks = []
@@ -790,6 +800,114 @@ class DreameVacuumDeviceSettersMixin(DreameVacuumDeviceState):
         return self.set_property(
             DreameVacuumProperty.DND_TASK,
             str(json.dumps(dnd_tasks, separators=(",", ":"))).replace(" ", ""),
+        )
+
+    def set_dnd_task_entry(
+        self,
+        task_id: int | None,
+        enabled: bool,
+        dnd_start: str | None,
+        dnd_end: str | None,
+        weekday_mask: int | None = None,
+    ) -> bool:
+        """Create or update a single multi-window DnD task by id.
+
+        Only meaningful on devices reporting the ``dnd_task`` capability: the
+        firmware's ``DND_TASK`` property already holds a JSON array of named
+        windows, but ``set_dnd_task`` above only ever reads/writes index 0.
+        This is the multi-window entry point that can target any task by id.
+
+        - ``task_id`` is ``None``, or does not match any existing task: a new
+          task is appended. When ``task_id`` is given but doesn't match, the
+          new task is created with that exact id ("create with this specific
+          id"); when ``task_id`` is ``None``, a fresh id is assigned as
+          ``max(existing ids, default 0) + 1``, mirroring the ``id=1``
+          ``set_dnd_task`` assigns to the very first task.
+        - ``task_id`` matches an existing task: ``en``/``st``/``et`` (and
+          ``wk``, only if ``weekday_mask`` is given) are updated in place,
+          preserving every other key already on that task's dict — in
+          particular ``ss``, whose meaning is unknown and must never be
+          overwritten.
+        - ``weekday_mask``: raw weekday bitmask exactly as reported by the
+          device firmware. The bit-to-day mapping is **not confirmed** on a
+          live device — only ``127`` (all 7 bits set) is known to mean "all
+          days" (see ``docs/dev/dnd-tasks-design.md``). The value is passed
+          through opaquely, never decoded/encoded here. If omitted, the
+          existing task's ``wk`` is preserved, or defaults to ``127`` for a
+          brand-new task, matching ``set_dnd_task``'s current behavior.
+        - Reuses the exact HH:MM validation (``_validate_dnd_window``) and
+          the exact compact-JSON serialization ``set_dnd_task`` uses today.
+
+        Raises ``InvalidActionException`` if ``capability.dnd_task`` is not
+        set — single-window devices must keep using ``set_dnd``/
+        ``set_dnd_start``/``set_dnd_end``.
+        """
+        if not self.capability.dnd_task:
+            raise InvalidActionException("Multi-window DnD tasks are not supported on this device")
+
+        dnd_start, dnd_end = _validate_dnd_window(dnd_start, dnd_end)
+
+        if self.status.dnd_tasks is None:
+            self.status.dnd_tasks = []
+        dnd_tasks = self.status.dnd_tasks
+
+        existing_task = None
+        if task_id is not None:
+            for task in dnd_tasks:
+                if task.get("id") == task_id:
+                    existing_task = task
+                    break
+
+        if existing_task is not None:
+            existing_task["en"] = enabled
+            existing_task["st"] = dnd_start
+            existing_task["et"] = dnd_end
+            if weekday_mask is not None:
+                existing_task["wk"] = weekday_mask
+        else:
+            new_id = task_id
+            if new_id is None:
+                existing_ids = [task.get("id") for task in dnd_tasks if isinstance(task.get("id"), int)]
+                new_id = (max(existing_ids) if existing_ids else 0) + 1
+            dnd_tasks.append(
+                {
+                    "id": new_id,
+                    "en": enabled,
+                    "st": dnd_start,
+                    "et": dnd_end,
+                    "wk": weekday_mask if weekday_mask is not None else 127,
+                    "ss": 0,
+                }
+            )
+
+        return self.set_property(
+            DreameVacuumProperty.DND_TASK,
+            str(json.dumps(dnd_tasks, separators=(",", ":"))).replace(" ", ""),
+        )
+
+    def delete_dnd_task(self, task_id: int) -> bool:
+        """Remove a single multi-window DnD task by id.
+
+        Raises ``InvalidActionException`` if ``capability.dnd_task`` is not
+        set, or if ``task_id`` does not match any task in
+        ``status.dnd_tasks`` — mirrors the existence check used by the
+        analogous per-id action ``rename_shortcut``
+        (``device_actions.py``, which raises
+        ``InvalidActionException(f"Shortcut {id} not found")`` for the same
+        shape of problem).
+        """
+        if not self.capability.dnd_task:
+            raise InvalidActionException("Multi-window DnD tasks are not supported on this device")
+
+        dnd_tasks = self.status.dnd_tasks or []
+        if not any(task.get("id") == task_id for task in dnd_tasks):
+            raise InvalidActionException(f"DnD task {task_id} not found")
+
+        remaining_tasks = [task for task in dnd_tasks if task.get("id") != task_id]
+        self.status.dnd_tasks = remaining_tasks
+        return self.set_property(
+            DreameVacuumProperty.DND_TASK,
+            str(json.dumps(remaining_tasks, separators=(",", ":"))).replace(" ", ""),
         )
 
     def set_dnd(self, enabled: bool) -> bool:

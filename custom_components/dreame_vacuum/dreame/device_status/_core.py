@@ -1368,6 +1368,13 @@ class DreameVacuumDeviceStatus(_NamedPropsMixin, _ActivityMixin, _MapPropsMixin,
                     "enabled": dnd_task.get("en"),
                     "start": dnd_task.get("st"),
                     "end": dnd_task.get("et"),
+                    # Raw device weekday bitmask, passed through opaquely.
+                    # The bit-to-day mapping is NOT confirmed on a live
+                    # device — only 127 (all 7 bits set) is known to mean
+                    # "all days" (see docs/dev/dnd-tasks-design.md). Do not
+                    # assume any other bit order without verifying against
+                    # real hardware.
+                    "weekday_mask": dnd_task.get("wk"),
                 }
         else:
             attributes[ATTR_DND] = self.dnd

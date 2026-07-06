@@ -532,6 +532,53 @@ vacuum_rename_shortcut:
       selector:
         text:
 
+vacuum_set_dnd_task:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    task_id:
+      example: "1"
+      required: false
+      selector:
+        number:
+          mode: box
+    enabled:
+      example: "true"
+      required: true
+      selector:
+        boolean:
+    start:
+      example: "22:00"
+      required: true
+      selector:
+        text:
+    end:
+      example: "08:00"
+      required: true
+      selector:
+        text:
+    weekday_mask:
+      example: "127"
+      required: false
+      selector:
+        number:
+          mode: box
+
+vacuum_delete_dnd_task:
+  target:
+    entity:
+      integration: dreame_vacuum
+      domain: vacuum
+  fields:
+    task_id:
+      example: "1"
+      required: true
+      selector:
+        number:
+          mode: box
+
 vacuum_set_carpet_area:
   target:
     entity:

@@ -1031,6 +1031,192 @@ class TestSetDndTaskParsing:
             host.set_dnd_task(True, value, "12:00")
 
 
+# ===========================================================================
+# Multi-window DnD task editing: set_dnd_task_entry / delete_dnd_task
+# ===========================================================================
+
+
+class TestSetDndTaskEntry:
+    def test_requires_dnd_task_capability(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=False)
+        with pytest.raises(InvalidActionException, match="not supported on this device"):
+            host.set_dnd_task_entry(None, True, "07:30", "22:15")
+
+    def test_new_task_appended_with_id_1_when_list_empty(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        host.set_property = MagicMock(return_value=True)
+
+        result = host.set_dnd_task_entry(None, True, "07:30", "22:15")
+
+        assert result is True
+        assert host.status.dnd_tasks == [{"id": 1, "en": True, "st": "07:30", "et": "22:15", "wk": 127, "ss": 0}]
+        host.set_property.assert_called_once_with(
+            DreameVacuumProperty.DND_TASK,
+            '[{"id":1,"en":true,"st":"07:30","et":"22:15","wk":127,"ss":0}]',
+        )
+
+    def test_new_task_id_is_max_existing_plus_one(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[
+                {"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0},
+                {"id": 3, "en": False, "st": "12:00", "et": "13:00", "wk": 127, "ss": 0},
+            ]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(None, True, "09:00", "10:00")
+
+        assert len(host.status.dnd_tasks) == 3
+        assert host.status.dnd_tasks[2] == {"id": 4, "en": True, "st": "09:00", "et": "10:00", "wk": 127, "ss": 0}
+
+    def test_unmatched_task_id_appended_with_that_exact_id(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(9, False, "01:00", "02:00")
+
+        assert len(host.status.dnd_tasks) == 2
+        assert host.status.dnd_tasks[1] == {"id": 9, "en": False, "st": "01:00", "et": "02:00", "wk": 127, "ss": 0}
+
+    def test_existing_task_updated_in_place_preserves_ss(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 2, "en": False, "st": "01:00", "et": "02:00", "wk": 85, "ss": 7}]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(2, True, "09:00", "17:00")
+
+        assert len(host.status.dnd_tasks) == 1
+        task = host.status.dnd_tasks[0]
+        assert task["en"] is True
+        assert task["st"] == "09:00"
+        assert task["et"] == "17:00"
+        # wk and ss are untouched when weekday_mask is omitted.
+        assert task["wk"] == 85
+        assert task["ss"] == 7
+
+    def test_existing_task_wk_overwritten_only_when_weekday_mask_given(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(1, True, "22:00", "08:00", weekday_mask=5)
+
+        assert host.status.dnd_tasks[0]["wk"] == 5
+
+    def test_new_task_none_list_initializes_and_defaults_wk_127(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=None)
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(None, True, "", "")
+
+        assert host.status.dnd_tasks == [{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+
+    def test_new_task_weekday_mask_used_when_given(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        host.set_property = MagicMock(return_value=True)
+
+        host.set_dnd_task_entry(None, True, "07:00", "08:00", weekday_mask=42)
+
+        assert host.status.dnd_tasks[0]["wk"] == 42
+
+    def test_invalid_start_time_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        with pytest.raises(InvalidValueException, match="DnD start time is not valid"):
+            host.set_dnd_task_entry(None, True, "25:00", "08:00")
+
+    def test_start_equal_end_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        with pytest.raises(InvalidValueException, match="must be different"):
+            host.set_dnd_task_entry(None, True, "10:00", "10:00")
+
+
+class TestDeleteDndTask:
+    def test_requires_dnd_task_capability(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=False)
+        with pytest.raises(InvalidActionException, match="not supported on this device"):
+            host.delete_dnd_task(1)
+
+    def test_removes_matching_task_and_writes_remaining_list(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[
+                {"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0},
+                {"id": 2, "en": False, "st": "12:00", "et": "13:00", "wk": 127, "ss": 0},
+            ]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        result = host.delete_dnd_task(1)
+
+        assert result is True
+        assert host.status.dnd_tasks == [{"id": 2, "en": False, "st": "12:00", "et": "13:00", "wk": 127, "ss": 0}]
+        host.set_property.assert_called_once_with(
+            DreameVacuumProperty.DND_TASK,
+            '[{"id":2,"en":false,"st":"12:00","et":"13:00","wk":127,"ss":0}]',
+        )
+
+    def test_removing_last_task_writes_empty_list(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+        )
+        host.set_property = MagicMock(return_value=True)
+
+        host.delete_dnd_task(1)
+
+        assert host.status.dnd_tasks == []
+        host.set_property.assert_called_once_with(DreameVacuumProperty.DND_TASK, "[]")
+
+    def test_unknown_task_id_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(
+            dnd_tasks=[{"id": 1, "en": True, "st": "22:00", "et": "08:00", "wk": 127, "ss": 0}]
+        )
+        with pytest.raises(InvalidActionException, match="DnD task 9 not found"):
+            host.delete_dnd_task(9)
+
+    def test_empty_task_list_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=[])
+        with pytest.raises(InvalidActionException, match="not found"):
+            host.delete_dnd_task(1)
+
+    def test_none_task_list_raises(self) -> None:
+        host = _host()
+        host.capability = SimpleNamespace(dnd_task=True)
+        host.status = SimpleNamespace(dnd_tasks=None)
+        with pytest.raises(InvalidActionException, match="not found"):
+            host.delete_dnd_task(1)
+
+
 class TestSetOffPeakChargingParsing:
     def test_valid_config_written(self) -> None:
         host = _host()
