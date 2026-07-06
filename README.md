@@ -190,6 +190,116 @@ segment_colors:
   - rgb(184, 217, 141)
 ```
 
+#### With [Xiaomi Vacuum Map Card](https://github.com/PiotrMachowski/lovelace-xiaomi-vacuum-map-card)
+ > Template for room and zone cleaning.
+<a href="https://my.home-assistant.io/redirect/developer_template/" target="_blank"><img src="https://my.home-assistant.io/badges/developer_template.svg" alt="Open your Home Assistant instance and show your template developer tools." /></a>
+```yaml
+{# ----------------- PROVIDE YOUR OWN ENTITY IDS HERE ----------------- #}
+{% set camera_entity = "camera." %}
+{% set vacuum_entity = "vacuum." %}
+{# ------------------- DO NOT CHANGE ANYTHING BELOW ------------------- #}
+{% set attributes = states[camera_entity].attributes %}
+
+type: custom:xiaomi-vacuum-map-card
+vacuum_platform: default
+entity: {{ vacuum_entity }}
+map_source:
+  camera: {{ camera_entity }}
+calibration_source:
+  camera: true
+map_modes:
+  - template: vacuum_clean_zone
+    max_selections: 10
+    repeats_type: EXTERNAL
+    max_repeats: 3
+    service_call_schema:
+      service: dreame_vacuum.vacuum_clean_zone
+      service_data:
+        entity_id: '[[entity_id]]'
+        zone: '[[selection]]'
+        repeats: '[[repeats]]'
+  - template: vacuum_clean_segment
+    repeats_type: EXTERNAL
+    max_repeats: 3
+    service_call_schema:
+      service: dreame_vacuum.vacuum_clean_segment
+      service_data:
+        entity_id: '[[entity_id]]'
+        segments: '[[selection]]'
+        repeats: '[[repeats]]'
+    predefined_selections:
+{%- for room_id in attributes.rooms | default([]) %}
+{%- set room = attributes.rooms[room_id] %}
+      - id: {{room_id}}
+        outline:
+          - - {{room["x0"]}}
+            - {{room["y0"]}}
+          - - {{room["x0"]}}
+            - {{room["y1"]}}
+          - - {{room["x1"]}}
+            - {{room["y1"]}}
+          - - {{room["x1"]}}
+            - {{room["y0"]}}
+{%- endfor %}
+  - name: Clean Spot
+    icon: mdi:map-marker-plus
+    max_repeats: 3
+    selection_type: MANUAL_POINT
+    repeats_type: EXTERNAL
+    service_call_schema:
+      service: dreame_vacuum.vacuum_clean_spot
+      service_data:
+        entity_id: '[[entity_id]]'
+        points: '[[selection]]'
+        repeats: '[[repeats]]'
+```
+
+#### With <a href="https://github.com/benct/lovelace-xiaomi-vacuum-card" target="_blank">Xiaomi Vacuum Card</a> and Picture Entity Card
+```yaml
+type: picture-entity
+entity: # Your vacuum entity
+camera_image: # Your camera entity
+show_state: false
+show_name: false
+camera_view: live
+tap_action:
+  action: none
+hold_action:
+  action: none
+```
+
+```yaml
+type: custom:xiaomi-vacuum-card
+entity: # Your vacuum entity
+vendor: xiaomi
+attributes:
+  main_brush_life:
+    label: 'Main Brush: '
+    key: main_brush_left
+    unit: '%'
+    icon: mdi:car-turbocharger
+  side_brush_life:
+    label: 'Side Brush: '
+    key: side_brush_left
+    unit: '%'
+    icon: mdi:pinwheel-outline
+  filter_life:
+    label: 'Filter: '
+    key: filter_left
+    unit: '%'
+    icon: mdi:air-filter
+  sensor_life:
+    label: 'Sensor: '
+    key: sensor_dirty_left
+    unit: '%'
+    icon: mdi:radar
+  main_brush: false
+  side_brush: false
+  filter: false
+  sensor: false
+
+```
+
 
 ## Documentation
 
@@ -197,6 +307,7 @@ segment_colors:
 - [Entities](docs/entities.md) — Full entity list
 - [Supported Devices](docs/supported_devices.md) — Tested models and compatibility
 - [Map](docs/map.md) — Map configuration and usage
+- [Camera HTTP API](docs/camera_http_api.md) — Wire format for the 7 camera HTTP views and the map attribute contract (companion card integrators)
 - [Services](docs/services.md) — Available services
 - [Room Entities](docs/room_entities.md) — Per-room cleaning entities
 - [Notifications](docs/notifications.md) — Notification system
@@ -216,7 +327,7 @@ segment_colors:
 - Updates are pushed by the Dreame cloud over MQTT (`cloud_push`), backed by a
   periodic safety-net poll — a working cloud connection is required
 - Map rendering is CPU-intensive on first load (cached afterward)
-- The `requests` library is used for some cloud API calls (not fully async yet)
+- Cloud API calls are async-native (aiohttp); the local python-miio backend and some `device.py` worker threads are not fully async yet (see `ARCHITECTURE.md`'s async migration roadmap)
 - Some older Dreame models may not expose all entities
 
 
@@ -230,13 +341,11 @@ segment_colors:
 
 ## To Do
 
-- Integrated custom lovelace map card
 - Shortcut editing
 - Schedule editing
 - Furniture editing
-- DnD editing
-- Live camera streaming
-- Full async migration (replace `requests` with `aiohttp`)
+- Multi-window DnD editing (single-window done; design: docs/dev/dnd-tasks-design.md)
+- Live camera streaming (spike: see docs/dev/streaming-spike.md — size L-or-never, blocked on proprietary transport)
 
 
 ## Contributing

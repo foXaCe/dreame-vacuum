@@ -1302,6 +1302,96 @@ class TestInitConstruction:
         entity = DreameVacuumCameraEntity(coordinator, desc, "Dreame Light", None, [], False, False, 0, "en")
         assert entity._attr_translation_key == "current_map"
 
+    def test_construction_leaves_image_none_for_map_index_zero(self) -> None:
+        """The default map image is no longer decoded on the event loop at construction.
+
+        It used to be read eagerly here; it is now warmed lazily in
+        ``async_added_to_hass`` (see TestAsyncAddedToHass below).
+        """
+        coordinator, device = _init_coordinator()
+        device.get_map.return_value = None
+        device.status.located = False
+        desc = cam.DreameVacuumCameraEntityDescription(key="map", icon="mdi:map")
+        entity = DreameVacuumCameraEntity(coordinator, desc, "Dreame Light", None, [], False, False, 0, "en")
+        assert entity._image is None
+
+    def test_construction_never_calls_pil_image_open(self) -> None:
+        """No PIL decode (icon warm-up or default-image render) may run at construction time."""
+        coordinator, device = _init_coordinator()
+        device.get_map.return_value = None
+        device.status.located = False
+        desc = cam.DreameVacuumCameraEntityDescription(key="map", icon="mdi:map")
+        from PIL import Image
+
+        with patch.object(Image, "open", wraps=Image.open) as spy:
+            DreameVacuumCameraEntity(coordinator, desc, "Dreame Light", None, [], False, False, 0, "en")
+        spy.assert_not_called()
+
+
+# ===========================================================================
+# async_added_to_hass: off-loop warm-up of the default/disconnected images
+# ===========================================================================
+class TestAsyncAddedToHass:
+    @staticmethod
+    def _entity_with_mock_renderer(*, map_index: int = 0, map_data_json: bool = False) -> DreameVacuumCameraEntity:
+        entity = _bare_camera()
+        entity.map_index = map_index
+        entity._image = None
+        entity._renderer = MagicMock()
+        entity._renderer.default_map_image = b"DEFAULT"
+        entity._renderer.disconnected_map_image = b"DISCONNECTED"
+        if map_data_json:
+            entity.entity_description = SimpleNamespace(map_type=DreameVacuumMapType.JSON_MAP_DATA)
+        else:
+            entity.entity_description = SimpleNamespace(map_type=None)
+        return entity
+
+    async def test_warms_both_images_and_sets_image_for_map_index_zero(self) -> None:
+        entity = self._entity_with_mock_renderer(map_index=0)
+        with (
+            patch.object(cam.DreameVacuumEntity, "async_added_to_hass", AsyncMock(), create=True),
+            patch.object(entity, "async_write_ha_state", MagicMock()) as write_state,
+        ):
+            await entity.async_added_to_hass()
+        # Both lazy image caches were touched (loop-side reads now hit the cache).
+        assert entity._renderer.disconnected_map_image == b"DISCONNECTED"
+        assert entity._renderer.default_map_image == b"DEFAULT"
+        assert entity._image == b"DEFAULT"
+        write_state.assert_called_once()
+
+    async def test_does_not_overwrite_existing_image(self) -> None:
+        entity = self._entity_with_mock_renderer(map_index=0)
+        entity._image = b"ALREADY-SET"
+        with (
+            patch.object(cam.DreameVacuumEntity, "async_added_to_hass", AsyncMock(), create=True),
+            patch.object(entity, "async_write_ha_state", MagicMock()) as write_state,
+        ):
+            await entity.async_added_to_hass()
+        assert entity._image == b"ALREADY-SET"
+        write_state.assert_not_called()
+
+    async def test_non_zero_map_index_warms_but_does_not_set_image(self) -> None:
+        entity = self._entity_with_mock_renderer(map_index=2)
+        with (
+            patch.object(cam.DreameVacuumEntity, "async_added_to_hass", AsyncMock(), create=True),
+            patch.object(entity, "async_write_ha_state", MagicMock()) as write_state,
+        ):
+            await entity.async_added_to_hass()
+        assert entity._image is None
+        write_state.assert_not_called()
+
+    async def test_json_map_data_entity_skips_warm_up(self) -> None:
+        entity = self._entity_with_mock_renderer(map_index=0, map_data_json=True)
+        with (
+            patch.object(cam.DreameVacuumEntity, "async_added_to_hass", AsyncMock(), create=True),
+            patch.object(entity, "async_write_ha_state", MagicMock()) as write_state,
+            patch.object(entity.hass, "async_add_executor_job", AsyncMock()) as exec_job,
+        ):
+            await entity.async_added_to_hass()
+        exec_job.assert_not_called()
+        assert entity._image is None
+        write_state.assert_not_called()
+
 
 # ===========================================================================
 # _handle_coordinator_update: remaining timestamp/error/map-id branches

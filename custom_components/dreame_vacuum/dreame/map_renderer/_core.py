@@ -176,6 +176,18 @@ class DreameVacuumMapRenderer(
         self._obstacle_top_right_icon: Any = None
         self._map_problem_icon = None
 
+        # Status-icon sets: decoded lazily by _warm_up_icons() (first
+        # render_map() call, always executor-side) so constructing a
+        # renderer on the event loop stays cheap. See _warm_up_icons().
+        self._icons_warmed = False
+        self._cleaning_times_icon: Any = None
+        self._suction_level_icon: Any = None
+        self._water_volume_icon: Any = None
+        self._mop_pad_humidity_icon: Any = None
+        self._cleaning_mode_icon: Any = None
+        self._cleaning_route_icon: Any = None
+        self._custom_mopping_route_icon: Any = None
+
         self._segment_icons: dict[Any, Any] = {}
         self._obstacle_icons = {}
         self._obstacle_hidden_icons = {}
@@ -188,6 +200,17 @@ class DreameVacuumMapRenderer(
             self.config.obstacle = False
             self.config.pet = False
             self.config.furniture = False
+
+    def _warm_up_icons(self) -> None:
+        """Decode the status-icon sets (PIL, CPU-bound).
+
+        Deferred out of __init__ so constructing a renderer on the event
+        loop stays cheap; render paths run in an executor and call this
+        before touching the icon lists.
+        """
+        if self._icons_warmed:
+            return
+        self._icons_warmed = True
 
         if self.icon_set == 2:
             repeats = MAP_ICON_REPEATS_MIJIA
@@ -1253,6 +1276,7 @@ class DreameVacuumMapRenderer(
         ):
             return self.default_map_image
 
+        self._warm_up_icons()
         self.render_complete = False
         image = self._image
 

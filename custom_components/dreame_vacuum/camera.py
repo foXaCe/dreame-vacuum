@@ -392,8 +392,8 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         self._segment_map_cache: tuple[Any, Any, Any] = (None, None, None)
         self.map_index = map_index
         self._state: str | datetime = STATE_UNAVAILABLE
-        if self.map_index == 0 and not self.map_data_json:
-            self._image = self._renderer.default_map_image if self._renderer else None
+        # The default map image (PIL decode + resize) is warmed lazily in
+        # async_added_to_hass(), off the event loop — not here.
 
         map_data = self._map_data
         self._map_id = map_data.map_id if map_data else None
@@ -628,6 +628,21 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         self._frame_id = None
         self._last_updated = None
         self.update()
+
+    async def async_added_to_hass(self) -> None:
+        """Warm the static images in an executor so no PIL runs on the loop."""
+        await super().async_added_to_hass()
+        if self._renderer is not None and not self.map_data_json:
+
+            def _warm() -> bytes:
+                # Touch both lazy images so later event-loop reads hit the cache.
+                _ = self._renderer.disconnected_map_image
+                return self._renderer.default_map_image
+
+            image = await self.hass.async_add_executor_job(_warm)
+            if self._image is None and self.map_index == 0:
+                self._image = image
+                self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         """Clean up renderers when entity is removed.
