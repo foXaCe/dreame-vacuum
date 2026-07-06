@@ -5,6 +5,7 @@ Provides circuit breaker, configurable timeouts, and retry with exponential back
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 import logging
@@ -46,6 +47,7 @@ class CircuitBreaker:
 
     failure_threshold: int = 5
     recovery_timeout: float = 300.0  # 5 minutes
+    clock: Callable[[], float] = time.monotonic
     _state: CircuitState = field(default=CircuitState.CLOSED, init=False)
     _failure_count: int = field(default=0, init=False)
     _last_failure_time: float = field(default=0.0, init=False)
@@ -55,7 +57,7 @@ class CircuitBreaker:
     def state(self) -> CircuitState:
         with self._lock:
             if self._state is CircuitState.OPEN:
-                if time.monotonic() - self._last_failure_time >= self.recovery_timeout:
+                if self.clock() - self._last_failure_time >= self.recovery_timeout:
                     self._state = CircuitState.HALF_OPEN
                     _LOGGER.debug("Circuit breaker → HALF_OPEN (recovery timeout elapsed)")
             return self._state
@@ -76,7 +78,7 @@ class CircuitBreaker:
         """Record a failed call."""
         with self._lock:
             self._failure_count += 1
-            self._last_failure_time = time.monotonic()
+            self._last_failure_time = self.clock()
             if self._state is CircuitState.HALF_OPEN:
                 self._state = CircuitState.OPEN
                 _LOGGER.warning("Circuit breaker → OPEN (failure during HALF_OPEN)")
