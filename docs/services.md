@@ -936,6 +936,72 @@ Rename a saved shortcut.
         entity_id: vacuum.vacuum
     ```
 
+### `dreame_vacuum.vacuum_set_dnd_task`
+
+Create or update a single multi-window Do Not Disturb (DnD) task by id.
+
+> - Only supported on devices reporting the `dnd_task` capability (devices whose firmware supports several
+>   named DnD windows). On other devices, keep using the `dnd` switch entity and the `dnd_start`/`dnd_end`
+>   time entities — this service is rejected on those devices.
+> - Omit `task_id` to create a new task; the device assigns the next free id.
+> - If `task_id` is given but doesn't match an existing task, a new task is created with that exact id.
+> - `weekday_mask` is the **raw** weekday bitmask reported by the device firmware. **The bit-to-day mapping
+>   is not confirmed on a live device** — only `127` (all 7 bits set) is known to mean "all days". This
+>   service never decodes or interprets the value; it is passed straight to the device. Omit it to preserve
+>   an existing task's mask, or to default a new task to `127` (all days). See
+>   `docs/dev/dnd-tasks-design.md` for the full wire-format writeup and open unknowns.
+> - All tasks (not just the first) are exposed read-only via the vacuum entity's `dnd` attribute, keyed by
+>   task id, including the raw `weekday_mask` for each task.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `task_id` | no | Id of the task to update; omit to create a new task | `1` |
+| `enabled` | yes | Whether the task is enabled | `true` |
+| `start` | yes | Window start time (`HH:MM`) | `"22:00"` |
+| `end` | yes | Window end time (`HH:MM`, must differ from `start`) | `"08:00"` |
+| `weekday_mask` | no | Raw device weekday bitmask; meaning unconfirmed, `127` = all days; omit to preserve/default | `127` |
+
+**Example:**
+
+- Create (or update) task 1 to run 22:00-08:00, enabled, on all days
+    ```yaml
+    service: dreame_vacuum.vacuum_set_dnd_task
+    data:
+        task_id: 1
+        enabled: true
+        start: "22:00"
+        end: "08:00"
+        weekday_mask: 127
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
+### `dreame_vacuum.vacuum_delete_dnd_task`
+
+Delete a single multi-window DnD task by id.
+
+> - Only supported on devices reporting the `dnd_task` capability.
+> - Raises an error if `task_id` does not match any existing task.
+
+**Fields:**
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `task_id` | yes | Id of the task to delete | `1` |
+
+**Example:**
+
+- Delete task 1
+    ```yaml
+    service: dreame_vacuum.vacuum_delete_dnd_task
+    data:
+        task_id: 1
+    target:
+        entity_id: vacuum.vacuum
+    ```
+
 ### `dreame_vacuum.vacuum_set_obstacle_ignore`
 
 Mark a detected obstacle at a coordinate as ignored (or un-ignore it) so the robot does not avoid it during cleaning.

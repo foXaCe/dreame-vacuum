@@ -1590,6 +1590,16 @@
       },
       "name": "Nettoyer une zone"
     },
+    "vacuum_delete_dnd_task": {
+      "description": "Supprimez une tâche NPD (Ne pas déranger) multi-fenêtres par son identifiant. (Uniquement sur les appareils compatibles)",
+      "fields": {
+        "task_id": {
+          "description": "ID de la tâche NPD à supprimer.",
+          "name": "ID de tâche"
+        }
+      },
+      "name": "Supprimer la tâche NPD"
+    },
     "vacuum_delete_map": {
       "description": "Supprimer une carte.",
       "fields": {
@@ -1871,6 +1881,32 @@
         }
       },
       "name": "Définir un nettoyage personnalisé"
+    },
+    "vacuum_set_dnd_task": {
+      "description": "Créez ou mettez à jour une tâche NPD (Ne pas déranger) multi-fenêtres par son identifiant. (Uniquement sur les appareils compatibles)",
+      "fields": {
+        "enabled": {
+          "description": "Indique si la tâche NPD est activée.",
+          "name": "Activé"
+        },
+        "end": {
+          "description": "Heure de fin de la plage NPD (HH:MM).",
+          "name": "Heure de fin"
+        },
+        "start": {
+          "description": "Heure de début de la plage NPD (HH:MM).",
+          "name": "Heure de début"
+        },
+        "task_id": {
+          "description": "ID de la tâche NPD à mettre à jour. Omettez ce champ pour créer une nouvelle tâche.",
+          "name": "ID de tâche"
+        },
+        "weekday_mask": {
+          "description": "Masque brut des jours de la semaine tel que rapporté par le micrologiciel de l'appareil. La correspondance bit-jour n'est pas confirmée ; seule la valeur 127 (tous les bits à 1) est connue pour signifier tous les jours. Omettez ce champ pour conserver le masque existant de la tâche, ou par défaut tous les jours pour une nouvelle tâche.",
+          "name": "Masque des jours"
+        }
+      },
+      "name": "Définir une tâche NPD"
     },
     "vacuum_set_obstacle_ignore": {
       "description": "Définir si un obstacle doit être ignoré. (Uniquement sur les aspirateurs dotés de la détection IA des obstacles)",

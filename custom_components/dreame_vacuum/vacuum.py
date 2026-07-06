@@ -793,6 +793,33 @@ class DreameVacuum(DreameVacuumEntity, StateVacuumEntity):  # type: ignore[misc]
                 shortcut_name,
             )
 
+    async def async_set_dnd_task(
+        self,
+        enabled: Any,
+        start: Any,
+        end: Any,
+        task_id: Any = None,
+        weekday_mask: Any = None,
+    ) -> None:
+        """Create or update a single multi-window DnD task (only on supported devices)."""
+        await self._try_command(
+            "Unable to call set_dnd_task: %s",
+            self.device.set_dnd_task_entry,
+            task_id,
+            enabled,
+            start,
+            end,
+            weekday_mask,
+        )
+
+    async def async_delete_dnd_task(self, task_id: Any) -> None:
+        """Delete a single multi-window DnD task by id (only on supported devices)."""
+        await self._try_command(
+            "Unable to call delete_dnd_task: %s",
+            self.device.delete_dnd_task,
+            task_id,
+        )
+
     async def async_set_obstacle_ignore(self, x: Any, y: Any, obstacle_ignored: Any) -> None:
         """Set obstacle ignore status"""
         if x is not None and x != "" and y is not None and y != "":

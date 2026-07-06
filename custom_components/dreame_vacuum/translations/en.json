@@ -1590,6 +1590,16 @@
       },
       "name": "Clean Zone"
     },
+    "vacuum_delete_dnd_task": {
+      "description": "Delete a single multi-window DnD task by id. (Only on supported devices)",
+      "fields": {
+        "task_id": {
+          "description": "ID of the DnD task to delete.",
+          "name": "Task ID"
+        }
+      },
+      "name": "Delete DnD Task"
+    },
     "vacuum_delete_map": {
       "description": "Delete a map.",
       "fields": {
@@ -1871,6 +1881,32 @@
         }
       },
       "name": "Set Custom Cleaning"
+    },
+    "vacuum_set_dnd_task": {
+      "description": "Create or update a single multi-window DnD task by id. (Only on supported devices)",
+      "fields": {
+        "enabled": {
+          "description": "Whether the DnD task is enabled.",
+          "name": "Enabled"
+        },
+        "end": {
+          "description": "End time of the DnD window (HH:MM).",
+          "name": "End Time"
+        },
+        "start": {
+          "description": "Start time of the DnD window (HH:MM).",
+          "name": "Start Time"
+        },
+        "task_id": {
+          "description": "ID of the DnD task to update. Omit to create a new task.",
+          "name": "Task ID"
+        },
+        "weekday_mask": {
+          "description": "Raw weekday bitmask reported by the device firmware. The bit-to-day mapping is not confirmed; only 127 (all 7 bits set) is known to mean all days. Omit to preserve the existing task's mask, or default to all days for a new task.",
+          "name": "Weekday Mask"
+        }
+      },
+      "name": "Set DnD Task"
     },
     "vacuum_set_obstacle_ignore": {
       "description": "Set ignore status of an obstacle. (Only supported on vacuums with AI Obstacle detection feature)",
