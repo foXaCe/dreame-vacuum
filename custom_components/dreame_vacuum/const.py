@@ -61,6 +61,10 @@ CONF_MAP_SCALE: Final = "map_scale"
 DEFAULT_MAP_SCALE: Final = 2
 CONF_ACCOUNT_TYPE: Final = "account_type"
 CONF_VERSION: Final = "version"
+# TOFU-pinned MQTT broker cert fingerprints, persisted so a Home Assistant
+# restart does not silently re-trust whatever certificate is presented at
+# reconnect. Shape: {"host:port": "<sha256 hex>"}.
+CONF_MQTT_FINGERPRINTS: Final = "mqtt_fingerprints"
 
 CONTENT_TYPE: Final = "image/png"
 

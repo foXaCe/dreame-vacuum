@@ -25,6 +25,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.issue_registry import IssueSeverity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 import pytest
 
@@ -32,6 +33,7 @@ from custom_components.dreame_vacuum.const import (
     CONF_AUTH_KEY,
     CONF_HIDDEN_MAP_OBJECTS,
     CONF_MAP_OBJECTS,
+    CONF_MQTT_FINGERPRINTS,
     CONF_VERSION,
     CONSUMABLE_MAIN_BRUSH,
     DOMAIN,
@@ -52,6 +54,19 @@ from custom_components.dreame_vacuum.const import (
 from custom_components.dreame_vacuum.coordinator import DreameVacuumDataUpdateCoordinator
 from custom_components.dreame_vacuum.dreame import VERSION, DreameVacuumProperty
 from custom_components.dreame_vacuum.dreame.exceptions import RateLimitError
+from custom_components.dreame_vacuum.dreame.protocol import DreameVacuumDreameHomeCloudProtocol
+
+# MQTT TOFU fingerprint state (_mqtt_fingerprints / _mqtt_fingerprint_listeners) is a
+# pair of ClassVars on DreameVacuumDreameHomeCloudProtocol, shared with test_protocol.py
+# and across every coordinator built in this module (the constructor registers a
+# listener). Isolate it between tests so leftover listeners/baselines don't leak.
+
+
+@pytest.fixture(autouse=True)
+def _clear_mqtt_fingerprint_state() -> None:
+    DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints.clear()
+    DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprint_listeners.clear()
+
 
 # Path to the symbol that ``__init__`` instantiates; patching it keeps the
 # coordinator construction fully offline.
@@ -373,6 +388,122 @@ def test_init_passes_all_credentials_to_device(coord_entry):
     assert args[6] == "eu"  # country
     assert args[8] == "dreame"  # account_type
     assert args[9] == "123456789"  # did
+
+
+def test_init_seeds_mqtt_fingerprints_and_registers_listener(coord_entry):
+    """Fingerprints persisted from a previous run are re-trusted before the
+    device's first connect, so a HA restart does not silently re-trust
+    whatever certificate is presented at reconnect. The coordinator also
+    registers its own listener for future changes."""
+    hass = _fake_hass()
+    coord_entry.data = {
+        **coord_entry.data,
+        CONF_MQTT_FINGERPRINTS: {"mqtt.example.com:8883": "trusted-fingerprint"},
+    }
+    coord_entry.options = {"notify": True, CONF_VERSION: VERSION}
+
+    coordinator, _, _ = _build_coordinator(hass, coord_entry, _make_device())
+
+    assert DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints["mqtt.example.com:8883"] == "trusted-fingerprint"
+    assert coordinator._unsub_mqtt_fingerprint_listener is not None
+    assert coordinator._mqtt_fingerprint_changed in DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprint_listeners
+
+
+def test_init_without_stored_fingerprints_still_registers_listener(coord_entry):
+    """No CONF_MQTT_FINGERPRINTS in the entry: nothing to seed, but the
+    listener is still wired up for the first connect."""
+    hass = _fake_hass()
+    coord_entry.options = {"notify": True, CONF_VERSION: VERSION}
+
+    coordinator, _, _ = _build_coordinator(hass, coord_entry, _make_device())
+
+    assert DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints == {}
+    assert coordinator._mqtt_fingerprint_changed in DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprint_listeners
+
+
+def test_cleanup_unsubscribes_mqtt_fingerprint_listener(coord_entry):
+    hass = _fake_hass()
+    coord_entry.options = {"notify": True, CONF_VERSION: VERSION}
+
+    coordinator, _, _ = _build_coordinator(hass, coord_entry, _make_device())
+    assert coordinator._mqtt_fingerprint_changed in DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprint_listeners
+
+    coordinator.cleanup()
+
+    assert coordinator._mqtt_fingerprint_changed not in DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprint_listeners
+    assert coordinator._unsub_mqtt_fingerprint_listener is None
+
+
+# --------------------------------------------------------------------------- #
+# _mqtt_fingerprint_changed (TOFU persistence + repair issue)
+# --------------------------------------------------------------------------- #
+
+
+def test_mqtt_fingerprint_first_seen_persists_to_entry_data():
+    """First use of a fingerprint (previous is None) is persisted silently:
+    no repair issue, just a config-entry update once marshalled onto the loop."""
+    coord = _bare_coordinator()
+    coord._entry.data = {CONF_HOST: "192.168.1.100", CONF_TOKEN: "a" * 32}
+
+    coord._mqtt_fingerprint_changed("mqtt.example.com:8883", "new-fingerprint", None)
+
+    assert coord.hass.loop.call_soon_threadsafe.call_count == 1
+    # Execute the scheduled callback (only touches the MagicMock hass).
+    coord.hass.loop.call_soon_threadsafe.call_args.args[0]()
+
+    coord.hass.config_entries.async_update_entry.assert_called_once()
+    _, kwargs = coord.hass.config_entries.async_update_entry.call_args
+    assert kwargs["data"][CONF_MQTT_FINGERPRINTS] == {"mqtt.example.com:8883": "new-fingerprint"}
+
+
+def test_mqtt_fingerprint_first_seen_already_persisted_is_noop():
+    """If the entry already has this exact fingerprint stored, no redundant
+    async_update_entry call is made."""
+    coord = _bare_coordinator()
+    coord._entry.data = {
+        CONF_HOST: "192.168.1.100",
+        CONF_TOKEN: "a" * 32,
+        CONF_MQTT_FINGERPRINTS: {"mqtt.example.com:8883": "same-fingerprint"},
+    }
+
+    coord._mqtt_fingerprint_changed("mqtt.example.com:8883", "same-fingerprint", None)
+    coord.hass.loop.call_soon_threadsafe.call_args.args[0]()
+
+    coord.hass.config_entries.async_update_entry.assert_not_called()
+
+
+def test_mqtt_fingerprint_mismatch_raises_fixable_issue_without_touching_entry_data():
+    """A mismatch must raise a fixable repair issue and must NOT modify the
+    persisted baseline — the engine already keeps trusting the old
+    fingerprint; only the repair flow may re-trust the new one."""
+    coord = _bare_coordinator()
+    coord._entry.data = {
+        CONF_HOST: "192.168.1.100",
+        CONF_TOKEN: "a" * 32,
+        CONF_MQTT_FINGERPRINTS: {"mqtt.example.com:8883": "old-fingerprint"},
+    }
+
+    with patch("custom_components.dreame_vacuum.coordinator.async_create_issue") as mock_create_issue:
+        coord._mqtt_fingerprint_changed("mqtt.example.com:8883", "new-fingerprint", "old-fingerprint")
+        assert coord.hass.loop.call_soon_threadsafe.call_count == 1
+        coord.hass.loop.call_soon_threadsafe.call_args.args[0]()
+
+    mock_create_issue.assert_called_once()
+    _, kwargs = mock_create_issue.call_args
+    assert kwargs["is_fixable"] is True
+    assert kwargs["severity"] == IssueSeverity.ERROR
+    assert kwargs["translation_key"] == "mqtt_fingerprint_changed"
+    assert kwargs["data"] == {
+        "entry_id": "entry123",
+        "key": "mqtt.example.com:8883",
+        "fingerprint": "new-fingerprint",
+    }
+    assert kwargs["translation_placeholders"]["previous"] == "old-fingerprint"[:16]
+    assert kwargs["translation_placeholders"]["fingerprint"] == "new-fingerprint"[:16]
+
+    # Entry data untouched by the mismatch path.
+    coord.hass.config_entries.async_update_entry.assert_not_called()
+    assert coord._entry.data[CONF_MQTT_FINGERPRINTS] == {"mqtt.example.com:8883": "old-fingerprint"}
 
 
 # --------------------------------------------------------------------------- #

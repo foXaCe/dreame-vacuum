@@ -1415,6 +1415,17 @@
       "description": "The **{consumable}** consumable on **{device_name}** is depleted and needs to be replaced. Please replace it and reset the counter from the device settings.",
       "title": "Consumable depleted on {device_name}"
     },
+    "mqtt_fingerprint_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "The TLS certificate fingerprint of the Dreame MQTT broker **{key}** changed from `{previous}…` to `{fingerprint}…`. This can be a legitimate vendor key rotation — or a man-in-the-middle. If you trust your network path, select **Submit** to trust the new certificate.",
+            "title": "MQTT broker certificate changed"
+          }
+        }
+      },
+      "title": "MQTT broker certificate changed for {device_name}"
+    },
     "segments_changed": {
       "fix_flow": {
         "step": {

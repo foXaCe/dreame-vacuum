@@ -13,6 +13,7 @@ synchronous ``python-miio`` local backend) are tracked in
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 import hashlib
 import hmac
 import json
@@ -118,8 +119,32 @@ class DreameVacuumDeviceProtocol(MiIOProtocol):
 
 class DreameVacuumDreameHomeCloudProtocol:
     # Trust-on-first-use fingerprint cache, keyed by "host:port".
-    # Populated by _check_mqtt_fingerprint on each reconnect.
+    # Populated by _check_mqtt_fingerprint on each reconnect. HA-side code
+    # seeds this from persisted storage at startup (trust_mqtt_fingerprint)
+    # so the baseline survives restarts.
     _mqtt_fingerprints: ClassVar[dict[str, str]] = {}
+
+    # Called as listener(key, new_fingerprint, previous_fingerprint) from the
+    # MQTT worker thread whenever a fingerprint is first seen (previous is
+    # None) or differs from the trusted baseline. HA-side code registers here;
+    # this module must stay free of Home Assistant imports.
+    _mqtt_fingerprint_listeners: ClassVar[list[Callable[[str, str, str | None], None]]] = []
+
+    @classmethod
+    def trust_mqtt_fingerprint(cls, key: str, fingerprint: str) -> None:
+        """Mark ``fingerprint`` as the trusted baseline for ``key``.
+
+        Used both to seed the TOFU cache from persisted storage at startup
+        and to re-trust a new certificate once the user has confirmed a
+        legitimate rotation through the repair flow.
+        """
+        cls._mqtt_fingerprints[key] = fingerprint
+
+    @classmethod
+    def add_mqtt_fingerprint_listener(cls, listener: Callable[[str, str, str | None], None]) -> Callable[[], None]:
+        """Register a fingerprint listener, returning a remover callback."""
+        cls._mqtt_fingerprint_listeners.append(listener)
+        return lambda: cls._mqtt_fingerprint_listeners.remove(listener)
 
     @staticmethod
     def _check_mqtt_fingerprint(host: str, port: int) -> None:
@@ -129,7 +154,9 @@ class DreameVacuumDreameHomeCloudProtocol:
         mitigation we capture the peer certificate's SHA-256 fingerprint on
         every reconnect and compare it to what we saw previously. A
         stable fingerprint indicates the traffic is still reaching the same
-        endpoint; a change is worth investigating (MitM or key rotation).
+        endpoint; a change is worth investigating (MitM or key rotation) — so
+        the previously trusted baseline is kept until a listener (the
+        Home Assistant repair flow) explicitly re-trusts the new certificate.
         """
         try:
             ctx = ssl.create_default_context()
@@ -148,6 +175,7 @@ class DreameVacuumDreameHomeCloudProtocol:
             if previous is None:
                 DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints[key] = fingerprint
                 _LOGGER.info("MQTT %s cert fingerprint (SHA-256): %s", key, fingerprint)
+                DreameVacuumDreameHomeCloudProtocol._notify_mqtt_fingerprint_listeners(key, fingerprint, None)
             elif previous != fingerprint:
                 _LOGGER.warning(
                     "MQTT %s cert fingerprint changed: was %s, now %s. "
@@ -156,9 +184,20 @@ class DreameVacuumDreameHomeCloudProtocol:
                     previous,
                     fingerprint,
                 )
-                DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints[key] = fingerprint
+                # The old baseline is intentionally kept trusted here; it is
+                # only replaced once the user acknowledges the change via
+                # trust_mqtt_fingerprint (repair flow confirm step).
+                DreameVacuumDreameHomeCloudProtocol._notify_mqtt_fingerprint_listeners(key, fingerprint, previous)
         except Exception as ex:
             _LOGGER.debug("Could not capture MQTT cert fingerprint for %s:%s: %s", host, port, ex)
+
+    @staticmethod
+    def _notify_mqtt_fingerprint_listeners(key: str, fingerprint: str, previous: str | None) -> None:
+        for listener in list(DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprint_listeners):
+            try:
+                listener(key, fingerprint, previous)
+            except Exception as ex:
+                _LOGGER.debug("MQTT fingerprint listener failed for %s: %s", key, ex)
 
     def __init__(
         self,

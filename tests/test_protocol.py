@@ -677,8 +677,9 @@ class _FakeSSLContext:
 
 @pytest.fixture(autouse=True)
 def _clear_mqtt_fingerprints() -> None:
-    """Isolate the TOFU cache (a ClassVar) between tests."""
+    """Isolate the TOFU cache and listener list (both ClassVars) between tests."""
     DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints.clear()
+    DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprint_listeners.clear()
 
 
 def test_check_mqtt_fingerprint_first_time_is_trust_on_first_use(caplog: pytest.LogCaptureFixture) -> None:
@@ -719,7 +720,130 @@ def test_check_mqtt_fingerprint_change_logs_warning(caplog: pytest.LogCaptureFix
         DreameVacuumDreameHomeCloudProtocol._check_mqtt_fingerprint("mqtt.example.com", 8883)
 
     assert "fingerprint changed" in caplog.text
-    assert DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints[key] == hashlib.sha256(der).hexdigest()
+    # The old baseline must NOT be clobbered by an unverified new certificate:
+    # a mismatch keeps trusting "old-fingerprint" until the user explicitly
+    # re-trusts the new one (via trust_mqtt_fingerprint / the repair flow).
+    # This inverts the previous assertion, which encoded the bug this plan fixes.
+    assert DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints[key] == "old-fingerprint"
+
+
+def test_check_mqtt_fingerprint_first_time_notifies_listener_with_none_previous() -> None:
+    der = b"certificate-bytes-1"
+    calls: list[tuple[str, str, str | None]] = []
+    DreameVacuumDreameHomeCloudProtocol.add_mqtt_fingerprint_listener(
+        lambda key, fingerprint, previous: calls.append((key, fingerprint, previous))
+    )
+    with (
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.socket.create_connection",
+            return_value=_FakeRawSocket(),
+        ),
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.ssl.create_default_context",
+            return_value=_FakeSSLContext(der),
+        ),
+    ):
+        DreameVacuumDreameHomeCloudProtocol._check_mqtt_fingerprint("mqtt.example.com", 8883)
+
+    expected = hashlib.sha256(der).hexdigest()
+    assert calls == [("mqtt.example.com:8883", expected, None)]
+
+
+def test_check_mqtt_fingerprint_change_notifies_listener_with_previous() -> None:
+    key = "mqtt.example.com:8883"
+    DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints[key] = "old-fingerprint"
+    der = b"certificate-bytes-2"
+    calls: list[tuple[str, str, str | None]] = []
+    DreameVacuumDreameHomeCloudProtocol.add_mqtt_fingerprint_listener(
+        lambda key, fingerprint, previous: calls.append((key, fingerprint, previous))
+    )
+    with (
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.socket.create_connection",
+            return_value=_FakeRawSocket(),
+        ),
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.ssl.create_default_context",
+            return_value=_FakeSSLContext(der),
+        ),
+    ):
+        DreameVacuumDreameHomeCloudProtocol._check_mqtt_fingerprint("mqtt.example.com", 8883)
+
+    expected = hashlib.sha256(der).hexdigest()
+    assert calls == [(key, expected, "old-fingerprint")]
+
+
+def test_check_mqtt_fingerprint_listener_exception_is_swallowed(caplog: pytest.LogCaptureFixture) -> None:
+    der = b"certificate-bytes-1"
+
+    def _boom(key: str, fingerprint: str, previous: str | None) -> None:
+        raise RuntimeError("listener boom")
+
+    DreameVacuumDreameHomeCloudProtocol.add_mqtt_fingerprint_listener(_boom)
+    with (
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.socket.create_connection",
+            return_value=_FakeRawSocket(),
+        ),
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.ssl.create_default_context",
+            return_value=_FakeSSLContext(der),
+        ),
+        caplog.at_level(logging.DEBUG),
+    ):
+        DreameVacuumDreameHomeCloudProtocol._check_mqtt_fingerprint("mqtt.example.com", 8883)  # must not raise
+
+    expected = hashlib.sha256(der).hexdigest()
+    assert DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints["mqtt.example.com:8883"] == expected
+
+
+def test_add_mqtt_fingerprint_listener_remover_unregisters() -> None:
+    calls: list[tuple[str, str, str | None]] = []
+    remove = DreameVacuumDreameHomeCloudProtocol.add_mqtt_fingerprint_listener(
+        lambda key, fingerprint, previous: calls.append((key, fingerprint, previous))
+    )
+    remove()
+
+    der = b"certificate-bytes-1"
+    with (
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.socket.create_connection",
+            return_value=_FakeRawSocket(),
+        ),
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.ssl.create_default_context",
+            return_value=_FakeSSLContext(der),
+        ),
+    ):
+        DreameVacuumDreameHomeCloudProtocol._check_mqtt_fingerprint("mqtt.example.com", 8883)
+
+    assert calls == []
+
+
+def test_trust_mqtt_fingerprint_then_check_same_cert_is_noop(caplog: pytest.LogCaptureFixture) -> None:
+    key = "mqtt.example.com:8883"
+    der = b"certificate-bytes-1"
+    fingerprint = hashlib.sha256(der).hexdigest()
+    DreameVacuumDreameHomeCloudProtocol.trust_mqtt_fingerprint(key, fingerprint)
+
+    calls: list[tuple[str, str, str | None]] = []
+    DreameVacuumDreameHomeCloudProtocol.add_mqtt_fingerprint_listener(lambda k, f, p: calls.append((k, f, p)))
+    with (
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.socket.create_connection",
+            return_value=_FakeRawSocket(),
+        ),
+        patch(
+            "custom_components.dreame_vacuum.dreame.protocol.ssl.create_default_context",
+            return_value=_FakeSSLContext(der),
+        ),
+        caplog.at_level(logging.WARNING),
+    ):
+        DreameVacuumDreameHomeCloudProtocol._check_mqtt_fingerprint("mqtt.example.com", 8883)
+
+    assert calls == []
+    assert "fingerprint changed" not in caplog.text
+    assert DreameVacuumDreameHomeCloudProtocol._mqtt_fingerprints[key] == fingerprint
 
 
 def test_check_mqtt_fingerprint_no_cert_is_noop() -> None:

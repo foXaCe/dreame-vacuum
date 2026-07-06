@@ -1415,6 +1415,17 @@
       "description": "Le consommable **{consumable}** de **{device_name}** est épuisé et doit être remplacé. Veuillez le remplacer et réinitialiser le compteur depuis les paramètres de l'appareil.",
       "title": "Consommable épuisé sur {device_name}"
     },
+    "mqtt_fingerprint_changed": {
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "description": "L'empreinte du certificat TLS du broker MQTT Dreame **{key}** a changé, passant de `{previous}…` à `{fingerprint}…`. Cela peut être une rotation légitime de la clé du fabricant — ou une attaque de l'homme du milieu (MITM). Si vous faites confiance à votre chemin réseau, sélectionnez **Valider** pour faire confiance au nouveau certificat.",
+            "title": "Certificat du broker MQTT modifié"
+          }
+        }
+      },
+      "title": "Certificat du broker MQTT modifié pour {device_name}"
+    },
     "segments_changed": {
       "fix_flow": {
         "step": {

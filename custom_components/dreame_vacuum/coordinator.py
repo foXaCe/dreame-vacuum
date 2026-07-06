@@ -41,6 +41,7 @@ from .const import (
     CONF_HIDDEN_MAP_OBJECTS,
     CONF_MAC,
     CONF_MAP_OBJECTS,
+    CONF_MQTT_FINGERPRINTS,
     CONF_NOTIFY,
     CONF_PREFER_CLOUD,
     CONF_VERSION,
@@ -98,6 +99,7 @@ from .const import (
     translate_description,
 )
 from .dreame import VERSION, DreameVacuumDevice, DreameVacuumProperty, RateLimitError
+from .dreame.protocol import DreameVacuumDreameHomeCloudProtocol
 
 # NOTE: CONSUMABLE_IMAGE, DRAINAGE_STATUS_FAIL and DRAINAGE_STATUS_SUCCESS are imported
 # lazily inside the methods that actually need them. They live in the lightweight
@@ -148,6 +150,15 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
 
             options[CONF_VERSION] = VERSION
             hass.config_entries.async_update_entry(entry=entry, options=options)
+
+        # Re-trust the MQTT TOFU baseline persisted from a previous run before
+        # the device's first connect, so a HA restart does not silently
+        # re-trust whatever certificate is presented at reconnect time.
+        for key, fingerprint in entry.data.get(CONF_MQTT_FINGERPRINTS, {}).items():
+            DreameVacuumDreameHomeCloudProtocol.trust_mqtt_fingerprint(key, fingerprint)
+        self._unsub_mqtt_fingerprint_listener = DreameVacuumDreameHomeCloudProtocol.add_mqtt_fingerprint_listener(
+            self._mqtt_fingerprint_changed
+        )
 
         self._device = DreameVacuumDevice(
             entry.data[CONF_NAME],
@@ -477,6 +488,58 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
                 DreameVacuumProperty.SCALE_INHIBITOR_LEFT,
             )
 
+    def _mqtt_fingerprint_changed(self, key: str, fingerprint: str, previous: str | None) -> None:
+        """Handle a TOFU fingerprint notification from the MQTT worker thread.
+
+        Runs off the event loop (called directly from
+        ``DreameVacuumDreameHomeCloudProtocol._check_mqtt_fingerprint``), so
+        every Home Assistant call is marshalled onto the loop.
+        """
+        if previous is None:
+            # First use: persist silently, nothing for the user to act on.
+            self.hass.loop.call_soon_threadsafe(partial(self._async_persist_mqtt_fingerprint, key, fingerprint))
+        else:
+            # Mismatch: the engine already kept trusting `previous`; raise a
+            # fixable repair issue so the user can explicitly re-trust the new
+            # certificate (covers legitimate vendor key rotations) without
+            # ever blocking connectivity.
+            self.hass.loop.call_soon_threadsafe(
+                partial(self._async_raise_mqtt_fingerprint_issue, key, fingerprint, previous)
+            )
+
+    @callback
+    def _async_persist_mqtt_fingerprint(self, key: str, fingerprint: str) -> None:
+        """Persist a newly-seen MQTT cert fingerprint into the config entry."""
+        fingerprints = dict(self._entry.data.get(CONF_MQTT_FINGERPRINTS, {}))
+        if fingerprints.get(key) == fingerprint:
+            return
+        fingerprints[key] = fingerprint
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            data={**self._entry.data, CONF_MQTT_FINGERPRINTS: fingerprints},
+        )
+
+    @callback
+    def _async_raise_mqtt_fingerprint_issue(self, key: str, fingerprint: str, previous: str) -> None:
+        """Raise a fixable repair issue for a changed MQTT cert fingerprint."""
+        device_name = self._device.name if self._device is not None else self._entry.data.get(CONF_NAME, key)
+        issue_id = f"mqtt_fingerprint_changed_{key}"
+        async_create_issue(
+            self.hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=True,
+            severity=IssueSeverity.ERROR,
+            translation_key="mqtt_fingerprint_changed",
+            translation_placeholders={
+                "device_name": device_name,
+                "key": key,
+                "previous": previous[:16],
+                "fingerprint": fingerprint[:16],
+            },
+            data={"entry_id": self._entry.entry_id, "key": key, "fingerprint": fingerprint},
+        )
+
     def _create_persistent_notification(self, content: str, notification_id: str) -> None:
         assert self._device is not None
         if not self.device.disconnected and self.device.device_connected and self._notify:
@@ -652,6 +715,9 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
         if hasattr(self, "_unsub_dispatcher") and self._unsub_dispatcher:
             self._unsub_dispatcher()
             self._unsub_dispatcher = None
+        if hasattr(self, "_unsub_mqtt_fingerprint_listener") and self._unsub_mqtt_fingerprint_listener:
+            self._unsub_mqtt_fingerprint_listener()
+            self._unsub_mqtt_fingerprint_listener = None
         if self._device is not None:
             self._device.listen(None)
             self._device.disconnect()
