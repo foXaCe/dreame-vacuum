@@ -132,3 +132,31 @@ def test_wall_lines_to_img_converts_to_pixel_space() -> None:
     # to_img must return a Wall with numeric pixel coordinates (no exception).
     assert isinstance(img_wall, Wall)
     assert all(isinstance(v, (int, float)) for v in img_wall.as_list())
+
+
+def test_as_dict_includes_wall_lines_and_door_lines_when_present() -> None:
+    """as_dict() exposes decoded wall/door segments to consumers (e.g. the
+    companion card) under the wall_lines / door_lines attribute keys."""
+    map_data = MapData()
+    walls_info = _walls_info(
+        {
+            "room_id": 1,
+            "walls": [
+                _wall(0, 0, 100, 0, 0),
+                _wall(100, 0, 100, 100, 1),  # doorway
+            ],
+        }
+    )
+    DreameVacuumMapDecoder._decode_walls_info(map_data, walls_info)
+
+    d = map_data.as_dict()
+    assert d["wall_lines"] == [Wall(0, 0, 100, 0)]
+    assert d["door_lines"] == [Wall(100, 0, 100, 100)]
+
+
+def test_as_dict_omits_wall_lines_and_door_lines_when_absent() -> None:
+    """A map with no decoded wall/door segments omits both keys entirely
+    (the ``is not None`` contract shared with every other geometry field)."""
+    d = MapData().as_dict()
+    assert "wall_lines" not in d
+    assert "door_lines" not in d

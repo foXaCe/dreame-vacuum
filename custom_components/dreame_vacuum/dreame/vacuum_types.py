@@ -229,6 +229,8 @@ ATTR_IGNORED_CARPETS: Final = "ignored_carpets"
 ATTR_DETECTED_CARPETS: Final = "detected_carpets"
 ATTR_PREDEFINED_POINTS: Final = "predefined_points"
 ATTR_VIRTUAL_WALLS: Final = "virtual_walls"
+ATTR_WALL_LINES: Final = "wall_lines"
+ATTR_DOOR_LINES: Final = "door_lines"
 ATTR_VIRTUAL_THRESHOLDS: Final = "virtual_thresholds"
 ATTR_PASSABLE_THRESHOLDS: Final = "passable_thresholds"
 ATTR_IMPASSABLE_THRESHOLDS: Final = "impassable_thresholds"
@@ -4011,6 +4013,10 @@ class MapData:
             attributes_list[ATTR_PREDEFINED_POINTS] = list(self.predefined_points.values())
         if self.virtual_walls is not None:
             attributes_list[ATTR_VIRTUAL_WALLS] = self.virtual_walls
+        if self.wall_lines is not None:
+            attributes_list[ATTR_WALL_LINES] = self.wall_lines
+        if self.door_lines is not None:
+            attributes_list[ATTR_DOOR_LINES] = self.door_lines
         if self.virtual_thresholds is not None:
             attributes_list[ATTR_VIRTUAL_THRESHOLDS] = self.virtual_thresholds
         if self.passable_thresholds is not None:
