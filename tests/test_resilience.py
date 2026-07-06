@@ -1,7 +1,6 @@
 """Tests for Dreame Vacuum resilience module."""
 
 import threading
-import time
 
 from custom_components.dreame_vacuum.dreame.resilience import (
     CircuitBreaker,
@@ -9,6 +8,20 @@ from custom_components.dreame_vacuum.dreame.resilience import (
     TimeoutConfig,
     backoff_delay,
 )
+
+
+class FakeClock:
+    """Controllable monotonic clock for deterministic circuit-breaker tests."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
 
 # --- TimeoutConfig ---
 
@@ -71,21 +84,35 @@ def test_circuit_breaker_success_resets_count():
 
 def test_circuit_breaker_half_open_after_timeout():
     """Test circuit breaker transitions to HALF_OPEN after recovery timeout."""
-    cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+    clock = FakeClock()
+    cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1, clock=clock)
     cb.record_failure()
     cb.record_failure()
     assert cb.state is CircuitState.OPEN
 
-    time.sleep(0.15)
+    clock.advance(0.15)
+    assert cb.state is CircuitState.HALF_OPEN
+
+
+def test_circuit_breaker_half_open_at_exact_recovery_timeout():
+    """Test that the >= boundary at exactly recovery_timeout triggers HALF_OPEN."""
+    clock = FakeClock()
+    cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1, clock=clock)
+    cb.record_failure()
+    cb.record_failure()
+    assert cb.state is CircuitState.OPEN
+
+    clock.advance(0.1)  # exactly recovery_timeout
     assert cb.state is CircuitState.HALF_OPEN
 
 
 def test_circuit_breaker_half_open_success_closes():
     """Test that success in HALF_OPEN transitions to CLOSED."""
-    cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+    clock = FakeClock()
+    cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1, clock=clock)
     cb.record_failure()
     cb.record_failure()
-    time.sleep(0.15)
+    clock.advance(0.15)
     assert cb.state is CircuitState.HALF_OPEN
 
     cb.record_success()
@@ -94,10 +121,11 @@ def test_circuit_breaker_half_open_success_closes():
 
 def test_circuit_breaker_half_open_failure_reopens():
     """Test that failure in HALF_OPEN transitions back to OPEN."""
-    cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+    clock = FakeClock()
+    cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1, clock=clock)
     cb.record_failure()
     cb.record_failure()
-    time.sleep(0.15)
+    clock.advance(0.15)
     assert cb.state is CircuitState.HALF_OPEN
 
     cb.record_failure()
