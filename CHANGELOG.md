@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.1] - 2026-07-21
+
+### Changed
+- Dependency floors refreshed: **paho-mqtt 2.1.0** (v2 API — the full
+  4 100+-test suite, including the MQTT protocol tests, passes unchanged),
+  numpy 1.26.4, mini-racer 0.14.1.
+- CI/tooling: pre-commit hooks autoupdated, `softprops/action-gh-release`
+  bumped to v3.0.2.
+
 ## [6.8.0] - 2026-07-07
 
 ### Added
