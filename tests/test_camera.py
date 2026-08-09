@@ -20,6 +20,7 @@ PIL are genuine dependencies and are used for real.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 from datetime import datetime
 import io
@@ -77,8 +78,24 @@ from custom_components.dreame_vacuum.dreame.const import (
 class _ImmediateHass:
     """A minimal ``hass`` whose executor runs the job synchronously."""
 
+    def __init__(self) -> None:
+        self.tasks: list[asyncio.Task] = []
+
     async def async_add_executor_job(self, func, *args):
         return func(*args)
+
+    def async_create_task(self, coro):
+        """Run the coroutine as a tracked task (flushed by the tests)."""
+        task = asyncio.ensure_future(coro)
+        self.tasks.append(task)
+        return task
+
+
+async def _flush_background_tasks(hass: _ImmediateHass) -> None:
+    """Run every background task scheduled by the camera to completion."""
+    while hass.tasks:
+        task = hass.tasks.pop(0)
+        await task
 
 
 def _bare_camera() -> DreameVacuumCameraEntity:
@@ -93,6 +110,7 @@ def _bare_camera() -> DreameVacuumCameraEntity:
     entity._segment_map_cache = (None, None, None)
     entity._attributes_cache = (None, None)
     entity._should_poll = True
+    entity._background_refresh_running = False
     entity._last_updated = -1
     entity._last_rendered = -1
     entity._last_map_request = 0
@@ -100,6 +118,7 @@ def _bare_camera() -> DreameVacuumCameraEntity:
     entity._calibration_points = None
     entity._color_scheme = "Dreame Light"
     entity.map_index = 0
+    entity.entity_description = SimpleNamespace(map_type=0)  # FLOOR_MAP
     entity.hass = _ImmediateHass()
     entity.coordinator = MagicMock()
     entity.coordinator.device = None
@@ -450,6 +469,34 @@ class TestAsyncCameraImage:
         result = await entity.async_camera_image()
         assert result == b"the-image"
 
+    async def test_cached_image_answered_immediately_without_blocking_refresh(self) -> None:
+        """Snapshot with a cached image answers instantly and refreshes in the
+        background instead of waiting on the network map fetch + render."""
+        entity = _bare_camera()
+        entity._should_poll = True
+        entity.map_index = 0
+        entity._last_updated = 5000
+        entity._last_rendered = 4000
+        device = MagicMock()
+        _set_device(entity, device)
+        entity._renderer = MagicMock()
+        entity._renderer.render_complete = True
+        update_image = AsyncMock()
+        with (
+            patch.object(entity, "update", MagicMock()),
+            patch.object(entity, "_async_update_segment_map", AsyncMock()),
+            patch.object(type(entity), "_map_data", new=property(lambda self: MagicMock())),
+            patch.object(entity, "_update_image", update_image),
+        ):
+            result = await entity.async_camera_image()
+            # The cached image is returned synchronously — no wait on the refresh.
+            assert result == b"default-image"
+            # The refresh is scheduled but not awaited by the snapshot call.
+            assert entity._background_refresh_running is True
+            await _flush_background_tasks(entity.hass)
+            assert entity._background_refresh_running is False
+            update_image.assert_awaited_once()
+
     async def test_rearms_should_poll_on_success(self) -> None:
         entity = _bare_camera()
         entity._should_poll = True
@@ -464,10 +511,13 @@ class TestAsyncCameraImage:
             patch.object(entity, "_async_update_segment_map", AsyncMock()),
         ):
             await entity.async_camera_image()
-        assert entity._should_poll is True
+            # A cached image exists -> refresh is scheduled in the background; the
+            # snapshot answers immediately and polling is re-armed.
+            assert entity._should_poll is True
+            await _flush_background_tasks(entity.hass)  # let the background task run
 
     async def test_rearms_should_poll_even_when_update_raises(self) -> None:
-        """The try/finally must restore polling after a transient error."""
+        """A background refresh failure never surfaces to the snapshot client."""
         entity = _bare_camera()
         entity._should_poll = True
         _set_device(entity, MagicMock())
@@ -479,12 +529,13 @@ class TestAsyncCameraImage:
         with (
             patch.object(entity, "update", side_effect=boom),
             patch.object(entity, "_async_update_segment_map", AsyncMock()),
-            pytest.raises(RuntimeError, match="render pipeline blew up"),
         ):
-            await entity.async_camera_image()
-
-        # Without the finally clause the camera would stop refreshing forever.
-        assert entity._should_poll is True
+            # Cached image exists: the failing refresh runs in the background and
+            # is swallowed — the snapshot still answers with the cached image.
+            result = await entity.async_camera_image()
+            assert result == b"default-image"
+            await _flush_background_tasks(entity.hass)  # let the background task swallow
+            assert entity._should_poll is True
 
     async def test_calls_update_map_for_live_camera(self) -> None:
         entity = _bare_camera()
@@ -499,6 +550,7 @@ class TestAsyncCameraImage:
             patch.object(entity, "_async_update_segment_map", AsyncMock()),
         ):
             await entity.async_camera_image()
+            await _flush_background_tasks(entity.hass)  # background refresh calls update_map
         device.update_map.assert_called_once()
 
     async def test_renders_when_map_updated(self) -> None:
@@ -519,6 +571,7 @@ class TestAsyncCameraImage:
             patch.object(entity, "_update_image", update_image),
         ):
             await entity.async_camera_image()
+            await _flush_background_tasks(entity.hass)  # background refresh performs render
         update_image.assert_awaited_once()
         # After a successful render the rendered marker catches up.
         assert entity._last_rendered == 5000

@@ -318,6 +318,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
     __slots__ = (
         "_access_token_update_counter",
         "_attributes_cache",
+        "_background_refresh_running",
         "_calibration_points",
         "_color_scheme",
         "_default_map",
@@ -373,6 +374,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         self.async_update_token()
         self._rtsp_to_webrtc = False
         self._should_poll = True
+        self._background_refresh_running = False
         self._last_updated: int | None = -1
         self._frame_id: int | None = -1
         self._last_map_request: float = 0
@@ -594,37 +596,75 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
             self._segment_map_cache = (cache_key, result[0], result[1])
 
     async def async_camera_image(self, width: int | None = None, height: int | None = None) -> bytes | None:
-        """Return the current map image, refreshing it first if polling is due."""
+        """Return the current map image, refreshing it in the background.
+
+        The refresh (network map fetch + PIL render) can take a second or more.
+        Blocking the HTTP snapshot on it makes opening the dashboard slow: the
+        map only appears once the robot round-trip and the render complete. When
+        a previously rendered image already exists, we serve it immediately and
+        schedule the refresh as a background task so the *next* request gets a
+        fresh frame — the very first request (no cached image yet) still waits.
+        """
         if self._should_poll is True:
             self._should_poll = False
             try:
                 now = time.time()
                 if now - self._last_map_request >= self.frame_interval:
                     self._last_map_request = now
-                    if self.map_index == 0 and self.device:
-                        self.device.update_map()
-                    self.update()
-                    await self._async_update_segment_map()
-                    if (
-                        self._last_updated
-                        and self._last_rendered != self._last_updated
-                        and self._renderer is not None
-                        and self._renderer.render_complete
-                    ):
-                        map_for_render = await self.hass.async_add_executor_job(
-                            self.device.get_map_for_render, self._map_data
-                        )
-                        await self._update_image(
-                            map_for_render,
-                            self.device.status.robot_status,
-                            self.device.status.station_status,
-                        )
-                        self._last_rendered = self._last_updated
+                    if self._image is not None:
+                        # Cache hit: answer now, refresh in background.
+                        self._schedule_background_refresh()
+                        return self._image
+                    await self._async_perform_refresh()
             finally:
                 # Always re-arm polling, even if a transient error occurred above;
                 # otherwise the camera would stop refreshing the map permanently.
                 self._should_poll = True
         return self._image
+
+    async def _async_perform_refresh(self) -> None:
+        """Fetch + render the current map (shared by sync and background paths)."""
+        if self.map_index == 0 and self.device:
+            self.device.update_map()
+        self.update()
+        await self._async_update_segment_map()
+        if (
+            self._last_updated
+            and self._last_rendered != self._last_updated
+            and self._renderer is not None
+            and self._renderer.render_complete
+        ):
+            map_for_render = await self.hass.async_add_executor_job(self.device.get_map_for_render, self._map_data)
+            await self._update_image(
+                map_for_render,
+                self.device.status.robot_status,
+                self.device.status.station_status,
+            )
+            self._last_rendered = self._last_updated
+
+    def _schedule_background_refresh(self) -> None:
+        """Run one map refresh off the request path (fire-and-forget).
+
+        Guards against stacking refreshes: if a background refresh is already
+        scheduled or running, do nothing — the running one will re-arm the
+        next interval. Runs on the HA event loop task pool so the HTTP
+        snapshot answers instantly.
+        """
+        if self._background_refresh_running:
+            return
+        self._background_refresh_running = True
+
+        async def _refresh() -> None:
+            try:
+                await self._async_perform_refresh()
+            except Exception:
+                # The snapshot already answered with the cached image; a failed
+                # background refresh must never surface to that client.
+                LOGGER.debug("Background map refresh failed", exc_info=True)
+            finally:
+                self._background_refresh_running = False
+
+        self.hass.async_create_task(_refresh())
 
     async def handle_async_still_stream(self, request: web.Request, interval: float) -> web.StreamResponse:
         """Generate an HTTP MJPEG stream from camera images."""
