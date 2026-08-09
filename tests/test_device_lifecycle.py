@@ -1712,6 +1712,7 @@ def _boot_perform_update_device(**status_overrides: object) -> DreameVacuumDevic
     d.connect_device = MagicMock()
     d._map_initialized = False
     d._full_properties_loaded = False
+    d._pending_properties = set()
     d._map_manager = None
     d._consumable_change = False
     d._last_settings_request = time.time()
@@ -1767,6 +1768,17 @@ class TestPerformUpdateFirstCycle:
         d._perform_update()
         d._request_properties.assert_called_once_with(force_all=True)
         assert d._full_properties_loaded is True
+
+    def test_deferred_load_in_progress_skips_redundant_force_all(self) -> None:
+        """Warm boot: the persisted-inventory background thread is already
+        loading the deferred properties, so the first update must NOT issue a
+        second full request (it would double the boot network round-trips)."""
+        d = _boot_perform_update_device()
+        d._full_properties_loaded = False
+        d._pending_properties = {DreameVacuumProperty.BATTERY_LEVEL.value}
+        d._perform_update()
+        d._request_properties.assert_not_called()
+        assert d._full_properties_loaded is False  # thread still owns the load
 
     def test_map_manager_updates_map_when_no_current_map(self) -> None:
         map_manager = MagicMock()

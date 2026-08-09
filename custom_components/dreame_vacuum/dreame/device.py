@@ -418,9 +418,6 @@ class DreameVacuumDevice(
             auth_key,
         )
         if self._protocol.cloud:
-            map_mod = _get_map_module()
-            self._map_manager = map_mod.DreameMapVacuumMapManager(self._protocol)
-
             self.listen(self._map_list_changed, DreameVacuumProperty.MAP_LIST)
             self.listen(self._recovery_map_list_changed, DreameVacuumProperty.RECOVERY_MAP_LIST)
             self.listen(self._battery_level_changed, DreameVacuumProperty.BATTERY_LEVEL)
@@ -431,8 +428,29 @@ class DreameVacuumDevice(
                 self._map_backup_status_changed,
                 DreameVacuumProperty.MAP_BACKUP_STATUS,
             )
-            self._map_manager.listen(self._map_changed, self._map_updated)
-            self._map_manager.listen_error(self._update_failed)
+            # The map manager itself is NOT created here: constructing it
+            # imports the map renderer (numpy/PIL + ~20 MB of base64 resource
+            # data) which is too heavy for the event loop during HA startup.
+            # It is created lazily by _ensure_map_manager() from a worker
+            # thread (connect_cloud/connect_device) on first use.
+
+    def _ensure_map_manager(self) -> None:
+        """Create the map manager on first use, off the event loop.
+
+        The map renderer pulls in numpy/PIL and ~20 MB of resource data, so
+        it must never be imported from the coordinator __init__ (HA event
+        loop) at startup. connect_cloud()/connect_device() run on worker
+        threads and call this before any map traffic can arrive.
+        """
+        if self._map_manager is not None:
+            return
+        protocol = getattr(self, "_protocol", None)
+        if protocol is None or getattr(protocol, "cloud", None) is None:
+            return
+        map_mod = _get_map_module()
+        self._map_manager = map_mod.DreameMapVacuumMapManager(protocol)
+        self._map_manager.listen(self._map_changed, self._map_updated)
+        self._map_manager.listen_error(self._update_failed)
 
     def _connected_callback(self) -> None:
         if not self._ready:
@@ -476,8 +494,10 @@ class DreameVacuumDevice(
                         ):
                             map_properties.append(param)
 
-                if len(map_properties) and self._map_manager:
-                    self._map_manager.handle_properties(map_properties)
+                if len(map_properties):
+                    self._ensure_map_manager()
+                    if self._map_manager:
+                        self._map_manager.handle_properties(map_properties)
 
                 self._handle_properties(properties)
             elif method == "_otc.info":
@@ -1863,6 +1883,7 @@ class DreameVacuumDevice(
     def connect_device(self) -> None:
         """Connect to the device api."""
         _LOGGER.debug("Connecting to device")
+        self._ensure_map_manager()
         info = self._protocol.connect(self._message_callback, self._connected_callback)
         if info:
             self.info = DreameVacuumDeviceInfo(info)
@@ -1902,6 +1923,7 @@ class DreameVacuumDevice(
 
     def connect_cloud(self) -> None:
         """Connect to the cloud api."""
+        self._ensure_map_manager()
         if self._protocol.cloud and not self._protocol.cloud.logged_in:
             self._protocol.cloud.login()
             self.auth_failed = False
@@ -2035,8 +2057,15 @@ class DreameVacuumDevice(
         if not self._map_initialized:
             self._map_initialized = True
 
-            # Fallback: if connect_device didn't load all properties, load them now
-            if not self._full_properties_loaded:
+            # Fallback: if connect_device didn't load all properties, load them now.
+            # On a warm boot the persisted-inventory path already fetches the
+            # priority batch synchronously and the rest from a background
+            # thread (_load_deferred_properties); _full_properties_loaded stays
+            # False while that thread runs, so gate the fallback on the pending
+            # set too — otherwise the first update re-requests EVERYTHING
+            # (including what the background thread is mid-flight on) and
+            # doubles the boot network round-trips (~2s on real devices).
+            if not self._full_properties_loaded and not self._pending_properties:
                 self._full_properties_loaded = True
                 t0 = time.time()
                 self._request_properties(force_all=True)
