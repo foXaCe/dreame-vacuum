@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.3] - 2026-08-09
+
+### Fixed
+- **Integration failed to start on HA 2026.8**: the manifest demanded
+  `numpy>=2.5.1`, but Home Assistant core pins `numpy==2.3.2` in its package
+  constraints, so HA could not install the requirement and aborted setup with
+  *"Requirements for dreame_vacuum not found: ['numpy>=2.5.1']"*. The floor is
+  lowered to `numpy>=2.3.2` — the version HA ships and the one the full test
+  suite (4 126 tests) already runs against. The engine only uses stable numpy
+  2.x APIs (`asarray`/`where`/`clip`), so nothing else changes.
+
 ## [6.8.2] - 2026-08-09
 
 ### Changed
