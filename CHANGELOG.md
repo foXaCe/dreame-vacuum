@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.4] - 2026-08-09
+
+### Changed
+- **Faster dashboard map load**: requesting the camera `entity_picture`
+  no longer blocks the HTTP response on a full map refresh (network fetch +
+  PIL render, 0.5–1 s+). A cached image is served immediately and the
+  refresh runs as a background task, so the next request gets a fresh frame.
+  The very first request (no cached image yet) still waits. Paired with the
+  companion card's rAF-based robot marker, opening the dashboard feels
+  instant while the map keeps updating in the background.
+
 ## [6.8.3] - 2026-08-09
 
 ### Fixed
