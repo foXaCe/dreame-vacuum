@@ -19,7 +19,7 @@
   "quality_scale": "gold",
   "requirements": [
     "pillow>=12.3.0",
-    "numpy>=1.26.4",
+    "numpy>=2.5.1",
     "pycryptodome>=3.23.0",
     "python-miio>=0.5.12",
     "mini-racer>=0.14.1",
