@@ -1104,15 +1104,32 @@ class TestSimpleProperties:
 
 
 class TestConstruction:
-    def test_full_construction_wires_protocol_and_map_manager(self, monkeypatch) -> None:
+    def test_full_construction_wires_protocol_and_defers_map_manager(self, monkeypatch) -> None:
         device, protocol_instance, map_manager_instance = _build_device(monkeypatch, cloud=True)
 
         assert device._protocol is protocol_instance
+        # The map manager (numpy/PIL + ~20 MB resources) is NOT created in
+        # __init__: constructing it on the HA event loop at startup would slow
+        # the boot. It is created lazily from a worker thread on first connect.
+        assert device._map_manager is None
+        map_manager_instance.listen.assert_not_called()
+        map_manager_instance.listen_error.assert_not_called()
+        assert isinstance(device.status, DreameVacuumDeviceStatus)
+        assert isinstance(device.capability, DreameVacuumDeviceCapability)
+
+    def test_map_manager_created_lazily_on_connect(self, monkeypatch) -> None:
+        device, protocol_instance, map_manager_instance = _build_device(monkeypatch, cloud=True)
+        protocol_instance.connect.return_value = {
+            "model": "dreame.vacuum.p2028",
+            "fw_ver": "4.5.6_0078",
+            "mac": "AA:BB:CC:DD:EE:FF",
+        }
+
+        device.connect_device()
+
         assert device._map_manager is map_manager_instance
         map_manager_instance.listen.assert_called_once_with(device._map_changed, device._map_updated)
         map_manager_instance.listen_error.assert_called_once_with(device._update_failed)
-        assert isinstance(device.status, DreameVacuumDeviceStatus)
-        assert isinstance(device.capability, DreameVacuumDeviceCapability)
 
     def test_construction_without_cloud_skips_map_manager(self, monkeypatch) -> None:
         device, _protocol_instance, _map_manager_instance = _build_device(monkeypatch, cloud=False)
