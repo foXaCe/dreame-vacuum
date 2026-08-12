@@ -1486,7 +1486,14 @@ class TestAsyncAddedToHass:
             entity.entity_description = SimpleNamespace(map_type=None)
         return entity
 
-    async def test_warms_both_images_and_sets_image_for_map_index_zero(self) -> None:
+    async def test_warms_both_images_without_installing_the_placeholder(self) -> None:
+        """The warm-up touches the lazy PIL caches but must NOT assign the
+        placeholder as the served image: entity_picture's ?v= derives from the
+        map's last_updated (a render does not change it), so a client fetching
+        the placeholder once would keep it until the map really changes — on a
+        docked robot, indefinitely (seen live 2026-08-12). With no cached
+        image, the first snapshot request takes the synchronous refresh path
+        and waits for the real map instead."""
         entity = self._entity_with_mock_renderer(map_index=0)
         with (
             patch.object(cam.DreameVacuumEntity, "async_added_to_hass", AsyncMock(), create=True),
@@ -1496,8 +1503,8 @@ class TestAsyncAddedToHass:
         # Both lazy image caches were touched (loop-side reads now hit the cache).
         assert entity._renderer.disconnected_map_image == b"DISCONNECTED"
         assert entity._renderer.default_map_image == b"DEFAULT"
-        assert entity._image == b"DEFAULT"
-        write_state.assert_called_once()
+        assert entity._image is None
+        write_state.assert_not_called()
 
     async def test_does_not_overwrite_existing_image(self) -> None:
         entity = self._entity_with_mock_renderer(map_index=0)

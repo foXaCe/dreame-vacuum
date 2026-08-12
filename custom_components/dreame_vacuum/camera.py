@@ -725,10 +725,15 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 _ = self._renderer.disconnected_map_image
                 return self._renderer.default_map_image
 
-            image = await self.hass.async_add_executor_job(_warm)
-            if self._image is None and self.map_index == 0:
-                self._image = image
-                self.async_write_ha_state()
+            # Warm the PIL caches only — do NOT install the placeholder as the
+            # served image. entity_picture's ?v= is derived from the map's
+            # last_updated, which a *render* does not change: a client that
+            # fetches the placeholder once keeps it until the map really
+            # changes (a docked robot: indefinitely). With no cached image,
+            # the first snapshot request takes the synchronous refresh path in
+            # async_camera_image and waits ~1-2 s for the real map instead
+            # (seen live 2026-08-12, "map takes a while to wake up").
+            await self.hass.async_add_executor_job(_warm)
 
     async def async_will_remove_from_hass(self) -> None:
         """Clean up renderers when entity is removed.
