@@ -725,10 +725,15 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 _ = self._renderer.disconnected_map_image
                 return self._renderer.default_map_image
 
-            image = await self.hass.async_add_executor_job(_warm)
-            if self._image is None and self.map_index == 0:
-                self._image = image
-                self.async_write_ha_state()
+            # Warm the PIL caches only — do NOT install the placeholder as the
+            # served image. entity_picture's ?v= is derived from the map's
+            # last_updated, which a *render* does not change: a client that
+            # fetches the placeholder once keeps it until the map really
+            # changes (a docked robot: indefinitely). With no cached image,
+            # the first snapshot request takes the synchronous refresh path in
+            # async_camera_image and waits ~1-2 s for the real map instead
+            # (seen live 2026-08-12, "map takes a while to wake up").
+            await self.hass.async_add_executor_job(_warm)
 
     async def async_will_remove_from_hass(self) -> None:
         """Clean up renderers when entity is removed.
@@ -756,7 +761,15 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 self._default_map = False
         elif not self._default_map:
             self._state = STATE_UNAVAILABLE
-            self._image = self._default_map_image
+            # Transient losses (cloud_connected blip, status.located false during
+            # dock/relocation phases) MUST NOT evict the last rendered map: the
+            # proxy would then serve the "no map" placeholder under an unchanged
+            # entity_picture ?v=, and a docked robot produces no new frame to
+            # heal it — the dashboard shows the placeholder until the map really
+            # changes (seen live 2026-08-12, "map takes a while to wake up").
+            # The placeholder is only for cameras that never rendered anything.
+            if self._image is None:
+                self._image = self._default_map_image
             self._default_map = True
             self._frame_id = -1
             self._last_updated = -1
