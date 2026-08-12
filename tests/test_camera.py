@@ -1058,6 +1058,46 @@ class TestUpdate:
         assert entity._last_updated == -1
         assert entity._frame_id == -1
 
+    def test_transient_loss_keeps_last_rendered_image(self) -> None:
+        """A cloud/located blip must NOT evict the last rendered map: the proxy
+        would serve the "no map" placeholder under an unchanged entity_picture
+        ?v=, and a docked robot produces no new frame to heal it — the dashboard
+        then shows the placeholder until the map really changes (seen live
+        2026-08-12, "map takes a while to wake up")."""
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity._default_map = False
+        entity._image = b"REAL-MAP-PNG"  # last successful render
+        entity._renderer = MagicMock()
+        entity._renderer.default_map_image = b"DEFAULT"
+        entity._renderer.disconnected_map_image = b"DISCONNECTED"
+        device = MagicMock()
+        device.cloud_connected = True
+        device.status.located = False  # transient: relocation / dock phase
+        _set_device(entity, device)
+        with patch.object(type(entity), "_map_data", new=property(lambda self: MagicMock())):
+            entity.update()
+        assert entity._state == cam.STATE_UNAVAILABLE
+        assert entity._default_map is True
+        assert entity._image == b"REAL-MAP-PNG"  # image preserved
+
+    def test_transient_loss_without_any_image_uses_placeholder(self) -> None:
+        """A camera that never rendered anything still gets the placeholder."""
+        entity = _bare_camera()
+        entity.map_index = 0
+        entity._default_map = False
+        entity._image = None
+        entity._renderer = MagicMock()
+        entity._renderer.default_map_image = b"DEFAULT"
+        entity._renderer.disconnected_map_image = b"DISCONNECTED"
+        device = MagicMock()
+        device.cloud_connected = False
+        device.status.located = True
+        _set_device(entity, device)
+        with patch.object(type(entity), "_map_data", new=property(lambda self: None)):
+            entity.update()
+        assert entity._image == b"DEFAULT"
+
 
 # ===========================================================================
 # _handle_coordinator_update state machine

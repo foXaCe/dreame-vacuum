@@ -756,7 +756,15 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
                 self._default_map = False
         elif not self._default_map:
             self._state = STATE_UNAVAILABLE
-            self._image = self._default_map_image
+            # Transient losses (cloud_connected blip, status.located false during
+            # dock/relocation phases) MUST NOT evict the last rendered map: the
+            # proxy would then serve the "no map" placeholder under an unchanged
+            # entity_picture ?v=, and a docked robot produces no new frame to
+            # heal it — the dashboard shows the placeholder until the map really
+            # changes (seen live 2026-08-12, "map takes a while to wake up").
+            # The placeholder is only for cameras that never rendered anything.
+            if self._image is None:
+                self._image = self._default_map_image
             self._default_map = True
             self._frame_id = -1
             self._last_updated = -1
