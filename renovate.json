@@ -62,6 +62,11 @@
       "matchFileNames": ["custom_components/dreame_vacuum/manifest.json"],
       "automerge": false,
       "addLabels": ["python", "runtime-floor"]
+    },
+    {
+      "description": "numpy is pinned by Home Assistant core (2026.8 pins numpy==2.3.2): a manifest floor above that pin makes HA unable to install the requirements and the integration fails setup entirely (broken once by the 2.5.1 floor, fixed in v6.8.3). Raise this cap ONLY after checking homeassistant/package_constraints.txt for the oldest supported HA version.",
+      "matchDepNames": ["numpy"],
+      "allowedVersions": "<=2.3.2"
     }
   ],
   "customManagers": [
