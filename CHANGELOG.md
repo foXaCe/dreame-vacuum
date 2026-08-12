@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.5] - 2026-08-12
+
+### Fixed
+- **Map camera no longer serves the "no map" placeholder under a stable
+  `entity_picture` ?v=** (reported as "the map takes a while to wake up" —
+  on a docked robot the placeholder could stick indefinitely, since only a
+  real map change bumps the URL clients re-fetch):
+  - at Home Assistant startup, the placeholder was pre-installed as the
+    served image; the warm-up now only touches the PIL caches and the very
+    first snapshot request waits for the real render (~2-6 s, once) —
+    dashboards then display the map in under a second;
+  - transient `cloud_connected`/`located` losses (dock/relocation phases)
+    no longer evict the last rendered map from the camera cache.
+
 ## [6.8.4] - 2026-08-09
 
 ### Changed
