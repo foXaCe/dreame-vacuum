@@ -60,9 +60,11 @@ Ces dépréciations sont **encore en période de grâce** aujourd'hui (2026-07-0
 ```python
 type MyConfigEntry = ConfigEntry[MyData]
 
+
 @dataclass
 class MyData:
     client: MyClient
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     entry.runtime_data = MyData(client=MyClient(...))
@@ -81,7 +83,7 @@ Gère nativement `ConfigEntryError` / `ConfigEntryAuthFailed`.
 
 ### Coordinator `retry_after` (depuis 2025.11)
 ```python
-raise UpdateFailed(retry_after=60) from err   # ex: HTTP 429 / Retry-After
+raise UpdateFailed(retry_after=60) from err  # ex: HTTP 429 / Retry-After
 ```
 Retarde le prochain refresh de N secondes puis reprend la cadence normale. Ignoré pendant `async_config_entry_first_refresh` (c'est `ConfigEntryNotReady` qui gère le retry initial).
 
@@ -108,6 +110,7 @@ Objectif : l'enregistrement des services ne dépend plus du setup de la platefor
 class OptionsFlowHandler(OptionsFlow):
     def __init__(self) -> None:
         self._conf_app_id: str | None = None
+
     # self.config_entry est fourni par la classe parente, ne plus le stocker soi-même
 ```
 
@@ -126,7 +129,7 @@ Pour un `integration_type: hub` avec plusieurs comptes/appareils enfants, les *c
 ### `HassKey` / `HassEntryKey` (depuis 2024.5)
 ```python
 MY_KEY: HassKey["MyData"] = HassKey(DOMAIN)
-hass.data[MY_KEY] = MyData(...)   # type inféré par mypy
+hass.data[MY_KEY] = MyData(...)  # type inféré par mypy
 ```
 Uniquement utile pour des données **globales** partagées entre entries ; pour les données par-entry, préférer `runtime_data`.
 
@@ -239,6 +242,7 @@ Voir détail complet en §6 — c'est le changement le plus significatif pour un
 - **`VacuumActivity` (StrEnum)** est l'API état officielle depuis 2025.1, obligatoire depuis 2026.1 (les anciennes constantes d'état sont retirées). Valeurs : `CLEANING`, `DOCKED`, `IDLE`, `PAUSED`, `RETURNING`, `ERROR`.
   ```python
   from homeassistant.components.vacuum import VacuumActivity
+
 
   @property
   def activity(self) -> VacuumActivity | None:

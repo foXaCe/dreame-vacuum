@@ -169,6 +169,7 @@ def set_dnd_task_entry(
       (device_setters.py:790-793).
     """
 
+
 def delete_dnd_task(self, task_id: int) -> bool:
     """Remove a single task by id from dnd_tasks and write the list back.
 

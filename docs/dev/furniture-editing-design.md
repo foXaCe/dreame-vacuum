@@ -90,12 +90,18 @@ if "funiture_info" in data_json:
         if furniture[3] > 0 and furniture[4] > 0:
             if furniture_type in FurnitureType._value2member_map_:
                 map_data.saved_furnitures[index] = Furniture(
-                    int(furniture[6]), int(furniture[7]),
-                    int(furniture[6] - (furniture[3] / 2)), int(furniture[7] - (furniture[4] / 2)),
-                    furniture[3], furniture[4],
-                    FurnitureType(furniture_type), int(furniture[13]),
-                    furniture[9], furniture[12],
-                    furniture[0], furniture[2],
+                    int(furniture[6]),
+                    int(furniture[7]),
+                    int(furniture[6] - (furniture[3] / 2)),
+                    int(furniture[7] - (furniture[4] / 2)),
+                    furniture[3],
+                    furniture[4],
+                    FurnitureType(furniture_type),
+                    int(furniture[13]),
+                    furniture[9],
+                    furniture[12],
+                    furniture[0],
+                    furniture[2],
                 )
 ```
 
@@ -142,10 +148,16 @@ interaction" below). Key priority, first match wins
 
 ```python
 map_data.furnitures[index] = Furniture(
-    center_x, center_y, start_x0, start_y0,
-    rect_width, rect_height,
-    FurnitureType(furniture_type), int(furniture[3]),
-    angle, scale,
+    center_x,
+    center_y,
+    start_x0,
+    start_y0,
+    rect_width,
+    rect_height,
+    FurnitureType(furniture_type),
+    int(furniture[3]),
+    angle,
+    scale,
 )
 ```
 
@@ -216,9 +228,21 @@ newer devices get newer-style icons.
 
 ```python
 class Furniture(Point):
-    def __init__(self, x, y, x0, y0, width, height, type: FurnitureType,
-                 size_type: int, angle: float = 0, scale: float = 1.0,
-                 furniture_id: int | None = None, segment_id: int | None = None): ...
+    def __init__(
+        self,
+        x,
+        y,
+        x0,
+        y0,
+        width,
+        height,
+        type: FurnitureType,
+        size_type: int,
+        angle: float = 0,
+        scale: float = 1.0,
+        furniture_id: int | None = None,
+        segment_id: int | None = None,
+    ): ...
 ```
 
 `x1,y1 / x2,y2 / x3,y3` (the other three rectangle corners) are derived
