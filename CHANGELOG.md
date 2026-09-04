@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.6] - 2026-09-04
+
+### Fixed
+- **Map decoder no longer crashes on short obstacle entries** (#55): the
+  `ai_obstacle` decoder guarded its bounding box branch with `size >= 8`
+  but read elements 7 through 10 unconditionally, so any obstacle entry of
+  8, 9 or 10 elements raised `IndexError: list index out of range` and
+  aborted the whole partial map decode. The four bounding box fields are
+  now read only when they are present; a short entry decodes with no
+  bounding box, and a short `NEGLECTED_ROOM` entry still resolves its
+  segment center. Reported on a Dreame L40s Pro Ultra (firmware 3909).
+
 ## [6.8.5] - 2026-08-12
 
 ### Fixed
