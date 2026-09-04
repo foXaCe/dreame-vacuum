@@ -985,10 +985,10 @@ class DreameVacuumMapDecoder:
                                         id,
                                         obstacle[5],
                                         obstacle[6],
-                                        float(obstacle[7]) * 100,
-                                        float(obstacle[8]) * 100,
-                                        float(obstacle[9]) * 100,
-                                        float(obstacle[10]) * 100,
+                                        float(obstacle[7]) * 100 if size >= 11 else None,
+                                        float(obstacle[8]) * 100 if size >= 11 else None,
+                                        float(obstacle[9]) * 100 if size >= 11 else None,
+                                        float(obstacle[10]) * 100 if size >= 11 else None,
                                         int(obstacle[11]) if size >= 13 else 2,
                                         (
                                             int(obstacle[-1])
