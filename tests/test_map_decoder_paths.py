@@ -627,6 +627,36 @@ def test_decode_obstacle_neglected_room_resolves_segment_center():
     assert obs.ignore_status == 2
 
 
+def test_decode_obstacle_short_entry_without_bounding_box():
+    """An 8-to-10 element obstacle has no bounding box fields; decoding must not raise IndexError."""
+    header = build_header(width=0, height=0)
+    obstacle = [1.5, 2.5, 142, 0.9, 5000, "pic.jpg", 7, 0.1]
+    partial = make_partial(header, b"", {"ai_obstacle": [obstacle]})
+
+    map_data, _ = DreameVacuumMapDecoder.decode_map_data_from_partial(partial, False)
+
+    obs = map_data.obstacles["1"]
+    assert (obs.x, obs.y) == (1.5, 2.5)
+    assert obs.object_id == 5000
+    assert obs.file_name == "pic.jpg"
+    assert obs.key == 7
+    assert (obs.pos_x, obs.pos_y, obs.width, obs.height) == (None, None, None, None)
+
+
+def test_decode_obstacle_neglected_room_short_entry_still_resolves_segment():
+    """A short NEGLECTED_ROOM entry keeps the segment-center resolution instead of crashing."""
+    header = build_header(width=0, height=0)
+    obstacle = [1, 0, 200, 0.5, 5000, "pic.jpg", 7, 0.1, 0.2]
+    partial = make_partial(header, b"", {"ai_obstacle": [obstacle]})
+
+    map_data, _ = DreameVacuumMapDecoder.decode_map_data_from_partial(partial, False)
+
+    obs = map_data.obstacles["1"]
+    assert obs.type == ObstacleType.NEGLECTED_ROOM
+    assert obs.possibility is None
+    assert (obs.pos_x, obs.pos_y, obs.width, obs.height) == (None, None, None, None)
+
+
 def test_get_segments_outline_simplified_for_large_segment():
     """A 2D segment large enough to need Moore-Neighbor tracing gets a Douglas-Peucker simplified outline."""
     width, height = 12, 12
