@@ -15,7 +15,7 @@ from custom_components.dreame_vacuum import (
     async_setup_entry,
     async_unload_entry,
 )
-from custom_components.dreame_vacuum.const import DOMAIN
+from custom_components.dreame_vacuum.const import CONF_HIDDEN_MAP_OBJECTS, CONFIG_ENTRY_MINOR_VERSION, DOMAIN
 
 
 @pytest.fixture
@@ -207,19 +207,58 @@ async def test_unload_entry_failure_skips_cleanup(hass: MagicMock, entry: MagicM
 # --- async_migrate_entry --------------------------------------------------------
 
 
-async def test_migrate_entry_same_version_noop(hass: MagicMock) -> None:
-    """Migrating an entry already at the current version is a no-op success."""
+def _entry(version: int, minor: int, options: dict | None = None) -> MagicMock:
     config_entry = MagicMock()
-    config_entry.version = CONFIG_ENTRY_VERSION
+    config_entry.version = version
+    config_entry.minor_version = minor
+    config_entry.options = options if options is not None else {}
+    return config_entry
+
+
+async def test_migrate_entry_minor_1_hides_robot(hass: MagicMock) -> None:
+    """An entry created before the robot-hidden default gets "robot" added once."""
+    config_entry = _entry(1, 1, {CONF_HIDDEN_MAP_OBJECTS: ["name"], "color_scheme": "Dreame Light"})
 
     assert await async_migrate_entry(hass, config_entry) is True
+    hass.config_entries.async_update_entry.assert_called_once_with(
+        config_entry,
+        options={CONF_HIDDEN_MAP_OBJECTS: ["name", "robot"], "color_scheme": "Dreame Light"},
+        version=CONFIG_ENTRY_VERSION,
+        minor_version=CONFIG_ENTRY_MINOR_VERSION,
+    )
+
+
+async def test_migrate_entry_minor_1_without_option_key(hass: MagicMock) -> None:
+    """No hidden-objects option at all (never opened options): robot hidden."""
+    config_entry = _entry(1, 1, {})
+
+    assert await async_migrate_entry(hass, config_entry) is True
+    kwargs = hass.config_entries.async_update_entry.call_args.kwargs
+    assert kwargs["options"] == {CONF_HIDDEN_MAP_OBJECTS: ["robot"]}
+
+
+async def test_migrate_entry_robot_already_hidden_untouched(hass: MagicMock) -> None:
+    """Robot already hidden: options unchanged, only the version is bumped."""
+    config_entry = _entry(1, 1, {CONF_HIDDEN_MAP_OBJECTS: ["robot", "icon"]})
+
+    assert await async_migrate_entry(hass, config_entry) is True
+    kwargs = hass.config_entries.async_update_entry.call_args.kwargs
+    assert kwargs["options"] == {CONF_HIDDEN_MAP_OBJECTS: ["robot", "icon"]}
+    assert kwargs["minor_version"] == CONFIG_ENTRY_MINOR_VERSION
+
+
+async def test_migrate_entry_current_version_keeps_user_choice(hass: MagicMock) -> None:
+    """Already migrated: a user who re-showed the robot keeps that choice."""
+    config_entry = _entry(CONFIG_ENTRY_VERSION, CONFIG_ENTRY_MINOR_VERSION, {CONF_HIDDEN_MAP_OBJECTS: []})
+
+    assert await async_migrate_entry(hass, config_entry) is True
+    kwargs = hass.config_entries.async_update_entry.call_args.kwargs
+    assert kwargs["options"] == {CONF_HIDDEN_MAP_OBJECTS: []}
+
+
+async def test_migrate_entry_future_major_refused(hass: MagicMock) -> None:
+    """Downgrade from a future major version is refused."""
+    config_entry = _entry(CONFIG_ENTRY_VERSION + 1, 1)
+
+    assert await async_migrate_entry(hass, config_entry) is False
     hass.config_entries.async_update_entry.assert_not_called()
-
-
-async def test_migrate_entry_older_version_updates(hass: MagicMock) -> None:
-    """An older entry is bumped to the current version."""
-    config_entry = MagicMock()
-    config_entry.version = CONFIG_ENTRY_VERSION - 1
-
-    assert await async_migrate_entry(hass, config_entry) is True
-    hass.config_entries.async_update_entry.assert_called_once_with(config_entry, version=CONFIG_ENTRY_VERSION)

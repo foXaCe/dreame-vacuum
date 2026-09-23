@@ -53,6 +53,7 @@ from .const import (
     CONF_SQUARE,
     CONF_VECTOR_ROOMS,
     CONF_VERSION,
+    CONFIG_ENTRY_MINOR_VERSION,
     CONFIG_ENTRY_VERSION,
     DEFAULT_MAP_SCALE,
     DOMAIN,
@@ -160,6 +161,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle config flow for an Dreame Vacuum device."""
 
     VERSION = CONFIG_ENTRY_VERSION
+    MINOR_VERSION = CONFIG_ENTRY_MINOR_VERSION
 
     def __init__(self) -> None:
         """Initialize."""

@@ -19,7 +19,14 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONFIG_ENTRY_VERSION, DOMAIN, DreameVacuumConfigEntry, DreameVacuumRuntimeData
+from .const import (
+    CONF_HIDDEN_MAP_OBJECTS,
+    CONFIG_ENTRY_MINOR_VERSION,
+    CONFIG_ENTRY_VERSION,
+    DOMAIN,
+    DreameVacuumConfigEntry,
+    DreameVacuumRuntimeData,
+)
 from .coordinator import DreameVacuumDataUpdateCoordinator
 
 # Apply patch for python-miio Python 3.13 compatibility
@@ -114,31 +121,39 @@ async def async_unload_entry(hass: HomeAssistant, entry: DreameVacuumConfigEntry
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Migrate old config entry to new version.
+    """Migrate an older config entry to the current version.
 
-    This function is called when the config entry version is older than
-    CONFIG_ENTRY_VERSION. It should update the config entry data to the
-    current version format.
-
-    Args:
-        hass: Home Assistant instance.
-        config_entry: The config entry to migrate.
-
-    Returns:
-        True if migration was successful, False otherwise.
+    Minor 1 -> 2: add "robot" to the hidden map objects. New entries hide the
+    robot icon from the rendered PNG by default (since 2026-07-06) so the
+    companion card draws it as a smooth client-side overlay; entries created
+    before that kept the robot baked into the PNG forever, because options are
+    never migrated. Applied once: unchecking "Robot Icon" afterwards sticks.
     """
     _LOGGER.debug(
-        "Migrating config entry from version %s to %s",
+        "Migrating config entry from version %s.%s to %s.%s",
         config_entry.version,
+        config_entry.minor_version,
         CONFIG_ENTRY_VERSION,
+        CONFIG_ENTRY_MINOR_VERSION,
     )
 
-    if config_entry.version == CONFIG_ENTRY_VERSION:
-        _LOGGER.debug("Config entry already at version %s, no migration needed", CONFIG_ENTRY_VERSION)
-        return True
+    if config_entry.version > CONFIG_ENTRY_VERSION:
+        # Downgrade from a future major version: refuse rather than guess.
+        return False
 
-    if config_entry.version < CONFIG_ENTRY_VERSION:
-        hass.config_entries.async_update_entry(config_entry, version=CONFIG_ENTRY_VERSION)
+    options = dict(config_entry.options)
+    if config_entry.version < CONFIG_ENTRY_VERSION or config_entry.minor_version < 2:
+        hidden = list(options.get(CONF_HIDDEN_MAP_OBJECTS) or [])
+        if "robot" not in hidden:
+            hidden.append("robot")
+            options[CONF_HIDDEN_MAP_OBJECTS] = hidden
+            _LOGGER.info("Robot icon now hidden from the map image: the card draws it as a smooth overlay")
 
-    _LOGGER.info("Migration to version %s successful", CONFIG_ENTRY_VERSION)
+    hass.config_entries.async_update_entry(
+        config_entry,
+        options=options,
+        version=CONFIG_ENTRY_VERSION,
+        minor_version=CONFIG_ENTRY_MINOR_VERSION,
+    )
+    _LOGGER.info("Migration to version %s.%s successful", CONFIG_ENTRY_VERSION, CONFIG_ENTRY_MINOR_VERSION)
     return True
