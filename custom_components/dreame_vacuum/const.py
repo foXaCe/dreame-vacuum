@@ -16,6 +16,10 @@ LOGGER = logging.getLogger(__package__)
 
 # Config entry version — used by both __init__.py and config_flow.py
 CONFIG_ENTRY_VERSION: Final = 1
+# Minor 2: existing entries get "robot" added to hidden map objects (the
+# default for new entries since 2026-07-06) so the companion card's smooth
+# client-side robot overlay takes over after the update.
+CONFIG_ENTRY_MINOR_VERSION: Final = 2
 
 
 @dataclass(slots=True)
