@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.9.0] - 2026-09-23
+
+### Added
+- **Existing installs now hide the robot icon from the map image** (config
+  entry migration 1.1 -> 1.2). Since 2026-07-06 a new entry hides "Robot
+  Icon" by default so the companion card draws the robot as a smooth
+  client-side overlay (interpolated between position updates, real device
+  icon via `robot_icon`). Entries created before that date were never
+  migrated and kept the robot baked into the PNG, which only moves when the
+  map is re-rendered (~every 3 s) — `robot_in_map: true` was observed on a
+  real install. On the first start after this update, "robot" is added to
+  the hidden map objects **once**; `robot_in_map` then reports `false` and
+  the card's overlay takes over, with no dashboard change needed.
+  Re-checking "Robot Icon" afterwards is respected. Users of the bare camera
+  view without the card will no longer see the robot in the image.
+
 ## [6.8.6] - 2026-09-04
 
 ### Fixed
