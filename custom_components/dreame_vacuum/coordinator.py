@@ -387,9 +387,14 @@ class DreameVacuumDataUpdateCoordinator(DataUpdateCoordinator[DreameVacuumDevice
                 },
             )
 
-            # Create a repair issue for depleted consumables
+            # Create a repair issue for depleted consumables, unless consumable notifications are disabled
             if life_left is not None and life_left <= 0:
                 issue_id = f"consumable_depleted_{consumable}_{self._device.mac}"
+                if not self._notify or (
+                    isinstance(self._notify, list) and NOTIFICATION_ID_CONSUMABLE not in self._notify
+                ):
+                    self.hass.loop.call_soon_threadsafe(partial(async_delete_issue, self.hass, DOMAIN, issue_id))
+                    return
                 self.hass.loop.call_soon_threadsafe(
                     partial(
                         async_create_issue,

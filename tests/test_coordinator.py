@@ -13,6 +13,7 @@ this module per the test brief.
 from __future__ import annotations
 
 from datetime import timedelta
+from functools import partial
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -25,7 +26,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.issue_registry import IssueSeverity
+from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue, async_delete_issue
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 import pytest
 
@@ -1162,6 +1163,42 @@ def test_check_consumable_depleted_creates_repair_issue():
         coord._check_consumable(CONSUMABLE_MAIN_BRUSH, "replace_main_brush", DreameVacuumProperty.MAIN_BRUSH_LEFT)
     # notification + event + create-issue => 3 scheduled deferrals.
     assert coord.hass.loop.call_soon_threadsafe.call_count == 3
+
+
+def _scheduled_issue_helpers(coord: DreameVacuumDataUpdateCoordinator) -> list:
+    """Issue registry helpers scheduled via call_soon_threadsafe (wrapped in a partial).
+
+    Filters on ``functools.partial`` because the notification and the event are scheduled directly, not via a partial.
+    """
+    return [
+        call.args[0].func
+        for call in coord.hass.loop.call_soon_threadsafe.call_args_list
+        if isinstance(call.args[0], partial)
+    ]
+
+
+def _check_depleted_main_brush(notify) -> DreameVacuumDataUpdateCoordinator:
+    coord = _bare_coordinator(notify=notify)
+    coord._device.status.consumable_life_warning_description = MagicMock(return_value=["Main brush", "Worn out."])
+    coord._device.get_property = MagicMock(return_value=0)
+    with patch("custom_components.dreame_vacuum.dreame.resources.CONSUMABLE_IMAGE", {}):
+        coord._check_consumable(CONSUMABLE_MAIN_BRUSH, "replace_main_brush", DreameVacuumProperty.MAIN_BRUSH_LEFT)
+    return coord
+
+
+@pytest.mark.parametrize(
+    "notify", [True, [NOTIFICATION_ID_CONSUMABLE], [NOTIFICATION_ID_ERROR, NOTIFICATION_ID_CONSUMABLE]]
+)
+def test_check_consumable_depleted_repair_issue_when_consumable_notify_enabled(notify):
+    coord = _check_depleted_main_brush(notify)
+    assert _scheduled_issue_helpers(coord) == [async_create_issue]
+
+
+@pytest.mark.parametrize("notify", [False, [], [NOTIFICATION_ID_ERROR]])
+def test_check_consumable_depleted_no_repair_issue_when_consumable_notify_disabled(notify):
+    """Unchecking "Consumable" in the options also drops a previously raised repair issue."""
+    coord = _check_depleted_main_brush(notify)
+    assert _scheduled_issue_helpers(coord) == [async_delete_issue]
 
 
 def test_check_consumables_runs_full_matrix_with_all_capabilities():
