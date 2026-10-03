@@ -1,10 +1,10 @@
 {
   "config": {
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_account%]",
-      "already_in_progress": "Configuration already in progress",
+      "already_configured": "계정이 이미 구성되었습니다",
+      "already_in_progress": "이미 구성 중입니다. 다시 시작하기 전에 기존 구성을 완료하세요.",
       "cannot_connect": "연결에 실패했습니다.",
-      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
+      "reauth_successful": "재인증에 성공했습니다"
     },
     "error": {
       "2fa_failed": "인증에 실패했습니다.",
@@ -636,7 +636,7 @@
         "name": "Auto empty status",
         "state": {
           "active": "활성",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "유휴 중",
           "not_performed": "수행되지 않음",
           "unknown": "알 수 없음"
         }
@@ -726,7 +726,7 @@
           "draining": "배수 중",
           "draining_failed": "배수 실패",
           "draining_successful": "배수 성공",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "유휴 중",
           "unknown": "알 수 없음"
         }
       },
@@ -926,7 +926,7 @@
           "adding_water": "물 추가 중",
           "clean_add_water": "청소 및 물 추가 중",
           "drying": "건조 중",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "유휴 중",
           "paused": "일시 중지됨",
           "returning": "세척하러 복귀 중",
           "unknown": "알 수 없음",
@@ -978,13 +978,13 @@
           "finding_pet_paused": "Finding pet paused",
           "heading_to_extra_cleaning": "Heading to extra cleaning",
           "human_following": "사람 따라가기",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "유휴 중",
           "initial_deep_cleaning": "Initial deep cleaning",
           "initial_deep_cleaning_paused": "Initial deep cleaning paused",
           "monitoring": "모니터링",
           "monitoring_paused": "모니터링 일시 중지됨",
           "mopping": "닦기",
-          "paused": "[%key:common::state::paused%]",
+          "paused": "일시 중지됨",
           "remote_control": "원격 제어 중",
           "returning": "도크로 복귀 중",
           "returning_auto_empty": "자동 비움을 위해 복귀 중",
@@ -1014,7 +1014,7 @@
         "name": "Station drainage status",
         "state": {
           "draining": "배수 중",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "유휴 중",
           "unknown": "알 수 없음"
         }
       },
@@ -1031,9 +1031,9 @@
           "fast_mapping": "빠른 매핑",
           "fct": "FCT",
           "follow_wall_cleaning": "벽 따라 청소",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "유휴 중",
           "ota": "OTA",
-          "paused": "[%key:common::state::paused%]",
+          "paused": "일시 중지됨",
           "person_follow": "사람 따라가기",
           "power_off": "전원 끄기",
           "remote_control": "원격 제어",
@@ -1055,7 +1055,7 @@
         "name": "Stream status",
         "state": {
           "audio": "오디오",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "유휴 중",
           "recording": "녹화 중",
           "unknown": "알 수 없음",
           "video": "비디오"

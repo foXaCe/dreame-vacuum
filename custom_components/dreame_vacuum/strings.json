@@ -1,10 +1,10 @@
 {
   "config": {
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_account%]",
-      "already_in_progress": "[%key:common::config_flow::abort::already_in_progress%]",
+      "already_configured": "Account is already configured",
+      "already_in_progress": "This is already being configured. Finish the existing configuration before starting again.",
       "cannot_connect": "Failed to connect.",
-      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
+      "reauth_successful": "Re-authentication was successful"
     },
     "error": {
       "2fa_failed": "Verification failed.",
@@ -648,7 +648,7 @@
         "name": "Auto empty status",
         "state": {
           "active": "Active",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "Idle",
           "not_performed": "Not performed",
           "unknown": "Unknown"
         }
@@ -738,7 +738,7 @@
           "draining": "Draining",
           "draining_failed": "Draining failed",
           "draining_successful": "Draining successful",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "Idle",
           "unknown": "Unknown"
         }
       },
@@ -938,7 +938,7 @@
           "adding_water": "Adding water",
           "clean_add_water": "Cleaning and adding water",
           "drying": "Drying",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "Idle",
           "paused": "Paused",
           "returning": "Returning to wash",
           "unknown": "Unknown",
@@ -990,13 +990,13 @@
           "finding_pet_paused": "Finding pet paused",
           "heading_to_extra_cleaning": "Heading to extra cleaning",
           "human_following": "Human following",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "Idle",
           "initial_deep_cleaning": "Initial deep cleaning",
           "initial_deep_cleaning_paused": "Initial deep cleaning paused",
           "monitoring": "Monitoring",
           "monitoring_paused": "Monitoring paused",
           "mopping": "Mopping",
-          "paused": "[%key:common::state::paused%]",
+          "paused": "Paused",
           "remote_control": "Remote controlling",
           "returning": "Returning to dock",
           "returning_auto_empty": "Returning to Auto-Empty",
@@ -1026,7 +1026,7 @@
         "name": "Station drainage status",
         "state": {
           "draining": "Draining",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "Idle",
           "unknown": "Unknown"
         }
       },
@@ -1043,9 +1043,9 @@
           "fast_mapping": "Fast mapping",
           "fct": "FCT",
           "follow_wall_cleaning": "Follow wall cleaning",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "Idle",
           "ota": "OTA",
-          "paused": "[%key:common::state::paused%]",
+          "paused": "Paused",
           "person_follow": "Person follow",
           "power_off": "Power off",
           "remote_control": "Remote control",
@@ -1067,7 +1067,7 @@
         "name": "Stream status",
         "state": {
           "audio": "Audio",
-          "idle": "[%key:common::state::idle%]",
+          "idle": "Idle",
           "recording": "Recording",
           "unknown": "Unknown",
           "video": "Video"
