@@ -152,7 +152,7 @@ class DreameVacuumOptionsFlowHandler(OptionsFlowWithReload):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=data_schema,
+            data_schema=data_schema,  # type: ignore[arg-type]
             errors=errors,
         )
 
@@ -268,7 +268,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reconfigure_confirm",
-            data_schema=vol.Schema(
+            data_schema=vol.Schema(  # type: ignore[arg-type]
                 {
                     vol.Required(CONF_HOST, default=self.host): _TEXT,
                 }
@@ -375,7 +375,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id=ACCOUNT_TYPE_LOCAL,
-            data_schema=vol.Schema(
+            data_schema=vol.Schema(  # type: ignore[arg-type]
                 {
                     vol.Required(CONF_HOST, default=self.host): _TEXT,
                     vol.Required(CONF_TOKEN, default=self.token): _TEXT,
@@ -442,7 +442,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id=self.account_type,
-            data_schema=self.login_schema,
+            data_schema=self.login_schema,  # type: ignore[arg-type]
             description_placeholders={
                 "devices": "",
                 "server_url": "https://www.openhab.org/addons/bindings/miio/#country-servers",
@@ -471,7 +471,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="2fa",
-            data_schema=vol.Schema(
+            data_schema=vol.Schema(  # type: ignore[arg-type]
                 {
                     vol.Required("verification_code"): _TEXT,
                 }
@@ -503,7 +503,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="captcha",
-            data_schema=vol.Schema(
+            data_schema=vol.Schema(  # type: ignore[arg-type]
                 {
                     vol.Required("code"): _TEXT,
                 }
@@ -562,7 +562,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id=self.account_type,
-            data_schema=self.login_schema,
+            data_schema=self.login_schema,  # type: ignore[arg-type]
             description_placeholders=description_placeholders,
             errors=errors,
         )
@@ -611,7 +611,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="devices",
-            data_schema=vol.Schema({vol.Required("devices"): _select(list(self.devices))}),
+            data_schema=vol.Schema({vol.Required("devices"): _select(list(self.devices))}),  # type: ignore[arg-type]
             errors={},
         )
 

@@ -58,9 +58,12 @@ class MqttFingerprintRepairFlow(RepairsFlow):
                     data={**entry.data, CONF_MQTT_FINGERPRINTS: fingerprints},
                 )
                 DreameVacuumDreameHomeCloudProtocol.trust_mqtt_fingerprint(key, fingerprint)
-            return self.async_create_entry(data={})
+            return self.async_create_entry(data={})  # type: ignore[return-value]
 
-        return self.async_show_form(step_id="confirm", data_schema=vol.Schema({}))
+        return self.async_show_form(  # type: ignore[return-value]
+            step_id="confirm",
+            data_schema=vol.Schema({}),  # type: ignore[arg-type]
+        )
 
 
 async def async_create_fix_flow(
