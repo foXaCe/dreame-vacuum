@@ -104,7 +104,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements_test.txt
           pip install pillow numpy pybase64 aiohttp pycryptodome python-miio mini-racer paho-mqtt
-          pip install mypy
+          # Pinned: the ratchet tracks only the typed modules, so a floating mypy
+          # turns every new mypy release into a red check on main. Renovate bumps it.
+          pip install mypy==2.4.0
 
       # Only the modules opted-in via [tool.mypy] in pyproject.toml are checked;
       # the rest stay under the blanket ignore. Grow the ratchet there, not here.

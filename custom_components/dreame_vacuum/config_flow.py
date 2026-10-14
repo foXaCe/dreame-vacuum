@@ -6,7 +6,7 @@ import base64
 from collections.abc import Mapping
 import json
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 import zlib
 
 from homeassistant.config_entries import (
@@ -64,6 +64,15 @@ from .const import (
 )
 from .dreame import DEVICE_INFO, MAP_COLOR_SCHEME_LIST, MAP_ICON_SET_LIST, VERSION, DreameVacuumProtocol
 
+if TYPE_CHECKING:
+    # Home Assistant 2026.9+ (probatio) types the flow ``data_schema`` parameter as
+    # ``probatio.Schema``. At runtime Home Assistant aliases voluptuous to probatio
+    # (``install_as_voluptuous``), so ``vol.Schema`` already builds the class HA
+    # expects; this alias only aligns the static type with the HA annotations.
+    from probatio import Schema as _Schema
+else:
+    _Schema = vol.Schema
+
 _TEXT = TextSelector()
 _PASSWORD = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 _BOOL = BooleanSelector()
@@ -110,7 +119,7 @@ class DreameVacuumOptionsFlowHandler(OptionsFlowWithReload):
                 notify = []
 
         notification_labels = get_notification_labels(self.hass.config.language)
-        data_schema = vol.Schema({vol.Required(CONF_NOTIFY, default=notify): _multi_select(notification_labels)})
+        data_schema = _Schema({vol.Required(CONF_NOTIFY, default=notify): _multi_select(notification_labels)})
         if self.config_entry.data[CONF_USERNAME]:
             data_schema = data_schema.extend(
                 {
@@ -268,7 +277,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reconfigure_confirm",
-            data_schema=vol.Schema(
+            data_schema=_Schema(
                 {
                     vol.Required(CONF_HOST, default=self.host): _TEXT,
                 }
@@ -375,7 +384,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id=ACCOUNT_TYPE_LOCAL,
-            data_schema=vol.Schema(
+            data_schema=_Schema(
                 {
                     vol.Required(CONF_HOST, default=self.host): _TEXT,
                     vol.Required(CONF_TOKEN, default=self.token): _TEXT,
@@ -471,7 +480,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="2fa",
-            data_schema=vol.Schema(
+            data_schema=_Schema(
                 {
                     vol.Required("verification_code"): _TEXT,
                 }
@@ -503,7 +512,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="captcha",
-            data_schema=vol.Schema(
+            data_schema=_Schema(
                 {
                     vol.Required("code"): _TEXT,
                 }
@@ -611,7 +620,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="devices",
-            data_schema=vol.Schema({vol.Required("devices"): _select(list(self.devices))}),
+            data_schema=_Schema({vol.Required("devices"): _select(list(self.devices))}),
             errors={},
         )
 
@@ -650,7 +659,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
         notification_labels = get_notification_labels(self.hass.config.language)
-        data_schema = vol.Schema(
+        data_schema = _Schema(
             {
                 vol.Required(CONF_NAME, default=self.name): _TEXT,
                 vol.Required(CONF_NOTIFY, default=list(NOTIFICATION.keys())): _multi_select(notification_labels),
@@ -738,10 +747,10 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                     self.models[f"{account_type}.vacuum.{k}"] = info[1]
 
     @property
-    def login_schema(self) -> vol.Schema:
+    def login_schema(self) -> _Schema:
         """Return the login form schema matching the reauth state and account type."""
         if self.reauth:
-            return vol.Schema(
+            return _Schema(
                 {
                     vol.Required(CONF_USERNAME, default=self.username): _TEXT,
                     vol.Required(CONF_PASSWORD): _PASSWORD,
@@ -749,7 +758,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
         if self.account_type == ACCOUNT_TYPE_MI:
-            return vol.Schema(
+            return _Schema(
                 {
                     vol.Required(CONF_USERNAME, default=self.username): _TEXT,
                     vol.Required(CONF_PASSWORD): _PASSWORD,
@@ -760,7 +769,7 @@ class DreameVacuumFlowHandler(ConfigFlow, domain=DOMAIN):
                 }
             )
 
-        return vol.Schema(
+        return _Schema(
             {
                 vol.Required(CONF_USERNAME, default=self.username): _TEXT,
                 vol.Required(CONF_PASSWORD): _PASSWORD,
