@@ -9,9 +9,15 @@
     "group:monorepos",
     "group:recommended"
   ],
-  "labels": ["dependencies"],
-  "assignees": ["foXaCe"],
-  "schedule": ["before 6am on monday"],
+  "labels": [
+    "dependencies"
+  ],
+  "assignees": [
+    "foXaCe"
+  ],
+  "schedule": [
+    "before 6am on monday"
+  ],
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
   "prConcurrentLimit": 10,
@@ -20,65 +26,115 @@
     "enabled": true
   },
   "vulnerabilityAlerts": {
-    "labels": ["security", "dependencies"],
+    "labels": [
+      "security",
+      "dependencies"
+    ],
     "minimumReleaseAge": null
   },
   "packageRules": [
     {
       "description": "Label Python dependency updates",
-      "matchManagers": ["pip_requirements", "pep621", "pip-compile"],
-      "addLabels": ["python"]
+      "matchManagers": [
+        "pip_requirements",
+        "pep621",
+        "pip-compile"
+      ],
+      "addLabels": [
+        "python"
+      ]
     },
     {
       "description": "Label GitHub Actions updates",
-      "matchManagers": ["github-actions"],
-      "addLabels": ["github-actions"]
+      "matchManagers": [
+        "github-actions"
+      ],
+      "addLabels": [
+        "github-actions"
+      ]
     },
     {
       "description": "Group lint & format tools (pip + pre-commit)",
-      "matchPackageNames": ["ruff", "mypy", "bandit", "codespell"],
+      "matchPackageNames": [
+        "ruff",
+        "mypy",
+        "bandit",
+        "codespell"
+      ],
       "groupName": "lint & format tools"
     },
     {
       "description": "Automerge low-risk updates once CI is green",
-      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "matchUpdateTypes": [
+        "patch",
+        "pin",
+        "digest"
+      ],
       "automerge": true,
       "platformAutomerge": true
     },
     {
       "description": "Automerge GitHub Actions minor/patch/digest",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
       "automerge": true,
       "platformAutomerge": true
     },
     {
-      "description": "Never auto-merge language runtime version bumps (python, node) — always review",
-      "matchDepNames": ["python", "node"],
+      "description": "Never auto-merge language runtime version bumps (python, node) \u2014 always review",
+      "matchDepNames": [
+        "python",
+        "node"
+      ],
       "automerge": false
     },
     {
       "description": "Manifest runtime floors: PR only, never automerge",
-      "matchFileNames": ["custom_components/dreame_vacuum/manifest.json"],
+      "matchFileNames": [
+        "custom_components/dreame_vacuum/manifest.json"
+      ],
       "automerge": false,
-      "addLabels": ["python", "runtime-floor"]
+      "addLabels": [
+        "python",
+        "runtime-floor"
+      ]
     },
     {
       "description": "numpy is pinned by Home Assistant core (2026.8 pins numpy==2.3.2): a manifest floor above that pin makes HA unable to install the requirements and the integration fails setup entirely (broken once by the 2.5.1 floor, fixed in v6.8.3). Raise this cap ONLY after checking homeassistant/package_constraints.txt for the oldest supported HA version.",
-      "matchDepNames": ["numpy"],
+      "matchDepNames": [
+        "numpy"
+      ],
       "allowedVersions": "<=2.3.2"
+    },
+    {
+      "description": "Tout ce qui monte se fusionne seul quand la CI est verte (op\u00e9rateur, 2026-10-14)",
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "automerge": true,
+      "platformAutomerge": true
     }
   ],
   "customManagers": [
     {
       "customType": "regex",
       "description": "Track runtime requirement floors in the Home Assistant manifest",
-      "managerFilePatterns": ["/^custom_components/dreame_vacuum/manifest\\.json$/"],
+      "managerFilePatterns": [
+        "/^custom_components/dreame_vacuum/manifest\\.json$/"
+      ],
       "matchStrings": [
         "\"(?<depName>[a-zA-Z0-9._-]+)(?:\\[[a-zA-Z0-9,._-]+\\])?>=(?<currentValue>[0-9][^\",<]*)"
       ],
       "datasourceTemplate": "pypi",
       "versioningTemplate": "pep440"
     }
-  ]
+  ],
+  "rollbackPrs": false
 }
