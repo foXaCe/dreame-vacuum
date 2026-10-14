@@ -1,4 +1,5 @@
 {
+  "rollbackPrs": false,
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
@@ -67,6 +68,12 @@
       "description": "numpy is pinned by Home Assistant core (2026.8 pins numpy==2.3.2): a manifest floor above that pin makes HA unable to install the requirements and the integration fails setup entirely (broken once by the 2.5.1 floor, fixed in v6.8.3). Raise this cap ONLY after checking homeassistant/package_constraints.txt for the oldest supported HA version.",
       "matchDepNames": ["numpy"],
       "allowedVersions": "<=2.3.2"
+    },
+    {
+      "description": "Tout ce qui monte se fusionne seul quand la CI est verte (opérateur, 2026-10-14)",
+      "matchUpdateTypes": ["minor", "major"],
+      "automerge": true,
+      "platformAutomerge": true
     }
   ],
   "customManagers": [
