@@ -14,15 +14,28 @@ rotation without ever having blocked connectivity in the meantime.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
 import voluptuous as vol
 
 from .const import CONF_MQTT_FINGERPRINTS
 from .dreame.protocol import DreameVacuumDreameHomeCloudProtocol
+
+if TYPE_CHECKING:
+    # ``RepairsFlowResult`` is only a return annotation (``from __future__ import
+    # annotations`` keeps it unevaluated at runtime) and older Home Assistant
+    # versions do not export it from ``homeassistant.components.repairs``.
+    from homeassistant.components.repairs import RepairsFlowResult
+
+    # Home Assistant 2026.9+ (probatio) types the flow ``data_schema`` parameter as
+    # ``probatio.Schema``. At runtime Home Assistant aliases voluptuous to probatio
+    # (``install_as_voluptuous``), so ``vol.Schema`` already builds the class HA
+    # expects; this alias only aligns the static type with the HA annotations.
+    from probatio import Schema as _Schema
+else:
+    _Schema = vol.Schema
 
 _ISSUE_PREFIX_MQTT_FINGERPRINT = "mqtt_fingerprint_changed_"
 
@@ -39,11 +52,11 @@ class MqttFingerprintRepairFlow(RepairsFlow):
         self.hass = hass
         self._data = data
 
-    async def async_step_init(self, user_input: dict[str, str] | None = None) -> FlowResult:
+    async def async_step_init(self, user_input: dict[str, str] | None = None) -> RepairsFlowResult:
         """Handle the first step of the fix flow."""
         return await self.async_step_confirm()
 
-    async def async_step_confirm(self, user_input: dict[str, str] | None = None) -> FlowResult:
+    async def async_step_confirm(self, user_input: dict[str, str] | None = None) -> RepairsFlowResult:
         """Handle the confirm step: re-trust the new certificate on submit."""
         if user_input is not None:
             entry_id = self._data.get("entry_id")
@@ -60,7 +73,7 @@ class MqttFingerprintRepairFlow(RepairsFlow):
                 DreameVacuumDreameHomeCloudProtocol.trust_mqtt_fingerprint(key, fingerprint)
             return self.async_create_entry(data={})
 
-        return self.async_show_form(step_id="confirm", data_schema=vol.Schema({}))
+        return self.async_show_form(step_id="confirm", data_schema=_Schema({}))
 
 
 async def async_create_fix_flow(
