@@ -19,7 +19,7 @@
   "quality_scale": "gold",
   "requirements": [
     "numpy>=2.3.2",
-    "pycryptodome>=3.24.0",
+    "pycryptodome>=4.0.0",
     "python-miio>=0.5.12",
     "mini-racer>=0.14.1",
     "paho-mqtt>=2.1.0,<3.0"
