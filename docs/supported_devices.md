@@ -45,6 +45,7 @@
 | D20 Pro Plus                                 | dreame.vacuum.r2566h |
 | D20 Ultra                                    | dreame.vacuum.r2562h |
 | D20 Ultra                                    | dreame.vacuum.r9507b |
+| D20 Ultra                                    | dreame.vacuum.r5022a |
 | D9                                           | dreame.vacuum.p2009  |
 | D9 Max                                       | dreame.vacuum.p2259  |
 | D9 Max                                       | dreame.vacuum.r2312  |
