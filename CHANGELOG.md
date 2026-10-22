@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.0] - 2026-10-22
+
+### Added
+- **D20 Ultra `dreame.vacuum.r5022a` is supported (#77).** Setup no longer fails with "Unsupported Device!"; the model uses the same capabilities as the `r9507b` D20 Ultra.
+
+### Fixed
+- **Unchecking "Consumable" in the options now also silences the "consumable depleted" repair issues (#63)**, not only the persistent notifications.
+- **The status sensor and vacuum card show "Idle" again (#64)** instead of the raw `[%key:common::state::idle%]` text: translation references are replaced with plain strings, since Home Assistant resolves them only for core integrations.
+- `pillow` is no longer listed in the manifest (#65): it ships with Home Assistant itself.
+
 ## [6.9.0] - 2026-09-23
 
 ### Added
