@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.2] - 2026-10-23
+
+### Fixed
+- **The map no longer stays empty after a Home Assistant restart.** The first map render can take longer than the 10 seconds Home Assistant gives a camera image: the request failed and the render was thrown away, so the dashboard kept an empty map until the map changed. The first render now starts as soon as the map is loaded, is kept even when a request gives up, and is shared by all the requests that arrive meanwhile. Update the Dreame Vacuum card to 5.11.5 as well: it retries the image after an error.
+
 ## [6.10.1] - 2026-10-23
 
 ### Fixed
