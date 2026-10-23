@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.1] - 2026-10-23
+
+### Fixed
+- **`vacuum_delete_schedule` really deletes the task (#79).** The robot ignored the delete when the schedule id was sent as a number, so the service reported success while the task stayed. The id is now sent as text, and the service checks that the task is gone: if the robot keeps it, the call now fails with an error instead of passing silently.
+
 ## [6.10.0] - 2026-10-22
 
 ### Added
