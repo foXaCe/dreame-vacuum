@@ -1449,7 +1449,8 @@ class DreameVacuumDeviceStatus(_NamedPropsMixin, _ActivityMixin, _MapPropsMixin,
             attributes[ATTR_ROOMS] = {}
             for _k, v in (self.map_data_list or {}).items():
                 attributes[ATTR_ROOMS][v.map_name] = [
-                    {ATTR_ID: j, ATTR_NAME: s.name, ATTR_ICON: s.icon} for (j, s) in sorted((v.segments or {}).items())
+                    {ATTR_ID: j, ATTR_NAME: s.display_name, ATTR_ICON: s.icon}
+                    for (j, s) in sorted((v.segments or {}).items())
                 ]
 
         if self._capability.carpet_recognition:

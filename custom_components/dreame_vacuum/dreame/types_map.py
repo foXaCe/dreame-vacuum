@@ -522,6 +522,11 @@ class Segment(Zone):
         return self.water_volume
 
     @property
+    def display_name(self) -> str:
+        """Name shown to users: the name given in the app, else the default type name."""
+        return self.custom_name or self.name
+
+    @property
     def icon_type(self) -> int:
         """Resolved type for icon lookup: custom name can override the robot-assigned type.
 
@@ -646,7 +651,7 @@ class Segment(Zone):
         if self.segment_id:
             attributes[ATTR_ROOM_ID] = self.segment_id
         if self.name is not None:
-            attributes[ATTR_NAME] = self.name
+            attributes[ATTR_NAME] = self.display_name
         if self.custom_name is not None:
             attributes[ATTR_CUSTOM_NAME] = self.custom_name
         if self.order is not None:

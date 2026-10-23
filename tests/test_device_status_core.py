@@ -3398,7 +3398,7 @@ def test_attributes_smart_mop_washing_map_and_dnd_task_path() -> None:
     # Segment.__init__ always finishes with set_name(), which derives .name/.icon from
     # .type/.custom_name/.segment_id - passing name=/icon= directly is a no-op, so
     # custom_name= is used here and the expected room entry is read back off the segment.
-    segment = Segment(1, custom_name="Living Room")
+    segment = Segment(1, type=1, custom_name="Salon")  # Living Room renamed in the app
     selected_map = MapData()
     selected_map.map_id = 5
     selected_map.map_name = "Home"
@@ -3472,5 +3472,5 @@ def test_attributes_smart_mop_washing_map_and_dnd_task_path() -> None:
     assert attributes["selected_map"] == "Home"
     assert attributes["selected_map_id"] == 5
     assert attributes["selected_map_index"] == 0
-    assert attributes["rooms"] == {"Home": [{"id": 1, "name": segment.name, "icon": segment.icon}]}
+    assert attributes["rooms"] == {"Home": [{"id": 1, "name": "Salon", "icon": segment.icon}]}
     assert segment.name == "Living Room"

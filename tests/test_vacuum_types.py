@@ -968,6 +968,14 @@ class TestSegmentNaming:
         segment = Segment(segment_id=1, type=999)
         assert segment.icon == "mdi:home-outline"
 
+    def test_as_dict_name_prefers_custom_name_over_type_name(self) -> None:
+        segment = Segment(segment_id=1, type=4, custom_name="Cuisine")  # Kitchen renamed in the app
+        assert segment.as_dict()["name"] == "Cuisine"
+
+    def test_as_dict_name_falls_back_to_type_name(self) -> None:
+        segment = Segment(segment_id=1, type=4)
+        assert segment.as_dict()["name"] == "Kitchen"
+
 
 class TestSegmentTranslatedName:
     def test_custom_name_wins_over_translation(self) -> None:
