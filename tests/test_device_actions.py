@@ -15,7 +15,7 @@ import base64
 import json
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import ANY, MagicMock, call
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
@@ -1180,6 +1180,16 @@ class TestSendCommand:
 
 
 class TestDeleteSchedule:
+    """The robot ignores DELETE_SCHEDULE with an int id; only a string id deletes the task (#79)."""
+
+    @staticmethod
+    def _host_with(raw_schedules: list[str], ids: list[int]):
+        host = _host(action_mapping={DreameVacuumAction.DELETE_SCHEDULE: {"siid": 8, "aiid": 1}})
+        host.status = SimpleNamespace(schedule=[SimpleNamespace(id=i) for i in ids], draining_complete=False)
+        host.get_property = MagicMock(side_effect=raw_schedules + [raw_schedules[-1]] * 50)
+        host.set_property = MagicMock(return_value=True)
+        return host
+
     def test_not_found_raises(self) -> None:
         host = _host()
         host.status = SimpleNamespace(schedule=[SimpleNamespace(id=1), SimpleNamespace(id=2)], draining_complete=False)
@@ -1187,73 +1197,34 @@ class TestDeleteSchedule:
         with pytest.raises(InvalidActionException, match="Schedule not found"):
             host.delete_schedule(99)
 
-    def test_found_filters_schedule_string_and_calls_action(self) -> None:
-        host = _host(action_mapping={DreameVacuumAction.DELETE_SCHEDULE: {"siid": 8, "aiid": 1}})
-        host.status = SimpleNamespace(schedule=[SimpleNamespace(id=1), SimpleNamespace(id=2)], draining_complete=False)
-        raw_schedule = "1-a-08:00-...-x;2-b-09:00-...-y"
-        host.get_property = MagicMock(return_value=raw_schedule)
-        host.set_property = MagicMock(return_value=True)
+    def test_sends_id_as_string_and_confirms_removal(self) -> None:
+        host = self._host_with(["1-a-08:00-x;2-b-09:00-y", "2-b-09:00-y"], [1, 2])
 
-        result = host.delete_schedule(1)
+        with patch("time.sleep"):
+            result = host.delete_schedule(1)
 
         assert result == {"code": 0}
-        host.set_property.assert_called_once_with(DreameVacuumProperty.SCHEDULE, "2-b-09:00-...-y")
-        host.schedule_update.assert_called_with(3, True)
-
-    def test_found_filters_multiple_remaining_tasks_joined_with_semicolon(self) -> None:
-        host = _host(action_mapping={DreameVacuumAction.DELETE_SCHEDULE: {"siid": 8, "aiid": 1}})
-        host.status = SimpleNamespace(
-            schedule=[SimpleNamespace(id=1), SimpleNamespace(id=2), SimpleNamespace(id=3)],
-            draining_complete=False,
-        )
-        raw_schedule = "1-a-08:00-...-x;2-b-09:00-...-y;3-c-10:00-...-z"
-        host.get_property = MagicMock(return_value=raw_schedule)
-        host.set_property = MagicMock(return_value=True)
-
-        result = host.delete_schedule(1)
-
-        assert result == {"code": 0}
-        host.set_property.assert_called_once_with(DreameVacuumProperty.SCHEDULE, "2-b-09:00-...-y;3-c-10:00-...-z")
-
-    def test_found_with_empty_schedule_list_skips_filtering(self) -> None:
-        host = _host(action_mapping={DreameVacuumAction.DELETE_SCHEDULE: {"siid": 8, "aiid": 1}})
-        host.status = SimpleNamespace(schedule=[SimpleNamespace(id=1)], draining_complete=False)
-        host.get_property = MagicMock(return_value="")
-        host.set_property = MagicMock()
-
-        result = host.delete_schedule(1)
-
-        assert result == {"code": 0}
+        host._protocol.action.assert_called_once()
+        assert host._protocol.action.call_args.args[2][0]["value"] == "1"
         host.set_property.assert_not_called()
+        host.schedule_update.assert_called_with(1, True)
 
-    def test_action_failure_restores_previous_schedule_string(self) -> None:
-        host = _host(action_mapping={DreameVacuumAction.DELETE_SCHEDULE: {"siid": 8, "aiid": 1}})
-        host.status = SimpleNamespace(schedule=[SimpleNamespace(id=1)], draining_complete=False)
-        raw_schedule = "1-a-08:00-...-x"
-        host.get_property = MagicMock(return_value=raw_schedule)
-        host.set_property = MagicMock(return_value=True)
-        host._protocol.action.return_value = {"code": 1}
+    def test_falls_back_to_int_when_string_is_rejected(self) -> None:
+        host = self._host_with(["1-a-08:00-x", ""], [1])
+        host._protocol.action.side_effect = [{"code": -1}, {"code": 0}]
 
-        result = host.delete_schedule(1)
+        with patch("time.sleep"):
+            result = host.delete_schedule(1)
 
-        assert result == {"code": 1}
-        assert host.set_property.call_args_list == [
-            call(DreameVacuumProperty.SCHEDULE, ""),
-            call(DreameVacuumProperty.SCHEDULE, raw_schedule),
-        ]
+        assert result == {"code": 0}
+        values = [c.args[2][0]["value"] for c in host._protocol.action.call_args_list]
+        assert values == ["1", 1]
 
-    def test_action_none_response_restores_previous_schedule_string(self) -> None:
-        host = _host(action_mapping={DreameVacuumAction.DELETE_SCHEDULE: {"siid": 8, "aiid": 1}})
-        host.status = SimpleNamespace(schedule=[SimpleNamespace(id=1)], draining_complete=False)
-        raw_schedule = "1-a-08:00-...-x"
-        host.get_property = MagicMock(return_value=raw_schedule)
-        host.set_property = MagicMock(return_value=True)
-        host._protocol.action.side_effect = OSError("disconnected")
+    def test_raises_when_robot_keeps_the_task(self) -> None:
+        host = self._host_with(["1-a-08:00-x;2-b-09:00-y"], [1, 2])
 
-        result = host.delete_schedule(1)
-
-        assert result is None
-        assert host.set_property.call_args_list[-1] == call(DreameVacuumProperty.SCHEDULE, raw_schedule)
+        with patch("time.sleep"), pytest.raises(InvalidActionException, match="did not delete schedule 1"):
+            host.delete_schedule(1)
 
 
 # ===========================================================================

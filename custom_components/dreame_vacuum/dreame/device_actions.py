@@ -284,41 +284,37 @@ class DreameVacuumDeviceActionsMixin(DreameVacuumDeviceState):
         return None
 
     def delete_schedule(self, schedule_id: Any) -> dict[str, Any] | None:
-        """Delete a scheduled task."""
-        found = False
-        for schedule in self.status.schedule:
-            if str(schedule.id) == str(schedule_id):
-                found = True
-                break
+        """Delete a scheduled task.
 
-        if not found:
+        The robot accepts DELETE_SCHEDULE with an int id but ignores it: only a
+        string id deletes the task (#79). The int is kept as a fallback for a
+        firmware that rejects the string. Removal is confirmed against the
+        robot's SCHEDULE property, so a delete it ignores raises instead of
+        passing silently.
+        """
+        if not any(str(schedule.id) == str(schedule_id) for schedule in self.status.schedule):
             raise InvalidActionException(f"Schedule not found! ({schedule_id})")
 
-        schedule_list = self.get_property(DreameVacuumProperty.SCHEDULE)
-        if schedule_list and schedule_list != "":
-            tasks = schedule_list.split(";")
-            schedule = ""
-            for task in tasks:
-                props = task.split("-")
-                if props[0] != str(schedule_id):
-                    if len(schedule) > 1:
-                        schedule = f"{schedule};"
-                    schedule = f"{schedule}{task}"
-            self.set_property(DreameVacuumProperty.SCHEDULE, schedule)
+        def removed() -> bool:
+            raw = self.get_property(DreameVacuumProperty.SCHEDULE) or ""
+            return all(task.split("-")[0] != str(schedule_id) for task in raw.split(";") if task)
 
-        response = self.call_action(
-            DreameVacuumAction.DELETE_SCHEDULE,
-            [
-                {
-                    "piid": PIID(DreameVacuumProperty.SCHEDULE_ID, self.property_mapping),
-                    "value": schedule_id,
-                }
-            ],
-        )
-        self.schedule_update(3, True)
-        if not response or response.get("code") != 0:
-            self.set_property(DreameVacuumProperty.SCHEDULE, schedule_list)
-        return response
+        piid = PIID(DreameVacuumProperty.SCHEDULE_ID, self.property_mapping)
+        response = None
+        for value in (str(schedule_id), int(schedule_id)):
+            response = self.call_action(DreameVacuumAction.DELETE_SCHEDULE, [{"piid": piid, "value": value}])
+            if response and response.get("code") == 0:
+                break
+
+        # call_action runs on an executor thread, so waiting here does not block the event loop.
+        for _ in range(10):
+            if removed():
+                self.schedule_update(1, True)
+                return response
+            time.sleep(1)
+
+        self.schedule_update(1, True)
+        raise InvalidActionException(f"Robot did not delete schedule {schedule_id} (response {response})")
 
     def locate(self) -> dict[str, Any] | None:
         """Locate the vacuum cleaner."""
