@@ -539,6 +539,15 @@ class TestFirstRender:
             assert await entity.async_camera_image() == b"rendered-map"
         update_image.assert_awaited_once()
 
+    async def test_failed_render_answers_none_and_is_retried(self) -> None:
+        gate = asyncio.Event()
+        entity, update_image, patches = _camera_without_image(gate)
+        update_image.side_effect = [RuntimeError("render blew up"), None]
+        with patches[0], patches[1], patches[2], patches[3]:
+            assert await entity.async_camera_image() is None
+            await entity.async_camera_image()  # the finished task is replaced by a new render
+        assert update_image.await_count == 2
+
     async def test_coordinator_update_starts_the_first_render(self) -> None:
         """The first render starts as soon as the map is there, before any dashboard asks for it."""
         gate = asyncio.Event()
