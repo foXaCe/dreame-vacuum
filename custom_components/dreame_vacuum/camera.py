@@ -79,6 +79,12 @@ from .recorder import CAMERA_UNRECORDED_ATTRIBUTES
 PARALLEL_UPDATES = 1
 
 
+# HA abandons a snapshot after 10 s (``camera.async_get_image``) and turns that
+# into a 500. The first render after a restart can take longer, so a request
+# waits for it at most this long and answers itself before HA's timeout.
+FIRST_RENDER_WAIT: Final = 8.0
+
+
 @dataclass(frozen=True, kw_only=True)
 class DreameVacuumCameraEntityDescription(CameraEntityDescription, DreameVacuumEntityDescription):
     """Describes Dreame Vacuum Camera entity."""
@@ -375,6 +381,7 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         self._rtsp_to_webrtc = False
         self._should_poll = True
         self._background_refresh_running = False
+        self._first_render: asyncio.Task[None] | None = None
         self._last_updated: int | None = -1
         self._frame_id: int | None = -1
         self._last_map_request: float = 0
@@ -527,6 +534,11 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         else:
             self.update()
             self._state = STATE_UNAVAILABLE
+        if self.map_index == 0 and self._image is None and self._last_updated and self._last_updated != -1:
+            # The live map is there but nothing was rendered yet: render now, so
+            # the image is ready when a dashboard first asks for it. Saved maps
+            # wait for a request, to keep the startup light.
+            self._start_first_render()
         self.async_write_ha_state()
 
     def _build_segment_map(self, map_data: Any) -> tuple[str, dict[int, int]] | None:
@@ -605,21 +617,49 @@ class DreameVacuumCameraEntity(DreameVacuumEntity, Camera):
         schedule the refresh as a background task so the *next* request gets a
         fresh frame — the very first request (no cached image yet) still waits.
         """
+        if self._image is None:
+            return await self._async_first_image()
         if self._should_poll is True:
             self._should_poll = False
             try:
                 now = time.time()
                 if now - self._last_map_request >= self.frame_interval:
                     self._last_map_request = now
-                    if self._image is not None:
-                        # Cache hit: answer now, refresh in background.
-                        self._schedule_background_refresh()
-                        return self._image
-                    await self._async_perform_refresh()
+                    # Cache hit: answer now, refresh in background.
+                    self._schedule_background_refresh()
             finally:
                 # Always re-arm polling, even if a transient error occurred above;
                 # otherwise the camera would stop refreshing the map permanently.
                 self._should_poll = True
+        return self._image
+
+    def _start_first_render(self) -> asyncio.Task[None]:
+        """Start the first render, or return the one already running.
+
+        It runs as its own task, not inside the HTTP request: when HA abandons a
+        slow snapshot, the render goes on and its image is kept, and concurrent
+        requests (the card asks twice on first display) all wait for the same one.
+        """
+        if self._first_render is None or self._first_render.done():
+            self._last_map_request = time.time()
+            self._first_render = self.hass.async_create_background_task(
+                self._async_timed_first_render(), f"dreame_vacuum first map render {self.map_index}"
+            )
+        return self._first_render
+
+    async def _async_timed_first_render(self) -> None:
+        started = time.monotonic()
+        await self._async_perform_refresh()
+        LOGGER.debug("First map render done in %.2fs (image: %s)", time.monotonic() - started, self._image is not None)
+
+    async def _async_first_image(self) -> bytes | None:
+        """Wait (bounded) for the first render; ``None`` if it is not ready yet."""
+        try:
+            await asyncio.wait_for(asyncio.shield(self._start_first_render()), FIRST_RENDER_WAIT)
+        except TimeoutError:
+            LOGGER.debug("First map render still running after %ss", FIRST_RENDER_WAIT)
+        except Exception:
+            LOGGER.debug("First map render failed", exc_info=True)
         return self._image
 
     async def _async_perform_refresh(self) -> None:

@@ -90,6 +90,9 @@ class _ImmediateHass:
         self.tasks.append(task)
         return task
 
+    def async_create_background_task(self, coro, name, eager_start=True):
+        return self.async_create_task(coro)
+
 
 async def _flush_background_tasks(hass: _ImmediateHass) -> None:
     """Run every background task scheduled by the camera to completion."""
@@ -456,6 +459,98 @@ class TestAsyncUpdateSegmentMap:
         ):
             await entity._async_update_segment_map()
         assert entity._segment_map_cache == (None, None, None)
+
+
+# ===========================================================================
+# First render after a restart: no cached image yet
+# ===========================================================================
+def _camera_without_image(render_gate: asyncio.Event):
+    """A camera with no cached image whose render waits on ``render_gate``."""
+    entity = _bare_camera()
+    entity._image = None
+    entity._first_render = None
+    entity.map_index = 0
+    entity._last_updated = 5000
+    entity._last_rendered = -1
+    _set_device(entity, MagicMock())
+    entity._renderer = MagicMock()
+    entity._renderer.render_complete = True
+
+    async def slow_render(*_args) -> None:
+        await render_gate.wait()
+        entity._image = b"rendered-map"
+
+    update_image = AsyncMock(side_effect=slow_render)
+    patches = (
+        patch.object(entity, "update", MagicMock()),
+        patch.object(entity, "_async_update_segment_map", AsyncMock()),
+        patch.object(type(entity), "_map_data", new=property(lambda self: MagicMock())),
+        patch.object(entity, "_update_image", update_image),
+    )
+    return entity, update_image, patches
+
+
+class TestFirstRender:
+    """After a restart the first render can take longer than HA's 10 s snapshot
+    timeout. Measured on a live install (2026-10-23): the dashboard card's two
+    requests both got a 500 — the second instantly (no image yet), the first
+    after 10 s, when HA cancelled it and the render was thrown away — and the
+    card kept an empty map until the map changed."""
+
+    async def test_concurrent_requests_share_one_render(self) -> None:
+        gate = asyncio.Event()
+        entity, update_image, patches = _camera_without_image(gate)
+        with patches[0], patches[1], patches[2], patches[3]:
+            first = asyncio.ensure_future(entity.async_camera_image())
+            second = asyncio.ensure_future(entity.async_camera_image())
+            await asyncio.sleep(0)
+            gate.set()
+            assert await first == b"rendered-map"
+            assert await second == b"rendered-map"
+        update_image.assert_awaited_once()
+
+    async def test_cancelled_request_does_not_lose_the_render(self) -> None:
+        gate = asyncio.Event()
+        entity, update_image, patches = _camera_without_image(gate)
+        with patches[0], patches[1], patches[2], patches[3]:
+            request = asyncio.ensure_future(entity.async_camera_image())
+            await asyncio.sleep(0)
+            request.cancel()  # HA's snapshot timeout
+            with pytest.raises(asyncio.CancelledError):
+                await request
+            gate.set()
+            await _flush_background_tasks(entity.hass)
+            assert await entity.async_camera_image() == b"rendered-map"
+        update_image.assert_awaited_once()
+
+    async def test_wait_is_bounded_and_render_goes_on(self) -> None:
+        gate = asyncio.Event()
+        entity, update_image, patches = _camera_without_image(gate)
+        with (
+            patches[0],
+            patches[1],
+            patches[2],
+            patches[3],
+            patch("custom_components.dreame_vacuum.camera.FIRST_RENDER_WAIT", 0.01),
+        ):
+            assert await entity.async_camera_image() is None  # answered before HA's timeout
+            gate.set()
+            await _flush_background_tasks(entity.hass)
+            assert await entity.async_camera_image() == b"rendered-map"
+        update_image.assert_awaited_once()
+
+    async def test_coordinator_update_starts_the_first_render(self) -> None:
+        """The first render starts as soon as the map is there, before any dashboard asks for it."""
+        gate = asyncio.Event()
+        gate.set()
+        entity, update_image, patches = _camera_without_image(gate)
+        entity.async_write_ha_state = MagicMock()
+        entity.device.cloud_connected = False  # takes the short branch of the update handler
+        with patches[0], patches[1], patches[2], patches[3]:
+            entity._handle_coordinator_update()
+            await _flush_background_tasks(entity.hass)
+        update_image.assert_awaited_once()
+        assert entity._image == b"rendered-map"
 
 
 # ===========================================================================
