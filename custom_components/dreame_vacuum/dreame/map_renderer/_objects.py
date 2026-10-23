@@ -230,7 +230,7 @@ class _ObjectsMixin(_MapRendererState):
         map_rotation: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         icon_size = int(size * scale)
         robot_icon_size = (
             int(icon_size * 1.4)
@@ -411,7 +411,7 @@ class _ObjectsMixin(_MapRendererState):
             icon = self._obstacle_icons.get(obstacle.type.value)
 
         if icon:
-            new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+            new_layer = self._new_layer(layer_size)
             icon_size = size * scale * (1 if obstacle.ignore_status == 1 else 0.85)
             draw = ImageDraw.Draw(new_layer, "RGBA")
 
@@ -535,7 +535,7 @@ class _ObjectsMixin(_MapRendererState):
         rotation: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         if cruise_point.type == 1 and self._cruise_path_point_background is None:
             self._cruise_path_point_background = Image.open(
@@ -675,7 +675,7 @@ class _ObjectsMixin(_MapRendererState):
                 ).convert("RGBA")
             icon = self._furniture_icons.get(furniture_type)
         if icon:
-            new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+            new_layer = self._new_layer(layer_size)
             if draw_image:
                 w = (furniture.width / dimensions.grid_size) * dimensions.scale
                 h = (furniture.height / dimensions.grid_size) * dimensions.scale
@@ -793,7 +793,7 @@ class _ObjectsMixin(_MapRendererState):
         map_rotation: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         icon_size = int(size * scale)
         if self.icon_set == 3:
             icon_size = int(icon_size * 1.2)
@@ -954,7 +954,7 @@ class _ObjectsMixin(_MapRendererState):
         rotation: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         icon_size = int(size * scale)
         if self._wifi_icon is None:
@@ -1045,7 +1045,7 @@ class _ObjectsMixin(_MapRendererState):
         width: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for area in areas:
             if area.hidden:

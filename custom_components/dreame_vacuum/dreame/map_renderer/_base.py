@@ -44,6 +44,7 @@ class _MapRendererState:
         _station_status: int | None
         _badge_positions: dict[Any, Any]
         _name_offsets: dict[Any, Any]
+        _spare_layer: Image.Image | None
         _obstacle_icons: dict[Any, Any]
         _obstacle_hidden_icons: dict[Any, Any]
         _furniture_icons: dict[Any, Any]
@@ -115,6 +116,20 @@ class _MapRendererState:
 
         @staticmethod
         def _alpha_composite(source: Any, destination: Any) -> Any: ...
+
+        @staticmethod
+        def _composite_onto(destination: Image.Image, source: Any) -> None: ...
+
+        @staticmethod
+        def _merge_layers(layers: list[Any], layer_size: tuple[int, int], align: int = 1) -> Any: ...
+
+        @staticmethod
+        def _downscale_patch(patch: Any, size: tuple[int, int]) -> Any: ...
+
+        # _LayersMixin
+        def _new_layer(self, layer_size: tuple[int, int]) -> Image.Image: ...
+
+        def _keep_patch(self, layer: Image.Image | None) -> Any: ...
 
         @staticmethod
         def _to_buffer(image: Image.Image | None) -> bytes | None: ...

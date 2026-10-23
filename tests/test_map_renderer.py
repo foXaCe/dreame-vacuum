@@ -577,7 +577,8 @@ class TestStaticHelpers:
         cached_layers = {"sub": {0: sub_image}}
         DreameVacuumMapRenderer._combine_layers(cached_layers, (2, 2), "parent", "sub")
         assert "parent" in cached_layers
-        arr = np.array(cached_layers["parent"])
+        assert cached_layers["parent"].offset == (0, 0)
+        arr = np.array(cached_layers["parent"].image)
         assert (arr == (255, 0, 0, 255)).all()
 
     def test_coords_on_line_subdivides_by_spacing(self) -> None:

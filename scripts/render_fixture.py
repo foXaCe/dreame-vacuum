@@ -13,12 +13,18 @@ schemes, at the production-default render scale (``map_scale=2``,
 Usage::
 
     python scripts/render_fixture.py <output-dir>
+    python scripts/render_fixture.py --bench [N]
 
 Writes to ``<output-dir>``:
 
 - ``light.png`` / ``dark.png`` — full render in each theme.
 - ``light-zoom.png`` — a x3 crop of ``light.png`` centered on a wall corner
   that has a nearby door, for close inspection of wall/door line quality.
+
+``--bench`` writes nothing: it times N first renders (a fresh renderer each
+time, like the first render after a Home Assistant restart) of the live
+``r95285-live.b64`` fixture, which carries the path and robot layers too,
+and reports the min/median/max duration and the peak RSS of the process.
 
 This is a throwaway dev script (not test code): it has no assertions, it
 just produces PNGs for a human (or another agent) to eyeball. Keep it
@@ -31,7 +37,10 @@ from __future__ import annotations
 import argparse
 from io import BytesIO
 from pathlib import Path
+import resource
+import statistics
 import sys
+import time
 
 from PIL import Image
 
@@ -44,6 +53,7 @@ from custom_components.dreame_vacuum.dreame.map_renderer import DreameVacuumMapR
 from custom_components.dreame_vacuum.dreame.vacuum_types import Point
 
 FIXTURE = REPO_ROOT / "tests" / "fixtures" / "maps" / "r95285-saved.b64"
+BENCH_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "maps" / "r95285-live.b64"
 
 # Production defaults (camera.py: DEFAULT_MAP_SCALE=2, CONF_VECTOR_ROOMS default True).
 RENDER_SCALE = 2
@@ -53,11 +63,11 @@ ZOOM_FACTOR = 3
 ZOOM_HALF_SIZE = 90  # half-width in final-image px of the zoom crop, before x3 upscale
 
 
-def load_map_data():
-    raw_map = FIXTURE.read_text(encoding="utf-8").strip()
+def load_map_data(fixture: Path = FIXTURE):
+    raw_map = fixture.read_text(encoding="utf-8").strip()
     map_data, _saved_map_data = DreameVacuumMapDecoder.decode_map(raw_map, False)
     if map_data is None:
-        raise RuntimeError(f"Fixture {FIXTURE} failed to decode")
+        raise RuntimeError(f"Fixture {fixture} failed to decode")
     return map_data
 
 
@@ -138,10 +148,34 @@ def make_zoom_crop(png_bytes: bytes, dimensions, map_data) -> Image.Image:
     return crop.resize((crop.width * ZOOM_FACTOR, crop.height * ZOOM_FACTOR), Image.Resampling.NEAREST)
 
 
+def bench(runs: int) -> None:
+    """Time ``runs`` first renders of the live fixture, each on a fresh renderer."""
+    durations = []
+    for _ in range(runs):
+        map_data = load_map_data(BENCH_FIXTURE)  # outside the timing: render_map mutates it
+        start = time.perf_counter()
+        render(map_data, "Dreame Light")
+        durations.append(time.perf_counter() - start)
+    peak_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss // 1024
+    print(
+        f"First render of {BENCH_FIXTURE.name} x{runs}: min {min(durations):.2f} s, "
+        f"median {statistics.median(durations):.2f} s, max {max(durations):.2f} s, peak RSS {peak_mb} MB"
+    )
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("output_dir", type=Path, help="Directory to write light.png/dark.png/light-zoom.png into")
+    parser.add_argument(
+        "output_dir", type=Path, nargs="?", help="Directory to write light.png/dark.png/light-zoom.png into"
+    )
+    parser.add_argument("--bench", type=int, nargs="?", const=5, metavar="N", help="Time N first renders instead")
     args = parser.parse_args(argv)
+
+    if args.bench:
+        bench(args.bench)
+        return 0
+    if args.output_dir is None:
+        parser.error("output_dir is required unless --bench is given")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 

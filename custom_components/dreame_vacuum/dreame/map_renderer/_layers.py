@@ -18,6 +18,7 @@ from PIL import Image, ImageDraw
 
 from ..vacuum_types import MapRendererLayer, ObstacleType, PathType, Point, RobotType
 from ._base import _MapRendererState
+from ._helpers import BLANK_PIXEL, LayerPatch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,14 +64,19 @@ class _LayersMixin(_MapRendererState):
                     )
 
                 changes.append(layer)
-                cached_layers[layer] = self.render_charger(
-                    charger_position,
-                    station_status,
-                    layer_size,
-                    map_data.dimensions,
-                    int((robot_icon_size * (map_data.dimensions.scale if map_data.dimensions.scale > 2 else 3)) * 1.2),
-                    map_data.rotation,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_charger(
+                        charger_position,
+                        station_status,
+                        layer_size,
+                        map_data.dimensions,
+                        int(
+                            (robot_icon_size * (map_data.dimensions.scale if map_data.dimensions.scale > 2 else 3))
+                            * 1.2
+                        ),
+                        map_data.rotation,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -154,14 +160,16 @@ class _LayersMixin(_MapRendererState):
                     )
 
                 changes.append(layer)
-                cached_layers[layer] = self.render_vacuum(
-                    robot_position,
-                    robot_status,
-                    layer_size,
-                    map_data.dimensions,
-                    int(robot_icon_size * (map_data.dimensions.scale if map_data.dimensions.scale > 2 else 3)),
-                    map_data.rotation,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_vacuum(
+                        robot_position,
+                        robot_status,
+                        layer_size,
+                        map_data.dimensions,
+                        int(robot_icon_size * (map_data.dimensions.scale if map_data.dimensions.scale > 2 else 3)),
+                        map_data.rotation,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -173,32 +181,52 @@ class _LayersMixin(_MapRendererState):
         """Compose all rendered layers into the final OBJECTS layer."""
         if changes or not self._cache:
             old_objects = cached_layers.get(MapRendererLayer.OBJECTS)
-            cached_layers[MapRendererLayer.OBJECTS] = Image.new(
-                "RGBA",
-                [layer_size[0], layer_size[1]],
-                (255, 255, 255, 0),
-            )
-            self._close_image(old_objects)
+            rendered = []
             for layer in layers:
                 if cached_layers.get(layer):
                     if layer in changes:
                         _LOGGER.debug("Render %s", layer.name)
-                    old = cached_layers[MapRendererLayer.OBJECTS]
-                    cached_layers[MapRendererLayer.OBJECTS] = Image.alpha_composite(old, cached_layers[layer])
-                    self._close_image(old)
-
+                    rendered.append(cached_layers[layer])
+            objects = self._merge_layers(rendered, layer_size, 2)
             if layer_size != map_image.size:
-                cached_layers[MapRendererLayer.OBJECTS].thumbnail(
-                    map_image.size, Image.Resampling.BOX, reducing_gap=1.5
-                )
+                downscaled = self._downscale_patch(objects, map_image.size)
+                objects.close()
+                objects = downscaled
+            cached_layers[MapRendererLayer.OBJECTS] = objects
+            self._close_image(old_objects)
         else:
             if not cached_layers.get(MapRendererLayer.OBJECTS):
                 return map_image
 
-        return Image.alpha_composite(
-            map_image,
-            cached_layers[MapRendererLayer.OBJECTS],
-        )
+        image = map_image.copy()
+        self._composite_onto(image, cached_layers[MapRendererLayer.OBJECTS])
+        return image
+
+    def _new_layer(self, layer_size: tuple[int, int]) -> Image.Image:
+        """Blank full-size object layer.
+
+        Reuses the layer ``_keep_patch`` last recycled: clearing it is much
+        cheaper than getting ~90 MB of fresh memory for each object layer.
+        """
+        spare = self._spare_layer
+        if spare is not None and spare.size == tuple(layer_size):
+            self._spare_layer = None
+            spare.paste(BLANK_PIXEL, (0, 0, *spare.size))
+            return spare
+        return Image.new("RGBA", layer_size, BLANK_PIXEL)
+
+    def _keep_patch(self, layer: Image.Image | None) -> LayerPatch | None:
+        """Crop a freshly rendered object layer to a patch and recycle the layer.
+
+        ``layer`` must come straight from a ``render_*`` call: nothing else may
+        still refer to it, since ``_new_layer`` hands it out again.
+        """
+        if layer is None:
+            return None
+        patch = LayerPatch.from_layer(layer)
+        self._close_image(self._spare_layer)
+        self._spare_layer = layer
+        return patch
 
     def render_objects(
         self, cached_layers: Any, map_data: Any, robot_status: Any, station_status: Any, map_image: Any, scale: Any
@@ -225,14 +253,16 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_areas(
-                    map_data.no_mopping_areas,
-                    self.color_scheme.no_mop_outline,
-                    self.color_scheme.no_mop,
-                    layer_size,
-                    map_data.dimensions,
-                    border_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_areas(
+                        map_data.no_mopping_areas,
+                        self.color_scheme.no_mop_outline,
+                        self.color_scheme.no_mop,
+                        layer_size,
+                        map_data.dimensions,
+                        border_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -248,14 +278,16 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_areas(
-                    map_data.no_go_areas,
-                    self.color_scheme.no_go_outline,
-                    self.color_scheme.no_go,
-                    layer_size,
-                    map_data.dimensions,
-                    border_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_areas(
+                        map_data.no_go_areas,
+                        self.color_scheme.no_go_outline,
+                        self.color_scheme.no_go,
+                        layer_size,
+                        map_data.dimensions,
+                        border_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -271,13 +303,15 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_walls(
-                    map_data.virtual_walls,
-                    self.color_scheme.virtual_wall,
-                    layer_size,
-                    map_data.dimensions,
-                    line_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_walls(
+                        map_data.virtual_walls,
+                        self.color_scheme.virtual_wall,
+                        layer_size,
+                        map_data.dimensions,
+                        line_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -298,13 +332,15 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_doors(
-                    map_data.door_lines,
-                    self._door_line_color(self.color_scheme.wall),
-                    layer_size,
-                    map_data.dimensions,
-                    max(1, line_width - 1),
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_doors(
+                        map_data.door_lines,
+                        self._door_line_color(self.color_scheme.wall),
+                        layer_size,
+                        map_data.dimensions,
+                        max(1, line_width - 1),
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -320,13 +356,15 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_walls(
-                    map_data.virtual_thresholds,
-                    self.color_scheme.virtual_threshold,
-                    layer_size,
-                    map_data.dimensions,
-                    line_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_walls(
+                        map_data.virtual_thresholds,
+                        self.color_scheme.virtual_threshold,
+                        layer_size,
+                        map_data.dimensions,
+                        line_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -342,14 +380,16 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_thresholds(
-                    map_data.passable_thresholds,
-                    self.color_scheme.passable_threshold_outline,
-                    self.color_scheme.passable_threshold,
-                    layer_size,
-                    map_data.dimensions,
-                    line_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_thresholds(
+                        map_data.passable_thresholds,
+                        self.color_scheme.passable_threshold_outline,
+                        self.color_scheme.passable_threshold,
+                        layer_size,
+                        map_data.dimensions,
+                        line_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -365,14 +405,16 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_thresholds(
-                    map_data.impassable_thresholds,
-                    self.color_scheme.impassable_threshold_outline,
-                    self.color_scheme.impassable_threshold,
-                    layer_size,
-                    map_data.dimensions,
-                    line_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_thresholds(
+                        map_data.impassable_thresholds,
+                        self.color_scheme.impassable_threshold_outline,
+                        self.color_scheme.impassable_threshold,
+                        layer_size,
+                        map_data.dimensions,
+                        line_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -389,15 +431,17 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_ramps(
-                    map_data.ramps,
-                    self.color_scheme.ramp_outline,
-                    self.color_scheme.ramp,
-                    layer_size,
-                    map_data.dimensions,
-                    line_width,
-                    scale,
-                    map_data.rotation,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_ramps(
+                        map_data.ramps,
+                        self.color_scheme.ramp_outline,
+                        self.color_scheme.ramp,
+                        layer_size,
+                        map_data.dimensions,
+                        line_width,
+                        scale,
+                        map_data.rotation,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -413,13 +457,15 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_curtains(
-                    map_data.curtains,
-                    self.color_scheme.curtain,
-                    layer_size,
-                    map_data.dimensions,
-                    line_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_curtains(
+                        map_data.curtains,
+                        self.color_scheme.curtain,
+                        layer_size,
+                        map_data.dimensions,
+                        line_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -435,12 +481,14 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_low_lying_areas(
-                    map_data.low_lying_areas,
-                    layer_size,
-                    map_data.dimensions,
-                    line_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_low_lying_areas(
+                        map_data.low_lying_areas,
+                        layer_size,
+                        map_data.dimensions,
+                        line_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -475,14 +523,16 @@ class _LayersMixin(_MapRendererState):
                         or self._map_data.rotation != map_data.rotation
                     ):
                         changed = True
-                        cached_layers[MapRendererLayer.FURNITURE][k] = self.render_furniture(
-                            v,
-                            map_data.furniture_version,
-                            layer_size,
-                            map_data.dimensions,
-                            int((icon_size * 1.2) * map_data.dimensions.scale),
-                            map_data.rotation,
-                            scale,
+                        cached_layers[MapRendererLayer.FURNITURE][k] = self._keep_patch(
+                            self.render_furniture(
+                                v,
+                                map_data.furniture_version,
+                                layer_size,
+                                map_data.dimensions,
+                                int((icon_size * 1.2) * map_data.dimensions.scale),
+                                map_data.rotation,
+                                scale,
+                            )
                         )
 
                 if changed:
@@ -502,14 +552,16 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_areas(
-                    map_data.active_areas,
-                    self.color_scheme.active_area_outline,
-                    self.color_scheme.active_area,
-                    layer_size,
-                    map_data.dimensions,
-                    border_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_areas(
+                        map_data.active_areas,
+                        self.color_scheme.active_area_outline,
+                        self.color_scheme.active_area,
+                        layer_size,
+                        map_data.dimensions,
+                        border_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -525,14 +577,16 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_points(
-                    map_data.active_points,
-                    self.color_scheme.active_point_outline,
-                    self.color_scheme.active_point,
-                    layer_size,
-                    map_data.dimensions,
-                    border_width,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_points(
+                        map_data.active_points,
+                        self.color_scheme.active_point_outline,
+                        self.color_scheme.active_point,
+                        layer_size,
+                        map_data.dimensions,
+                        border_width,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -622,27 +676,29 @@ class _LayersMixin(_MapRendererState):
                         or name_offsets.get(k) != self._name_offsets.get(k)
                     ):
                         changed = True
-                        cached_layers[MapRendererLayer.SEGMENT][k] = self.render_segment(
-                            v,
-                            bool((not map_data.saved_map or map_data.recovery_map) and map_data.cleanset),
-                            bool((not map_data.saved_map or map_data.recovery_map) and map_data.sequence),
-                            layer_size,
-                            map_data.dimensions,
-                            int(segment_icon_size * map_data.dimensions.scale),
-                            map_data.rotation,
-                            scale,
-                            (
-                                (not map_data.active_segments or k in map_data.active_segments)
-                                and (not map_data.hidden_segments or k not in map_data.hidden_segments)
-                                and not map_data.cleaning_map
-                            ),
-                            (
-                                map_data.cleaning_map
-                                and map_data.neglected_segments
-                                and k in map_data.neglected_segments
-                            ),
-                            flip_badge=badge_positions.get(k, False),
-                            name_offset=name_offsets.get(k, (0, 0)),
+                        cached_layers[MapRendererLayer.SEGMENT][k] = self._keep_patch(
+                            self.render_segment(
+                                v,
+                                bool((not map_data.saved_map or map_data.recovery_map) and map_data.cleanset),
+                                bool((not map_data.saved_map or map_data.recovery_map) and map_data.sequence),
+                                layer_size,
+                                map_data.dimensions,
+                                int(segment_icon_size * map_data.dimensions.scale),
+                                map_data.rotation,
+                                scale,
+                                (
+                                    (not map_data.active_segments or k in map_data.active_segments)
+                                    and (not map_data.hidden_segments or k not in map_data.hidden_segments)
+                                    and not map_data.cleaning_map
+                                ),
+                                (
+                                    map_data.cleaning_map
+                                    and map_data.neglected_segments
+                                    and k in map_data.neglected_segments
+                                ),
+                                flip_badge=badge_positions.get(k, False),
+                                name_offset=name_offsets.get(k, (0, 0)),
+                            )
                         )
 
                 self._badge_positions = badge_positions
@@ -673,13 +729,15 @@ class _LayersMixin(_MapRendererState):
                 or not cached_layers.get(layer)
             ):
                 changes.append(layer)
-                cached_layers[layer] = self.render_router(
-                    map_data.router_position,
-                    layer_size,
-                    map_data.dimensions,
-                    int((robot_icon_size * 1.25) * map_data.dimensions.scale),
-                    map_data.rotation,
-                    scale,
+                cached_layers[layer] = self._keep_patch(
+                    self.render_router(
+                        map_data.router_position,
+                        layer_size,
+                        map_data.dimensions,
+                        int((robot_icon_size * 1.25) * map_data.dimensions.scale),
+                        map_data.rotation,
+                        scale,
+                    )
                 )
         elif self._cache and cached_layers.get(layer):
             changes.append(layer)
@@ -733,13 +791,15 @@ class _LayersMixin(_MapRendererState):
                         or self._map_data.obstacles[k] != v
                         or self._map_data.rotation != map_data.rotation
                     ):
-                        obstacle_image = self.render_obstacle(
-                            v,
-                            layer_size,
-                            map_data.dimensions,
-                            int((icon_size * 1.2) * map_data.dimensions.scale),
-                            map_data.rotation,
-                            scale,
+                        obstacle_image = self._keep_patch(
+                            self.render_obstacle(
+                                v,
+                                layer_size,
+                                map_data.dimensions,
+                                int((icon_size * 1.2) * map_data.dimensions.scale),
+                                map_data.rotation,
+                                scale,
+                            )
                         )
                         if obstacle_image:
                             changed = True
@@ -782,14 +842,16 @@ class _LayersMixin(_MapRendererState):
                         or self._map_data.rotation != map_data.rotation
                     ):
                         changed = True
-                        cached_layers[MapRendererLayer.CRUISE_POINT][k] = self.render_cruise_point(
-                            k,
-                            v,
-                            layer_size,
-                            map_data.dimensions,
-                            int(round(icon_size * 1.25 * map_data.dimensions.scale)),
-                            map_data.rotation,
-                            scale,
+                        cached_layers[MapRendererLayer.CRUISE_POINT][k] = self._keep_patch(
+                            self.render_cruise_point(
+                                k,
+                                v,
+                                layer_size,
+                                map_data.dimensions,
+                                int(round(icon_size * 1.25 * map_data.dimensions.scale)),
+                                map_data.rotation,
+                                scale,
+                            )
                         )
 
                 if changed:
@@ -799,6 +861,8 @@ class _LayersMixin(_MapRendererState):
             changes.append(layer)
             self._del_layer(cached_layers, layer)
 
+        self._close_image(self._spare_layer)
+        self._spare_layer = None
         return self._compose_object_layers(cached_layers, changes, layers, layer_size, map_image)
 
     # render_areas, render_points, render_walls, render_thresholds,

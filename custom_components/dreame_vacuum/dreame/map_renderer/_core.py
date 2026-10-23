@@ -92,6 +92,8 @@ class DreameVacuumMapRenderer(
         self._map_data: MapData | None = None
         self.render_complete: bool = True
         self._layers: dict[MapRendererLayer, Any] = {}
+        # Full-size object layer recycled between render_* calls (see _new_layer).
+        self._spare_layer: Image.Image | None = None
         self._robot_status: int | None = None
         self._station_status: int | None = None
         self._robot_type: Any = robot_type
@@ -1228,15 +1230,17 @@ class DreameVacuumMapRenderer(
             # Blur the floor silhouette: inside stays ~1.0, it falls off only
             # within ``radius`` of the boundary, which is exactly the edge band.
             radius = max(2.0, float(scale) * 2.0)
-            silhouette = Image.fromarray(((alpha > 0).astype(np.uint8) * 255), "L")
-            blurred = np.asarray(silhouette.filter(ImageFilter.GaussianBlur(radius)), dtype=np.float32) / 255.0
-            silhouette.close()
-            # 1.0 in the interior, down to ~0.55 right at the edge.
-            factor = 0.55 + 0.45 * blurred
             floor = alpha > 0
-            rgb = pixels[..., :3].astype(np.float32)
-            rgb[floor] *= factor[floor][:, None]
-            pixels[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+            silhouette = Image.fromarray(floor.astype(np.uint8) * 255, "L")
+            blurred = np.asarray(silhouette.filter(ImageFilter.GaussianBlur(radius)))
+            silhouette.close()
+            # Where the blurred silhouette is still 255 the factor below is
+            # exactly 1.0, so only the floor pixels of the edge band change.
+            edge = floor & (blurred < 255)
+            # 1.0 in the interior, down to ~0.55 right at the edge.
+            factor = 0.55 + 0.45 * (blurred[edge].astype(np.float32) / 255.0)
+            rgb = pixels[edge, :3].astype(np.float32) * factor[:, None]
+            pixels[edge, :3] = np.clip(rgb, 0, 255).astype(np.uint8)
             return pixels
         except Exception as ex:  # pragma: no cover - defensive, never break the raster path
             _LOGGER.debug("Floor relief skipped: %s", ex)
@@ -1808,7 +1812,8 @@ class DreameVacuumMapRenderer(
                     )
                     cached_layers[MapRendererLayer.PATH].thumbnail(image.size, Image.Resampling.BOX, reducing_gap=1.5)
                     _LOGGER.debug("Render PATH")
-                image = Image.alpha_composite(image, cached_layers[MapRendererLayer.PATH])
+                image = image.copy()
+                self._composite_onto(image, cached_layers[MapRendererLayer.PATH])
             elif self._cache and cached_layers.get(MapRendererLayer.PATH):
                 self._close_image(cached_layers.pop(MapRendererLayer.PATH))
 
@@ -1818,7 +1823,6 @@ class DreameVacuumMapRenderer(
                 self._close_image(old_image)
 
             if segment_mask is not None:
-                old_image = image
                 neglected_layer = self.render_neglected_segments(
                     map_data.neglected_segments,
                     map_data.segments,
@@ -1828,10 +1832,10 @@ class DreameVacuumMapRenderer(
                     map_data.rotation,
                     map_data.cleaning_map,
                 )
-                image = Image.alpha_composite(image, neglected_layer)
+                if image is base_image:
+                    image = image.copy()
+                self._composite_onto(image, neglected_layer)
                 self._close_image(neglected_layer)
-                if old_image is not base_image:
-                    self._close_image(old_image)
 
             if map_data.rotation == 90:
                 old_image = image
