@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.3] - 2026-10-26
+
+### Changed
+- **The first map render after a restart is about 2.5x faster and uses 5x less memory (#82).** Map layers are now kept as their bounding box instead of full-size images, and merged in place: the rendered pixels are identical. Measured on a real install: 14–22 s down to 6–11 s, peak memory 2.8 GB down to 0.6 GB.
+
+### Fixed
+- **The `rooms` attribute shows your room names (#83).** Rooms renamed in the Dreame app were listed under their default type name ("Kitchen", "Living Room"…) in the `rooms` attribute of the map camera and of the vacuum; they now use the custom name, like the room name select and the map.
+
 ## [6.10.2] - 2026-10-23
 
 ### Fixed
