@@ -1,9 +1,10 @@
 """Shape-drawing mixin for :class:`DreameVacuumMapRenderer`.
 
 These methods are self-contained 2D rendering helpers: they take
-geometry + styling + a layer size and return a fresh PIL Image. They
-don't touch renderer instance state (``self._layers``, caches, etc.),
-which makes them safe to live in a dedicated module.
+geometry + styling + a layer size and return a blank-started PIL Image
+(from ``self._new_layer``). They don't touch other renderer instance state
+(``self._layers``, caches, etc.), which makes them safe to live in a
+dedicated module.
 
 The mixin is stitched back into the renderer in ``_core.py`` so call
 sites keep working without changes.
@@ -138,7 +139,7 @@ class _ShapesMixin(_MapRendererState):
         width: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for area in areas:
             p = area.to_img(dimensions)
@@ -172,7 +173,7 @@ class _ShapesMixin(_MapRendererState):
         width: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         size = 15 * dimensions.grid_size
         for point in points:
@@ -210,7 +211,7 @@ class _ShapesMixin(_MapRendererState):
         width: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for wall in walls:
             p = wall.to_img(dimensions)
@@ -245,7 +246,7 @@ class _ShapesMixin(_MapRendererState):
         segments several meters long trace app partition/construction
         lines across the whole building, not doorways.
         """
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         dash_length = 6 * scale
         gap_length = 5 * scale
@@ -296,7 +297,7 @@ class _ShapesMixin(_MapRendererState):
         width: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for wall in thresholds:
             p = wall.to_img(dimensions)
@@ -358,7 +359,7 @@ class _ShapesMixin(_MapRendererState):
         width: int,
         scale: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for wall in curtains:
             p = wall.to_img(dimensions)
@@ -407,7 +408,7 @@ class _ShapesMixin(_MapRendererState):
         scale: int,
         rotation: int,
     ) -> Image.Image:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         for area in ramps:
             p = area.to_img(dimensions)

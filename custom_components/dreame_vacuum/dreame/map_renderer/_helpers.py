@@ -25,6 +25,39 @@ from ..const import (
 )
 from ..vacuum_types import MapData, Point
 
+BLANK_PIXEL = (255, 255, 255, 0)
+
+
+class LayerPatch:
+    """The non-transparent part of a render layer and where it sits on it.
+
+    Object layers are drawn at twice the map size (4768x4768 px, ~90 MB, for a
+    typical map) but are mostly empty. Keeping only their bounding box saves
+    that memory and lets compositing touch only those pixels: a fully
+    transparent pixel is a no-op for ``alpha_composite``, so blending the
+    patch at ``offset`` gives exactly the same result as blending the whole
+    layer. ``size`` is the size of the full layer the patch stands for;
+    ``image`` is ``None`` when that layer is fully transparent.
+    """
+
+    __slots__ = ("image", "offset", "size")
+
+    def __init__(self, image: Image.Image | None, offset: tuple[int, int], size: tuple[int, int]) -> None:
+        self.image = image
+        self.offset = offset
+        self.size = size
+
+    @classmethod
+    def from_layer(cls, layer: Image.Image) -> LayerPatch:
+        bbox = layer.getbbox()
+        if bbox is None:
+            return cls(None, (0, 0), layer.size)
+        return cls(layer.crop(bbox), (bbox[0], bbox[1]), layer.size)
+
+    def close(self) -> None:
+        if self.image is not None:
+            self.image.close()
+
 
 class _StaticHelpersMixin:
     """Collection of pure-function staticmethods used by the renderer.
@@ -115,6 +148,92 @@ class _StaticHelpersMixin:
         return source
 
     @staticmethod
+    def _composite_onto(destination: Image.Image, source: Image.Image | LayerPatch) -> None:
+        """Alpha-composite ``source`` over ``destination`` in place.
+
+        Pixel-identical to ``Image.alpha_composite(destination, source)``:
+        a fully transparent source pixel leaves the destination untouched, so
+        only the bounding box of the source's non-transparent pixels needs to
+        be blended. Layers are mostly empty at full render size, which makes
+        this much cheaper than blending (and allocating) the whole image.
+        """
+        if isinstance(source, LayerPatch):
+            if source.image is not None:
+                destination.alpha_composite(source.image, source.offset)
+            return
+        bbox = source.getbbox()
+        if bbox is not None:
+            destination.alpha_composite(source, bbox[:2], bbox)
+
+    @staticmethod
+    def _merge_layers(
+        layers: list[Image.Image | LayerPatch], layer_size: tuple[int, int], align: int = 1
+    ) -> LayerPatch:
+        """Alpha-composite ``layers`` in order onto a blank layer, as a patch.
+
+        Same pixels as compositing them one by one over a blank full-size
+        layer, but the blank canvas only covers the union of their bounding
+        boxes (widened to multiples of ``align``, see ``_downscale_patch``).
+        """
+        pieces = []
+        for layer in layers:
+            if isinstance(layer, LayerPatch):
+                if layer.image is not None:
+                    pieces.append((layer.image, (0, 0, *layer.image.size), layer.offset))
+            else:
+                bbox = layer.getbbox()
+                if bbox is not None:
+                    pieces.append((layer, bbox, (bbox[0], bbox[1])))
+        if not pieces:
+            return LayerPatch(None, (0, 0), layer_size)
+
+        left = min(dest[0] for _image, _box, dest in pieces)
+        top = min(dest[1] for _image, _box, dest in pieces)
+        right = max(dest[0] + box[2] - box[0] for _image, box, dest in pieces)
+        bottom = max(dest[1] + box[3] - box[1] for _image, box, dest in pieces)
+        left -= left % align
+        top -= top % align
+        right = min(layer_size[0], right + (-right % align))
+        bottom = min(layer_size[1], bottom + (-bottom % align))
+
+        canvas = Image.new("RGBA", (right - left, bottom - top), BLANK_PIXEL)
+        for image, box, dest in pieces:
+            canvas.alpha_composite(image, (dest[0] - left, dest[1] - top), box)
+        return LayerPatch(canvas, (left, top), layer_size)
+
+    @staticmethod
+    def _downscale_patch(patch: LayerPatch, size: tuple[int, int]) -> LayerPatch:
+        """Patch of the full layer after ``thumbnail(size, BOX, reducing_gap=1.5)``.
+
+        When the layer is exactly twice ``size`` (object layers are drawn at
+        ``object_scale=2``) the BOX filter averages aligned 2x2 blocks, so
+        downscaling only the patch, built with ``align=2``, gives the same
+        pixels without touching the empty rest of the layer. Any other ratio
+        goes through the full-size layer.
+        """
+        if patch.image is None:
+            return LayerPatch(None, (0, 0), size)
+        if (
+            patch.size == (size[0] * 2, size[1] * 2)
+            and patch.offset[0] % 2 == 0
+            and patch.offset[1] % 2 == 0
+            and patch.image.width % 2 == 0
+            and patch.image.height % 2 == 0
+        ):
+            image = patch.image.resize(
+                (patch.image.width // 2, patch.image.height // 2), Image.Resampling.BOX, reducing_gap=1.5
+            )
+            return LayerPatch(image, (patch.offset[0] // 2, patch.offset[1] // 2), size)
+
+        layer = Image.new("RGBA", patch.size, BLANK_PIXEL)
+        layer.paste(patch.image, patch.offset)
+        layer.thumbnail(size, Image.Resampling.BOX, reducing_gap=1.5)
+        downscaled = LayerPatch.from_layer(layer)
+        downscaled.size = layer.size
+        layer.close()
+        return downscaled
+
+    @staticmethod
     def _close_image(img: Image.Image | None) -> None:
         """Safely close a PIL Image to release memory."""
         if img is not None:
@@ -145,15 +264,11 @@ class _StaticHelpersMixin:
     @staticmethod
     def _combine_layers(cached_layers: dict[Any, Any], layer_size: tuple[int, int], parent: Any, sub: Any) -> None:
         old_parent = cached_layers.get(parent)
-        cached_layers[parent] = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        cached_layers[parent] = _StaticHelpersMixin._merge_layers(
+            [v for _k, v in sorted(cached_layers.get(sub, {}).items()) if v is not None], layer_size
+        )
         if old_parent is not None:
             _StaticHelpersMixin._close_image(old_parent)
-        if sub in cached_layers:
-            for _k, v in sorted(cached_layers[sub].items()):
-                if v is not None:
-                    old = cached_layers[parent]
-                    cached_layers[parent] = Image.alpha_composite(old, v)
-                    _StaticHelpersMixin._close_image(old)
 
     @staticmethod
     def _coords_on_line(

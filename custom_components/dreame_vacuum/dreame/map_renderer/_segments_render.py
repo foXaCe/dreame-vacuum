@@ -49,7 +49,7 @@ class _SegmentsRenderMixin(_MapRendererState):
         flip_badge: bool = False,
         name_offset: Any = (0, 0),
     ) -> Any:
-        new_layer = Image.new("RGBA", layer_size, (255, 255, 255, 0))
+        new_layer = self._new_layer(layer_size)
         draw = ImageDraw.Draw(new_layer, "RGBA")
         if segment.x is not None and segment.y is not None:
             active = active and not neglected
