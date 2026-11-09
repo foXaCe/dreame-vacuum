@@ -22,7 +22,7 @@
     "pycryptodome>=4.3.0",
     "python-miio>=0.5.12",
     "mini-racer>=0.14.1",
-    "paho-mqtt>=2.1.0,<3.0"
+    "paho-mqtt>=2.2.0,<3.0"
   ],
   "version": "6.10.3"
 }
